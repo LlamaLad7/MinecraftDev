@@ -61,5 +61,10 @@ class MixinFoldingOptionsProvider :
             { settings.state.foldDefinitions },
             { b -> settings.state.foldDefinitions = b },
         )
+        checkBox(
+            "Fold MixinExtras expression definition fields and methods",
+            { settings.state.foldDefinitionFieldsAndMethods },
+            { b -> settings.state.foldDefinitionFieldsAndMethods = b },
+        )
     }
 }

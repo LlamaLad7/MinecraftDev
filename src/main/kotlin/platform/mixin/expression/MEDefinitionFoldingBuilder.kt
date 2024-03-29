@@ -22,7 +22,10 @@ package com.demonwav.mcdev.platform.mixin.expression
 
 import com.demonwav.mcdev.platform.mixin.MixinModuleType
 import com.demonwav.mcdev.platform.mixin.folding.MixinFoldingSettings
+import com.demonwav.mcdev.platform.mixin.reference.target.FieldDefinitionReference
+import com.demonwav.mcdev.platform.mixin.reference.target.MethodDefinitionReference
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
+import com.demonwav.mcdev.util.MemberReference
 import com.intellij.lang.ASTNode
 import com.intellij.lang.folding.CustomFoldingBuilder
 import com.intellij.lang.folding.FoldingDescriptor
@@ -32,6 +35,7 @@ import com.intellij.psi.JavaRecursiveElementWalkingVisitor
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiJavaFile
+import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiModifierList
 import com.intellij.psi.util.PsiTreeUtil
 
@@ -41,7 +45,15 @@ class MEDefinitionFoldingBuilder : CustomFoldingBuilder() {
     override fun isRegionCollapsedByDefault(node: ASTNode): Boolean =
         MixinFoldingSettings.instance.state.foldDefinitions
 
-    override fun getLanguagePlaceholderText(node: ASTNode, range: TextRange) = "..."
+    override fun getLanguagePlaceholderText(node: ASTNode, range: TextRange): String {
+        val psi = node.psi
+        if (psi is PsiLiteralExpression) {
+            val value = psi.value as? String ?: return "..."
+            val memberReference = MemberReference.parse(value) ?: return "..."
+            return memberReference.presentableText
+        }
+        return "..."
+    }
 
     override fun buildLanguageFoldRegions(
         descriptors: MutableList<FoldingDescriptor>,
@@ -86,6 +98,18 @@ class MEDefinitionFoldingBuilder : CustomFoldingBuilder() {
                 )
                 if (!range.isEmpty) {
                     descriptors.add(FoldingDescriptor(list.node, range))
+                }
+            }
+
+            super.visitModifierList(list)
+        }
+
+        override fun visitLiteralExpression(expression: PsiLiteralExpression) {
+            if (FieldDefinitionReference.ELEMENT_PATTERN.accepts(expression) ||
+                MethodDefinitionReference.ELEMENT_PATTERN.accepts(expression)
+            ) {
+                if (MemberReference.parse(expression.value as String) != null) {
+                    descriptors.add(FoldingDescriptor(expression.node, expression.textRange))
                 }
             }
         }

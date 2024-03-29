@@ -36,6 +36,7 @@ class MixinFoldingSettings : PersistentStateComponent<MixinFoldingSettings.State
         var foldAccessorCasts: Boolean = true,
         var foldAccessorMethodCalls: Boolean = false,
         var foldDefinitions: Boolean = true,
+        var foldDefinitionFieldsAndMethods: Boolean = true,
     )
 
     private var state = State()

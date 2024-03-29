@@ -914,7 +914,8 @@ object MEExpressionCompletionUtil {
                 val nameValuePair = annotation.findElementAt(foldRegion.startOffset - annotationRange.startOffset)
                     ?.findContainingNameValuePair() ?: continue
                 if (nameValuePair.name == foldAttribute &&
-                    nameValuePair.parentOfType<PsiAnnotation>()?.hasQualifiedName(MixinConstants.Annotations.AT) == true
+                    nameValuePair.parentOfType<PsiAnnotation>()?.hasQualifiedName(MixinConstants.MixinExtras.DEFINITION)
+                    == true
                 ) {
                     regionsToFold += foldRegion
                 }
