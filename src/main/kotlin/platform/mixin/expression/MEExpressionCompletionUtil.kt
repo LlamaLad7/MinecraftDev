@@ -420,7 +420,7 @@ object MEExpressionCompletionUtil {
         // In the case of multiple instructions producing the same lookup, attempt to show only the "best" lookup.
         // For example, if a local variable is only sometimes able to be targeted using implicit ordinals in this
         // expression, prefer specifying the ordinal.
-        return eliminableResults.groupBy { it.lookupElement.lookupString }.values.map { it.max().lookupElement }
+        return eliminableResults.groupBy { it.uniquenessKey }.values.map { it.max().lookupElement }
     }
 
     private fun replaceUnknownNamesWithWildcards(
@@ -592,9 +592,10 @@ object MEExpressionCompletionUtil {
                     is Type -> {
                         if (canCompleteTypes && cst.isAccessibleFrom(mixinClass)) {
                             return listOf(
-                                object : TailTypeDecorator<LookupElement>(createTypeLookup(cst)) {
-                                    override fun computeTailType(context: InsertionContext?) = DOT_CLASS_TAIL
-                                }.createEliminable()
+                                createTypeLookup(cst)
+                                    .withTailText(".class")
+                                    .withTail(DOT_CLASS_TAIL)
+                                    .createEliminable("class ${insn.cst}")
                             )
                         }
                     }
@@ -631,7 +632,7 @@ object MEExpressionCompletionUtil {
                     if (insn.opcode == Opcodes.GETSTATIC || insn.opcode == Opcodes.PUTSTATIC) {
                         lookup = lookup.withLookupString(insn.owner.substringAfterLast('/') + "." + insn.name)
                     }
-                    return listOf(lookup.createEliminable())
+                    return listOf(lookup.createEliminable("field ${insn.owner}.${insn.name}:${insn.desc}"))
                 }
             }
             is MethodInsnNode -> {
@@ -650,10 +651,8 @@ object MEExpressionCompletionUtil {
                         lookup = lookup.withLookupString(insn.owner.substringAfterLast('/') + "." + insn.name)
                     }
                     return listOf(
-                        object : TailTypeDecorator<LookupElement>(lookup) {
-                            override fun computeTailType(context: InsertionContext?) =
-                                ParenthesesTailType(!insn.desc.startsWith("()"))
-                        }.createEliminable()
+                        lookup.withTail(ParenthesesTailType(!insn.desc.startsWith("()")))
+                            .createEliminable("invoke ${insn.owner}.${insn.name}${insn.desc}")
                     )
                 }
             }
@@ -664,13 +663,13 @@ object MEExpressionCompletionUtil {
                     when (insn.opcode) {
                         Opcodes.ANEWARRAY -> {
                             return listOf(
-                                object : TailTypeDecorator<LookupElement>(lookup) {
-                                    override fun computeTailType(context: InsertionContext?) =
-                                        BracketsTailType(
-                                            1,
-                                            flows[insn]?.hasDecoration(Decorations.ARRAY_CREATION_INFO) == true,
-                                        )
-                                }.createEliminable()
+                                lookup.withTail(
+                                    BracketsTailType(
+                                        1,
+                                        flows[insn]?.hasDecoration(Decorations.ARRAY_CREATION_INFO) == true,
+                                    )
+                                )
+                                    .createEliminable("new [${insn.desc}")
                             )
                         }
                         Opcodes.NEW -> {
@@ -681,15 +680,11 @@ object MEExpressionCompletionUtil {
                                     (nextInsn as MethodInsnNode).name == "<init>"
                             }?.left?.insn as MethodInsnNode?
                             return listOf(
-                                object : TailTypeDecorator<LookupElement>(lookup) {
-                                    override fun computeTailType(context: InsertionContext?) =
-                                        ParenthesesTailType(
-                                            initCall?.desc?.startsWith("()") == false
-                                        )
-                                }.createEliminable()
+                                lookup.withTail(ParenthesesTailType(initCall?.desc?.startsWith("()") == false))
+                                    .createEliminable("new ${insn.desc}${initCall?.desc}")
                             )
                         }
-                        else -> return listOf(lookup.createEliminable())
+                        else -> return listOf(lookup.createEliminable("type ${insn.desc}"))
                     }
                 }
             }
@@ -708,15 +703,15 @@ object MEExpressionCompletionUtil {
                             else -> "unknown" // wtf?
                         }
                         return listOf(
-                            object : TailTypeDecorator<LookupElement>(
-                                LookupElementBuilder.create(type).withIcon(PlatformIcons.CLASS_ICON)
-                            ) {
-                                override fun computeTailType(context: InsertionContext?) =
+                            LookupElementBuilder.create(type)
+                                .withIcon(PlatformIcons.CLASS_ICON)
+                                .withTail(
                                     BracketsTailType(
                                         1,
                                         flows[insn]?.hasDecoration(Decorations.ARRAY_CREATION_INFO) == true,
                                     )
-                            }.createEliminable()
+                                )
+                                .createEliminable("new $type[]")
                         )
                     }
                 }
@@ -725,15 +720,14 @@ object MEExpressionCompletionUtil {
                 if (canCompleteTypes) {
                     val type = Type.getType(insn.desc)
                     return listOf(
-                        object : TailTypeDecorator<LookupElement>(
-                            createTypeLookup(type.elementType)
-                        ) {
-                            override fun computeTailType(context: InsertionContext?) =
+                        createTypeLookup(type.elementType)
+                            .withTail(
                                 BracketsTailType(
                                     type.dimensions,
-                                    flows[insn]?.hasDecoration(Decorations.ARRAY_CREATION_INFO) == true,
+                                    flows[insn]?.hasDecoration(Decorations.ARRAY_CREATION_INFO) == true
                                 )
-                        }.createEliminable()
+                            )
+                            .createEliminable("new ${insn.desc}")
                     )
                 }
             }
@@ -745,7 +739,7 @@ object MEExpressionCompletionUtil {
                                 LookupElementBuilder.create("length")
                                     .withIcon(PlatformIcons.FIELD_ICON)
                                     .withTypeText("int")
-                                    .createEliminable()
+                                    .createEliminable("arraylength")
                             )
                         }
                     }
@@ -805,7 +799,7 @@ object MEExpressionCompletionUtil {
         }
     }
 
-    private fun createTypeLookup(type: Type): LookupElement {
+    private fun createTypeLookup(type: Type): LookupElementBuilder {
         val definitionId = type.typeNameToInsert()
 
         val lookupElement = LookupElementBuilder.create(definitionId)
@@ -869,18 +863,19 @@ object MEExpressionCompletionUtil {
                 val localsOfMyType = localsHere.filter { it.desc == localVariable.desc }
                 val ordinal = localsOfMyType.indexOf(localVariable)
                 val isImplicit = localsOfMyType.size == 1
-                LookupElementBuilder.create(localVariable.name.toValidIdentifier())
+                val localName = localVariable.name.toValidIdentifier()
+                LookupElementBuilder.create(localName)
                     .withIcon(PlatformIcons.VARIABLE_ICON)
                     .withTypeText(localPsiType.presentableText)
                     .withLocalDefinition(
-                        localVariable.name.toValidIdentifier(),
+                        localName,
                         Type.getType(localVariable.desc),
                         ordinal,
                         isArgsOnly,
                         isImplicit,
                         mixinClass,
                     )
-                    .createEliminable(if (isImplicit) -1 else 0)
+                    .createEliminable("local $localName", if (isImplicit) -1 else 0)
             }
         }
 
@@ -896,8 +891,12 @@ object MEExpressionCompletionUtil {
                 .withIcon(PlatformIcons.VARIABLE_ICON)
                 .withTypeText(localType.presentableName())
                 .withLocalDefinition(localName, localType, ordinal, isArgsOnly, isImplicit, mixinClass)
-                .createEliminable(if (isImplicit) -1 else 0)
+                .createEliminable("local $localName", if (isImplicit) -1 else 0)
         )
+    }
+
+    private fun LookupElement.withTail(tailType: TailType?) = object : TailTypeDecorator<LookupElement>(this) {
+        override fun computeTailType(context: InsertionContext?) = tailType
     }
 
     private fun LookupElementBuilder.withDefinition(id: String, at: String) = withDefinition(id, at) { _, _ -> }
@@ -1143,9 +1142,11 @@ object MEExpressionCompletionUtil {
         return variants
     }
 
-    private fun LookupElement.createEliminable(priority: Int = 0) = EliminableLookup(this, priority)
+    private fun LookupElement.createEliminable(uniquenessKey: String, priority: Int = 0) =
+        EliminableLookup(uniquenessKey, this, priority)
 
     private class EliminableLookup(
+        val uniquenessKey: String,
         val lookupElement: LookupElement,
         private val priority: Int
     ) : Comparable<EliminableLookup> {

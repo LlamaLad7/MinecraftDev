@@ -84,7 +84,9 @@ class MEDefinitionFoldingBuilder : CustomFoldingBuilder() {
                     definitionList.first().parameterList.firstChild.nextSibling.textRange.startOffset,
                     PsiTreeUtil.getDeepestVisibleLast(definitionList.last())!!.textRange.startOffset,
                 )
-                descriptors.add(FoldingDescriptor(list.node, range))
+                if (!range.isEmpty) {
+                    descriptors.add(FoldingDescriptor(list.node, range))
+                }
             }
         }
     }
