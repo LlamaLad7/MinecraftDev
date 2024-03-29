@@ -26,6 +26,7 @@ import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiMethod
 import java.io.Serializable
+import org.objectweb.asm.Type
 
 /**
  * Represents a reference to a class member (a method or a field). It may
@@ -61,6 +62,19 @@ data class MemberReference(
     override val methodDescriptor = descriptor?.takeIf { it.contains("(") }
     override val fieldDescriptor = descriptor?.takeUnless { it.contains("(") }
     override val displayName = name
+
+    val presentableText: String get() = buildString {
+        if (owner != null) {
+            append(owner.substringAfterLast('.'))
+            append('.')
+        }
+        append(name)
+        if (descriptor != null && descriptor.startsWith("(")) {
+            append('(')
+            append(Type.getArgumentTypes(descriptor).joinToString { it.className.substringAfterLast('.') })
+            append(')')
+        }
+    }
 
     override fun canEverMatch(name: String): Boolean {
         return matchAllNames || this.name == name
