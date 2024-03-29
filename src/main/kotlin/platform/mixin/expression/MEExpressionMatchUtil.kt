@@ -20,11 +20,12 @@
 
 package com.demonwav.mcdev.platform.mixin.expression
 
-import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.AtResolver
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.CollectVisitor
 import com.demonwav.mcdev.platform.mixin.util.LocalInfo
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.platform.mixin.util.cached
+import com.demonwav.mcdev.util.MemberReference
+import com.demonwav.mcdev.util.computeStringArray
 import com.demonwav.mcdev.util.constantStringValue
 import com.demonwav.mcdev.util.descriptor
 import com.demonwav.mcdev.util.findAnnotations
@@ -35,7 +36,6 @@ import com.intellij.openapi.module.Module
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.RecursionManager
 import com.intellij.psi.PsiModifierList
 import com.llamalad7.mixinextras.expression.impl.ExpressionParserFacade
 import com.llamalad7.mixinextras.expression.impl.ast.expressions.Expression
@@ -44,12 +44,13 @@ import com.llamalad7.mixinextras.expression.impl.flow.FlowInterpreter
 import com.llamalad7.mixinextras.expression.impl.flow.FlowValue
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import com.llamalad7.mixinextras.expression.impl.pool.IdentifierPool
-import java.util.Collections
 import java.util.IdentityHashMap
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.FieldInsnNode
+import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
 import org.objectweb.asm.tree.VarInsnNode
 import org.objectweb.asm.tree.analysis.Analyzer
@@ -150,14 +151,20 @@ object MEExpressionMatchUtil {
 
             val definitionId = annotation.findDeclaredAttributeValue("id")?.constantStringValue ?: ""
 
-            val ats = annotation.findDeclaredAttributeValue("at")?.findAnnotations() ?: emptyList()
-            for (at in ats) {
-                val matchingInsns = RecursionManager.doPreventingRecursion(at, true) {
-                    AtResolver(at, targetClass, targetMethod)
-                        .resolveInstructions()
-                        .mapTo(Collections.newSetFromMap(IdentityHashMap())) { it.insn }
-                } ?: emptySet()
-                pool.addMember(definitionId) { it in matchingInsns }
+            val fields = annotation.findDeclaredAttributeValue("field")?.computeStringArray() ?: emptyList()
+            for (field in fields) {
+                val fieldRef = MemberReference.parse(field) ?: continue
+                pool.addMember(definitionId) {
+                    it is FieldInsnNode && fieldRef.matchField(it.owner, it.name, it.desc)
+                }
+            }
+
+            val methods = annotation.findDeclaredAttributeValue("method")?.computeStringArray() ?: emptyList()
+            for (method in methods) {
+                val methodRef = MemberReference.parse(method) ?: continue
+                pool.addMember(definitionId) {
+                    it is MethodInsnNode && methodRef.matchMethod(it.owner, it.name, it.desc)
+                }
             }
 
             val types = annotation.findDeclaredAttributeValue("type")?.resolveTypeArray() ?: emptyList()

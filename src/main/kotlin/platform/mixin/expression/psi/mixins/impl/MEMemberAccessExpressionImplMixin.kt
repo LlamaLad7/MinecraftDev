@@ -24,6 +24,7 @@ import com.demonwav.mcdev.platform.mixin.expression.MESourceMatchContext
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEExpression
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEName
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.impl.MEExpressionImpl
+import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.QualifiedMember
 import com.intellij.lang.ASTNode
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiElement
@@ -59,7 +60,8 @@ abstract class MEMemberAccessExpressionImplMixin(node: ASTNode) : MEExpressionIm
             }
         }
 
-        return memberName.matchesJavaExpr(java, context)
+        val qualifier = QualifiedMember.resolveQualifier(java) ?: resolved.containingClass ?: return false
+        return context.getFields(memberName.text).any { it.matchField(resolved, qualifier) }
     }
 
     override fun getInputExprs() = listOf(receiverExpr)

@@ -21,6 +21,7 @@
 package com.demonwav.mcdev.platform.mixin.expression
 
 import com.demonwav.mcdev.platform.mixin.util.LocalInfo
+import com.demonwav.mcdev.util.MemberReference
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 
@@ -31,7 +32,8 @@ class MESourceMatchContext(val project: Project) {
     val captures: List<PsiElement> get() = capturesInternal
 
     private val types = mutableMapOf<String, MutableList<String>>()
-    private val targetedElements = mutableMapOf<String, MutableList<PsiElement>>()
+    private val fields = mutableMapOf<String, MutableList<MemberReference>>()
+    private val methods = mutableMapOf<String, MutableList<MemberReference>>()
     private val localInfos = mutableMapOf<String, MutableList<LocalInfo>>()
 
     init {
@@ -52,19 +54,25 @@ class MESourceMatchContext(val project: Project) {
     fun getTypes(key: String): List<String> = types[key] ?: emptyList()
 
     fun addType(key: String, desc: String) {
-        types.computeIfAbsent(key) { mutableListOf() } += desc
+        types.getOrPut(key, ::mutableListOf) += desc
     }
 
-    fun getTargetedElements(key: String): List<PsiElement> = targetedElements[key] ?: emptyList()
+    fun getFields(key: String): List<MemberReference> = fields[key] ?: emptyList()
 
-    fun addTargetedElement(key: String, element: PsiElement) {
-        targetedElements.computeIfAbsent(key) { mutableListOf() } += element
+    fun addField(key: String, field: MemberReference) {
+        fields.getOrPut(key, ::mutableListOf) += field
+    }
+
+    fun getMethods(key: String): List<MemberReference> = methods[key] ?: emptyList()
+
+    fun addMethod(key: String, method: MemberReference) {
+        methods.getOrPut(key, ::mutableListOf) += method
     }
 
     fun getLocalInfos(key: String): List<LocalInfo> = localInfos[key] ?: emptyList()
 
     fun addLocalInfo(key: String, localInfo: LocalInfo) {
-        localInfos.computeIfAbsent(key) { mutableListOf() } += localInfo
+        localInfos.getOrPut(key, ::mutableListOf) += localInfo
     }
 
     fun reset() {

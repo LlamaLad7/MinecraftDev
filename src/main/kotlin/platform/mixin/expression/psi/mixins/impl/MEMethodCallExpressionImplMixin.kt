@@ -25,6 +25,7 @@ import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEArguments
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEExpression
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEName
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.impl.MEExpressionImpl
+import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.QualifiedMember
 import com.intellij.lang.ASTNode
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiElement
@@ -43,13 +44,18 @@ abstract class MEMethodCallExpressionImplMixin(node: ASTNode) : MEExpressionImpl
             return false
         }
 
-        if (!memberName.matchesJavaExpr(java, context)) {
-            return false
-        }
-
         val method = java.resolveMethod() ?: return false
         if (method.hasModifierProperty(PsiModifier.STATIC)) {
             return false
+        }
+
+        if (!memberName.isWildcard) {
+            val methodId = memberName.text
+            val qualifier =
+                QualifiedMember.resolveQualifier(java.methodExpression) ?: method.containingClass ?: return false
+            if (context.getMethods(methodId).none { it.matchMethod(method, qualifier) }) {
+                return false
+            }
         }
 
         val javaReceiver = PsiUtil.skipParenthesizedExprDown(java.methodExpression.qualifierExpression)

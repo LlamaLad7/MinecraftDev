@@ -622,13 +622,12 @@ object MEExpressionCompletionUtil {
             )
             is FieldInsnNode -> {
                 if (canCompleteExprs) {
-                    val at = "at = @${MixinConstants.Annotations.AT}(value = \"FIELD\"," +
-                        " target = \"L${insn.owner};${insn.name}:${insn.desc}\")"
+                    val definitionValue = "field = \"L${insn.owner};${insn.name}:${insn.desc}\""
                     var lookup = LookupElementBuilder.create(insn.name.toValidIdentifier())
                         .withIcon(PlatformIcons.FIELD_ICON)
                         .withPresentableText(insn.owner.substringAfterLast('/') + "." + insn.name)
                         .withTypeText(Type.getType(insn.desc).presentableName())
-                        .withDefinitionAndFoldTarget(insn.name.toValidIdentifier(), at)
+                        .withDefinitionAndFold(insn.name.toValidIdentifier(), "field", definitionValue)
                     if (insn.opcode == Opcodes.GETSTATIC || insn.opcode == Opcodes.PUTSTATIC) {
                         lookup = lookup.withLookupString(insn.owner.substringAfterLast('/') + "." + insn.name)
                     }
@@ -637,8 +636,7 @@ object MEExpressionCompletionUtil {
             }
             is MethodInsnNode -> {
                 if (canCompleteExprs) {
-                    val at = "at = @${MixinConstants.Annotations.AT}(value = \"INVOKE\"," +
-                        " target = \"L${insn.owner};${insn.name}${insn.desc}\")"
+                    val definitionValue = "method = \"L${insn.owner};${insn.name}${insn.desc}\""
                     var lookup = LookupElementBuilder.create(insn.name.toValidIdentifier())
                         .withIcon(PlatformIcons.METHOD_ICON)
                         .withPresentableText(insn.owner.substringAfterLast('/') + "." + insn.name)
@@ -646,7 +644,7 @@ object MEExpressionCompletionUtil {
                             "(" + Type.getArgumentTypes(insn.desc).joinToString { it.presentableName() } + ")"
                         )
                         .withTypeText(Type.getReturnType(insn.desc).presentableName())
-                        .withDefinitionAndFoldTarget(insn.name.toValidIdentifier(), at)
+                        .withDefinitionAndFold(insn.name.toValidIdentifier(), "method", definitionValue)
                     if (insn.opcode == Opcodes.INVOKESTATIC) {
                         lookup = lookup.withLookupString(insn.owner.substringAfterLast('/') + "." + insn.name)
                     }
@@ -899,10 +897,11 @@ object MEExpressionCompletionUtil {
         override fun computeTailType(context: InsertionContext?) = tailType
     }
 
-    private fun LookupElementBuilder.withDefinition(id: String, at: String) = withDefinition(id, at) { _, _ -> }
+    private fun LookupElementBuilder.withDefinition(id: String, definitionValue: String) =
+        withDefinition(id, definitionValue) { _, _ -> }
 
-    private fun LookupElementBuilder.withDefinitionAndFoldTarget(id: String, at: String) =
-        withDefinition(id, at) { context, annotation ->
+    private fun LookupElementBuilder.withDefinitionAndFold(id: String, foldAttribute: String, definitionValue: String) =
+        withDefinition(id, definitionValue) { context, annotation ->
             val hostEditor = InjectedLanguageEditorUtil.getTopLevelEditor(context.editor)
             CodeFoldingManager.getInstance(context.project).updateFoldRegions(hostEditor)
             val foldingModel = hostEditor.foldingModel
@@ -914,7 +913,7 @@ object MEExpressionCompletionUtil {
                 }
                 val nameValuePair = annotation.findElementAt(foldRegion.startOffset - annotationRange.startOffset)
                     ?.findContainingNameValuePair() ?: continue
-                if (nameValuePair.name == "target" &&
+                if (nameValuePair.name == foldAttribute &&
                     nameValuePair.parentOfType<PsiAnnotation>()?.hasQualifiedName(MixinConstants.Annotations.AT) == true
                 ) {
                     regionsToFold += foldRegion
@@ -939,7 +938,7 @@ object MEExpressionCompletionUtil {
         val isTypeAccessible = type.isAccessibleFrom(mixinClass)
         val isImplicit = canBeImplicit && isTypeAccessible
 
-        val definitionLocal = buildString {
+        val definitionValue = buildString {
             append("local = @${MixinConstants.MixinExtras.LOCAL}(")
             if (isTypeAccessible) {
                 append("type = ${type.className}.class, ")
@@ -959,7 +958,7 @@ object MEExpressionCompletionUtil {
 
             append(")")
         }
-        return withDefinition(name, definitionLocal) { context, annotation ->
+        return withDefinition(name, definitionValue) { context, annotation ->
             if (isImplicit) {
                 return@withDefinition
             }
@@ -1025,14 +1024,14 @@ object MEExpressionCompletionUtil {
 
     private inline fun LookupElementBuilder.withDefinition(
         id: String,
-        at: String,
+        definitionValue: String,
         crossinline andThen: (InsertionContext, PsiAnnotation) -> Unit
     ) = withInsertHandler { context, _ ->
         context.laterRunnable = Runnable {
             context.commitDocument()
             CommandProcessor.getInstance().runUndoTransparentAction {
                 runWriteAction {
-                    val annotation = addDefinition(context, id, at)
+                    val annotation = addDefinition(context, id, definitionValue)
                     if (annotation != null) {
                         andThen(context, annotation)
                     }
@@ -1041,7 +1040,7 @@ object MEExpressionCompletionUtil {
         }
     }
 
-    private fun addDefinition(context: InsertionContext, id: String, at: String): PsiAnnotation? {
+    private fun addDefinition(context: InsertionContext, id: String, definitionValue: String): PsiAnnotation? {
         val contextElement = context.file.findElementAt(context.startOffset) ?: return null
         val injectionHost = contextElement.findMultiInjectionHost() ?: return null
         val expressionAnnotation = injectionHost.parentOfType<PsiAnnotation>() ?: return null
@@ -1061,7 +1060,7 @@ object MEExpressionCompletionUtil {
 
         // create and add the new @Definition annotation
         var newAnnotation = JavaPsiFacade.getElementFactory(context.project).createAnnotationFromText(
-            "@${MixinConstants.MixinExtras.DEFINITION}(id = \"$id\", $at)",
+            "@${MixinConstants.MixinExtras.DEFINITION}(id = \"$id\", $definitionValue)",
             modifierList,
         )
         var anchor = modifierList.annotations.lastOrNull { it.hasQualifiedName(MixinConstants.MixinExtras.DEFINITION) }

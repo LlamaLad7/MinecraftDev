@@ -24,6 +24,7 @@ import com.demonwav.mcdev.platform.mixin.expression.MESourceMatchContext
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEArguments
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEName
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.impl.MEExpressionImpl
+import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.QualifiedMember
 import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethodCallExpression
@@ -38,8 +39,15 @@ abstract class MESuperCallExpressionImplMixin(node: ASTNode) : MEExpressionImpl(
             return false
         }
 
-        if (memberName?.matchesJavaExpr(java, context) != true) {
-            return false
+        val memberName = this.memberName ?: return false
+        if (!memberName.isWildcard) {
+            val method = java.resolveMethod() ?: return false
+            val methodId = memberName.text
+            val qualifier =
+                QualifiedMember.resolveQualifier(java.methodExpression) ?: method.containingClass ?: return false
+            if (context.getMethods(methodId).none { it.matchMethod(method, qualifier) }) {
+                return false
+            }
         }
 
         return arguments?.matchesJava(java.argumentList, context) == true

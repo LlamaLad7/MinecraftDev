@@ -20,62 +20,17 @@
 
 package com.demonwav.mcdev.platform.mixin.expression.psi.mixins.impl
 
-import com.demonwav.mcdev.platform.mixin.expression.MESourceMatchContext
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEExpressionTypes
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEName
 import com.demonwav.mcdev.platform.mixin.expression.psi.mixins.MENameMixin
 import com.demonwav.mcdev.platform.mixin.expression.reference.MEDefinitionReference
-import com.demonwav.mcdev.platform.mixin.util.LocalVariables
 import com.intellij.extapi.psi.ASTWrapperPsiElement
 import com.intellij.lang.ASTNode
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiField
 import com.intellij.psi.PsiReference
-import com.intellij.psi.PsiReferenceExpression
-import com.intellij.psi.PsiVariable
-import com.intellij.psi.util.PsiUtil
 
 abstract class MENameImplMixin(node: ASTNode) : ASTWrapperPsiElement(node), MENameMixin {
     override val isWildcard get() = node.firstChildNode.elementType == MEExpressionTypes.TOKEN_WILDCARD
     override val identifierElement get() = if (isWildcard) null else firstChild
-
-    override fun matchesJavaExpr(javaExpr: PsiElement, context: MESourceMatchContext): Boolean {
-        if (isWildcard) {
-            return true
-        }
-
-        // match against elements targeted with @At
-        val name = text
-        if (javaExpr in context.getTargetedElements(name)) {
-            return true
-        }
-
-        // match against local variables
-        if (javaExpr !is PsiReferenceExpression) {
-            return false
-        }
-        val variable = javaExpr.resolve() as? PsiVariable ?: return false
-        if (variable is PsiField) {
-            return false
-        }
-
-        val sourceArgs by lazy {
-            LocalVariables.guessLocalsAt(javaExpr, true, !PsiUtil.isAccessedForWriting(javaExpr))
-        }
-        val sourceVariables by lazy {
-            LocalVariables.guessLocalsAt(javaExpr, false, !PsiUtil.isAccessedForWriting(javaExpr))
-        }
-        for (localInfo in context.getLocalInfos(name)) {
-            val sourceLocals = if (localInfo.argsOnly) sourceArgs else sourceVariables
-            for (local in localInfo.matchSourceLocals(sourceLocals)) {
-                if (local.variable == variable) {
-                    return true
-                }
-            }
-        }
-
-        return false
-    }
 
     override fun getReference(): PsiReference? {
         if (isWildcard) {

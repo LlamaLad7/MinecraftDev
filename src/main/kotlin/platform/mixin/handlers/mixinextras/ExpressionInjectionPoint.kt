@@ -35,6 +35,8 @@ import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.NavigationVisit
 import com.demonwav.mcdev.platform.mixin.reference.MixinSelector
 import com.demonwav.mcdev.platform.mixin.util.LocalInfo
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
+import com.demonwav.mcdev.util.MemberReference
+import com.demonwav.mcdev.util.computeStringArray
 import com.demonwav.mcdev.util.constantStringValue
 import com.demonwav.mcdev.util.descriptor
 import com.demonwav.mcdev.util.findAnnotations
@@ -48,7 +50,6 @@ import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.RecursionManager
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
@@ -63,8 +64,6 @@ import java.util.IdentityHashMap
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
-
-private typealias SourceMatchContextFactory = (ClassNode, MethodNode) -> MESourceMatchContext
 
 class ExpressionInjectionPoint : InjectionPoint<PsiElement>() {
     override fun onCompleted(editor: Editor, reference: PsiLiteral) {
@@ -107,15 +106,15 @@ class ExpressionInjectionPoint : InjectionPoint<PsiElement>() {
         val parsedExprs = parseExpressions(project, modifierList, atId)
         parsedExprs.ifEmpty { return null }
 
-        val sourceMatchContextFactory = createSourceMatchContextFactory(project, modifierList)
+        val sourceMatchContext = createSourceMatchContext(project, modifierList)
 
-        return MyNavigationVisitor(parsedExprs.map { it.second }, sourceMatchContextFactory)
+        return MyNavigationVisitor(parsedExprs.map { it.second }, sourceMatchContext)
     }
 
-    private fun createSourceMatchContextFactory(
+    private fun createSourceMatchContext(
         project: Project,
         modifierList: PsiModifierList
-    ): SourceMatchContextFactory = { targetClass, targetMethod ->
+    ): MESourceMatchContext {
         val matchContext = MESourceMatchContext(project)
 
         for (annotation in modifierList.annotations) {
@@ -125,14 +124,16 @@ class ExpressionInjectionPoint : InjectionPoint<PsiElement>() {
 
             val definitionId = annotation.findDeclaredAttributeValue("id")?.constantStringValue ?: ""
 
-            val ats = annotation.findDeclaredAttributeValue("at")?.findAnnotations() ?: emptyList()
-            for (at in ats) {
-                val matches = RecursionManager.doPreventingRecursion(at, true) {
-                    AtResolver(at, targetClass, targetMethod).resolveNavigationTargets()
-                } ?: continue
-                for (target in matches) {
-                    matchContext.addTargetedElement(definitionId, target)
-                }
+            val fields = annotation.findDeclaredAttributeValue("field")?.computeStringArray() ?: emptyList()
+            for (field in fields) {
+                val fieldRef = MemberReference.parse(field) ?: continue
+                matchContext.addField(definitionId, fieldRef)
+            }
+
+            val methods = annotation.findDeclaredAttributeValue("method")?.computeStringArray() ?: emptyList()
+            for (method in methods) {
+                val methodRef = MemberReference.parse(method) ?: continue
+                matchContext.addMethod(definitionId, methodRef)
             }
 
             val types = annotation.findDeclaredAttributeValue("type")?.resolveTypeArray() ?: emptyList()
@@ -148,7 +149,7 @@ class ExpressionInjectionPoint : InjectionPoint<PsiElement>() {
             }
         }
 
-        matchContext
+        return matchContext
     }
 
     override fun doCreateCollectVisitor(
@@ -256,14 +257,8 @@ class ExpressionInjectionPoint : InjectionPoint<PsiElement>() {
 
     private class MyNavigationVisitor(
         private val statements: List<MEStatement>,
-        private val matchContextFactory: SourceMatchContextFactory
+        private val matchContext: MESourceMatchContext
     ) : NavigationVisitor() {
-        private lateinit var matchContext: MESourceMatchContext
-
-        override fun configureBytecodeTarget(classNode: ClassNode, methodNode: MethodNode) {
-            matchContext = matchContextFactory(classNode, methodNode)
-        }
-
         override fun visitElement(element: PsiElement) {
             for (statement in statements) {
                 if (statement.matchesJava(element, matchContext)) {
