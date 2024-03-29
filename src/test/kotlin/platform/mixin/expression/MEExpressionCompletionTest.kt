@@ -199,7 +199,7 @@ class MEExpressionCompletionTest : BaseMixinTest() {
             
             @Mixin(MEExpressionTestData.class)
             class MEExpressionCompletionTest {
-                @Definition(id = "acceptInaccessibleType", at = @At(value = "INVOKE", target = "Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData;acceptInaccessibleType(Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData${'$'}InaccessibleType;)V"))
+                @Definition(id = "acceptInaccessibleType", method = "Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData;acceptInaccessibleType(Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData${'$'}InaccessibleType;)V")
                 @Expression("acceptInaccessibleType(<caret>)")
                 @Inject(method = "complexFunction", at = @At("MIXINEXTRAS:EXPRESSION"))
             }
@@ -217,7 +217,7 @@ class MEExpressionCompletionTest : BaseMixinTest() {
             
             @Mixin(MEExpressionTestData.class)
             class MEExpressionCompletionTest {
-                @Definition(id = "acceptInaccessibleType", at = @At(value = "INVOKE", target = "Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData;acceptInaccessibleType(Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData${'$'}InaccessibleType;)V"))
+                @Definition(id = "acceptInaccessibleType", method = "Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData;acceptInaccessibleType(Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData${'$'}InaccessibleType;)V")
                 @Definition(id = "varOfInaccessibleType", local = @Local(ordinal = 0))
                 @Expression("acceptInaccessibleType(varOfInaccessibleType)")
                 @Inject(method = "complexFunction", at = @At("MIXINEXTRAS:EXPRESSION"))
@@ -258,7 +258,7 @@ class MEExpressionCompletionTest : BaseMixinTest() {
             
             @Mixin(MEExpressionTestData.class)
             class MEExpressionCompletionTest {
-                @Definition(id = "out", at = @At(value = "FIELD", target = "Ljava/lang/System;out:Ljava/io/PrintStream;"))
+                @Definition(id = "out", field = "Ljava/lang/System;out:Ljava/io/PrintStream;")
                 @Expression("out")
                 @Inject(method = "complexFunction", at = @At("MIXINEXTRAS:EXPRESSION"))
             }
@@ -298,7 +298,7 @@ class MEExpressionCompletionTest : BaseMixinTest() {
             
             @Mixin(MEExpressionTestData.class)
             class MEExpressionCompletionTest {
-                @Definition(id = "acceptInaccessibleType", at = @At(value = "INVOKE", target = "Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData;acceptInaccessibleType(Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData${'$'}InaccessibleType;)V"))
+                @Definition(id = "acceptInaccessibleType", method = "Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData;acceptInaccessibleType(Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData${'$'}InaccessibleType;)V")
                 @Expression("acceptInaccessibleType(<caret>)")
                 @Inject(method = "complexFunction", at = @At("MIXINEXTRAS:EXPRESSION"))
             }
@@ -338,7 +338,7 @@ class MEExpressionCompletionTest : BaseMixinTest() {
             
             @Mixin(MEExpressionTestData.class)
             class MEExpressionCompletionTest {
-                @Definition(id = "noArgMethod", at = @At(value = "INVOKE", target = "Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData;noArgMethod()V"))
+                @Definition(id = "noArgMethod", method = "Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData;noArgMethod()V")
                 @Expression("noArgMethod()<caret>")
                 @Inject(method = "complexFunction", at = @At("MIXINEXTRAS:EXPRESSION"))
             }
@@ -514,7 +514,7 @@ class MEExpressionCompletionTest : BaseMixinTest() {
             @Mixin(MEExpressionTestData.class)
             class MEExpressionCompletionTest {
                 @Definition(id = "Integer", type = Integer.class)
-                @Definition(id = "synchedData", at = @At(value = "FIELD", target = "Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData;synchedData:Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData${'$'}SynchedDataManager;"))
+                @Definition(id = "synchedData", field = "Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData;synchedData:Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData${'$'}SynchedDataManager;")
                 @Expression("(Integer) this.synchedData.<caret>")
                 @Inject(method = "getStingerCount", at = @At("MIXINEXTRAS:EXPRESSION"))
             }
