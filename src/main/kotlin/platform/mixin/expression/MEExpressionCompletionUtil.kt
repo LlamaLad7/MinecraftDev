@@ -228,7 +228,6 @@ object MEExpressionCompletionUtil {
             handler.resolveTarget(handlerAnnotation, targetClass)
                 .filterIsInstance<MethodTargetMember>()
                 .flatMap { methodTarget ->
-
                     getCompletionVariantsFromBytecode(
                         project,
                         mixinClass,
@@ -251,6 +250,30 @@ object MEExpressionCompletionUtil {
         targetMethod: MethodNode,
         poolFactory: IdentifierPoolFactory,
     ): List<LookupElement> {
+        /*
+         * MixinExtras isn't designed to match against incomplete expressions, which is what we need to do to produce
+         * completion options. The only support there is, is to match incomplete parameter lists and so on
+         * ("list inputs" to expressions). What follows is a kind of DIY match where we figure out different options
+         * for what the user might be trying to complete and hand it to MixinExtras to do the actual matching. Note that
+         * IntelliJ already inserts an identifier at the caret position to make auto-completion easier.
+         *
+         * We have four classes of problems to solve here:
+         * 1. There may already be a capture in the expression causing MixinExtras to return the wrong instructions.
+         * 2. There may be unresolved identifiers in the expression, causing MixinExtras to match nothing, which isn't
+         *    ideal.
+         * 3. "this.<caret>" expands to a field access, but the user may be trying to complete a method call (and other
+         *    similar situations).
+         * 4. What the user is typing may form only a subexpression of a larger expression. For example, with
+         *    "foo(<caret>)", the user may actually be trying to type the expression "foo(x + y) + z". That is, "x",
+         *    which is where the caret is, may not be a direct subexpression to the "foo" call expression, which itself
+         *    may not be a direct subexpression of its parent.
+         *
+         * Throughout this process, we have to keep careful track of where the caret is, because:
+         * 1. As we make changes to the expression to the left of the caret, the caret may shift.
+         * 2. As we make copies of the element, or entirely new elements, that new element's textOffset may be different
+         *    from the original one.
+         */
+
         if (DEBUG_COMPLETION) {
             println("======")
             println(targetMethod.textify())
@@ -265,16 +288,28 @@ object MEExpressionCompletionUtil {
         val pool = poolFactory(targetMethod)
         val flows = MEExpressionMatchUtil.getFlowMap(project, targetClass, targetMethod) ?: return emptyList()
 
+        // Removing all explicit captures from the expression solves problem 1 (see comment above).
         removeExplicitCaptures(statement, cursorOffset)
-        replaceUnknownNamesWithWildcards(project, statement, cursorOffset, pool)
+        // Replacing unresolved names with wildcards solves problem 2 (see comment above).
+        replaceUnresolvedNamesWithWildcards(project, statement, cursorOffset, pool)
 
         val elementAtCursor = statement.findElementAt(cursorOffset.toInt()) ?: return emptyList()
 
+        /*
+         * To solve problem 4 (see comment above), we first find matches for the top level statement, ignoring the
+         * subexpression that the caret is on. Then we iterate down into the subexpression that contains the caret and
+         * match that against all the statement's input flows in the same way as we matched the statement against all
+         * the instructions in the target method. Then we keep iterating until we reach the identifier the caret is on.
+         */
+
+        // Replace the subexpression the caret is on with a wildcard expression, so MixinExtras ignores it.
         val wildcardReplacedStatement = statement.copy() as MEStatement
         var cursorOffsetInCopyFile =
             cursorOffset.toInt() - statement.textRange.startOffset + wildcardReplacedStatement.textRange.startOffset
         replaceCursorInputWithWildcard(project, wildcardReplacedStatement, cursorOffsetInCopyFile)
 
+        // Iterate through possible "variants" of the statement that the user may be trying to complete; it doesn't
+        // matter if they don't parse, then we just skip them. This solves problem 3 (see comment above).
         var matchingFlows = mutableListOf<FlowValue>()
         for (statementToMatch in getStatementVariants(project.meExpressionElementFactory, wildcardReplacedStatement)) {
             if (DEBUG_COMPLETION) {
@@ -301,9 +336,11 @@ object MEExpressionCompletionUtil {
             return emptyList()
         }
 
+        // Iterate through subexpressions until we reach the identifier the caret is on
         var roundNumber = 0
         var subExpr: MEMatchableElement = statement
         while (true) {
+            // Replace the subexpression the caret is on with a wildcard expression, so MixinExtras ignores it.
             val inputExprOnCursor = subExpr.getInputExprs().firstOrNull { it.textRange.contains(cursorOffset.toInt()) }
                 ?: break
             val wildcardReplacedExpr = inputExprOnCursor.copy() as MEExpression
@@ -323,6 +360,8 @@ object MEExpressionCompletionUtil {
 
             replaceCursorInputWithWildcard(project, wildcardReplacedExpr, cursorOffsetInCopyFile)
 
+            // Iterate through the possible "varaints" of the expression in the same way as we did for the statement
+            // above. This solves problem 3 (see comment above).
             val newMatchingFlows = mutableSetOf<FlowValue>()
             for (exprToMatch in getExpressionVariants(project.meExpressionElementFactory, wildcardReplacedExpr)) {
                 if (DEBUG_COMPLETION) {
@@ -376,6 +415,9 @@ object MEExpressionCompletionUtil {
             }
         }
 
+        // Try to decide if we should be completing types or normal expressions.
+        // Not as easy as it sounds (think incomplete casts looking like parenthesized expressions).
+        // Note that it's possible to complete types and expressions at the same time.
         val isInsideMeType = PsiTreeUtil.getParentOfType(
             elementAtCursor,
             METype::class.java,
@@ -423,18 +465,18 @@ object MEExpressionCompletionUtil {
         return eliminableResults.groupBy { it.uniquenessKey }.values.map { it.max().lookupElement }
     }
 
-    private fun replaceUnknownNamesWithWildcards(
+    private fun replaceUnresolvedNamesWithWildcards(
         project: Project,
         statement: MEStatement,
         cursorOffset: MutableInt,
         pool: IdentifierPool,
     ) {
-        val unknownNames = mutableListOf<MEName>()
+        val unresolvedNames = mutableListOf<MEName>()
         statement.accept(object : MERecursiveWalkingVisitor() {
             override fun visitType(o: METype) {
                 val name = o.meName
                 if (!name.isWildcard && !pool.typeExists(name.text)) {
-                    unknownNames += name
+                    unresolvedNames += name
                 }
             }
 
@@ -443,11 +485,11 @@ object MEExpressionCompletionUtil {
                 if (!name.isWildcard) {
                     if (METypeUtil.isExpressionDirectlyInTypePosition(o)) {
                         if (!pool.typeExists(name.text)) {
-                            unknownNames += name
+                            unresolvedNames += name
                         }
                     } else {
                         if (!pool.memberExists(name.text)) {
-                            unknownNames += name
+                            unresolvedNames += name
                         }
                     }
                 }
@@ -456,7 +498,7 @@ object MEExpressionCompletionUtil {
             override fun visitSuperCallExpression(o: MESuperCallExpression) {
                 val name = o.memberName
                 if (name != null && !name.isWildcard && !pool.memberExists(name.text)) {
-                    unknownNames += name
+                    unresolvedNames += name
                 }
                 super.visitSuperCallExpression(o)
             }
@@ -464,7 +506,7 @@ object MEExpressionCompletionUtil {
             override fun visitMethodCallExpression(o: MEMethodCallExpression) {
                 val name = o.memberName
                 if (!name.isWildcard && !pool.memberExists(name.text)) {
-                    unknownNames += name
+                    unresolvedNames += name
                 }
                 super.visitMethodCallExpression(o)
             }
@@ -472,7 +514,7 @@ object MEExpressionCompletionUtil {
             override fun visitStaticMethodCallExpression(o: MEStaticMethodCallExpression) {
                 val name = o.memberName
                 if (!name.isWildcard && !pool.memberExists(name.text)) {
-                    unknownNames += name
+                    unresolvedNames += name
                 }
                 super.visitStaticMethodCallExpression(o)
             }
@@ -480,7 +522,7 @@ object MEExpressionCompletionUtil {
             override fun visitMemberAccessExpression(o: MEMemberAccessExpression) {
                 val name = o.memberName
                 if (!name.isWildcard && !pool.memberExists(name.text)) {
-                    unknownNames += name
+                    unresolvedNames += name
                 }
                 super.visitMemberAccessExpression(o)
             }
@@ -488,19 +530,19 @@ object MEExpressionCompletionUtil {
             override fun visitNewExpression(o: MENewExpression) {
                 val name = o.type
                 if (name != null && !name.isWildcard && !pool.typeExists(name.text)) {
-                    unknownNames += name
+                    unresolvedNames += name
                 }
                 super.visitNewExpression(o)
             }
         })
 
-        for (unknownName in unknownNames) {
-            val startOffset = unknownName.textRange.startOffset
+        for (unresolvedName in unresolvedNames) {
+            val startOffset = unresolvedName.textRange.startOffset
             if (cursorOffset.toInt() > startOffset) {
-                cursorOffset.setValue(cursorOffset.toInt() - unknownName.textLength + 1)
+                cursorOffset.setValue(cursorOffset.toInt() - unresolvedName.textLength + 1)
             }
 
-            unknownName.replace(project.meExpressionElementFactory.createName("?"))
+            unresolvedName.replace(project.meExpressionElementFactory.createName("?"))
         }
     }
 
