@@ -175,7 +175,7 @@ object MEExpressionMatchUtil {
 
             val locals = annotation.findDeclaredAttributeValue("local")?.findAnnotations() ?: emptyList()
             for (localAnnotation in locals) {
-                val localType = annotation.findDeclaredAttributeValue("type")?.resolveType()
+                val localType = localAnnotation.findDeclaredAttributeValue("type")?.resolveType()
                 val localInfo = LocalInfo.fromAnnotation(localType, localAnnotation)
                 pool.addMember(definitionId) { insn ->
                     if (insn !is VarInsnNode) {
