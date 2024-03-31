@@ -42,6 +42,7 @@ import com.demonwav.mcdev.util.descriptor
 import com.demonwav.mcdev.util.findAnnotations
 import com.demonwav.mcdev.util.findContainingModifierList
 import com.demonwav.mcdev.util.findModule
+import com.demonwav.mcdev.util.findMultiInjectionHost
 import com.demonwav.mcdev.util.ifEmpty
 import com.demonwav.mcdev.util.parseArray
 import com.demonwav.mcdev.util.resolveType
@@ -189,10 +190,13 @@ class ExpressionInjectionPoint : InjectionPoint<PsiElement>() {
                     ?: return@flatMap emptySequence<Pair<Expression, MEStatement>>()
                 expressionElements.asSequence().mapNotNull { expressionElement ->
                     val text = expressionElement.constantStringValue ?: return@mapNotNull null
-                    // TODO: get the right statement from the injected file
                     val rootStatementPsi = InjectedLanguageManager.getInstance(project)
                         .getInjectedPsiFiles(expressionElement)?.firstOrNull()
-                        ?.let { (it.first as? MEExpressionFile)?.statements?.singleOrNull() }
+                        ?.let {
+                            (it.first as? MEExpressionFile)?.statements?.firstOrNull { stmt ->
+                                stmt.findMultiInjectionHost()?.parentOfType<PsiAnnotation>() == exprAnnotation
+                            }
+                        }
                         ?: project.meExpressionElementFactory.createFile("do {$text}").statements.singleOrNull()
                         ?: project.meExpressionElementFactory.createStatement("empty")
                     MEExpressionMatchUtil.createExpression(text)?.let { it to rootStatementPsi }
