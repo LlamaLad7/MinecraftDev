@@ -70,6 +70,24 @@ class MEExpressionCompletionContributor : CompletionContributor() {
         )
         extend(
             CompletionType.BASIC,
+            MEExpressionCompletionUtil.STRING_LITERAL_PLACE,
+            object : CompletionProvider<CompletionParameters>() {
+                override fun addCompletions(
+                    parameters: CompletionParameters,
+                    context: ProcessingContext,
+                    result: CompletionResultSet
+                ) {
+                    result.addAllElements(
+                        MEExpressionCompletionUtil.getStringCompletions(
+                            parameters.originalFile.project,
+                            parameters.position
+                        )
+                    )
+                }
+            }
+        )
+        extend(
+            CompletionType.BASIC,
             MEExpressionCompletionUtil.FROM_BYTECODE_PLACE,
             object : CompletionProvider<CompletionParameters>() {
                 override fun addCompletions(

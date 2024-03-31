@@ -180,6 +180,9 @@ object MEExpressionCompletionUtil {
         NORMAL_ELEMENT,
         AFTER_END_EXPRESSION_PATTERN,
     )
+    val STRING_LITERAL_PLACE = PlatformPatterns.psiElement().withElementType(
+        TokenSet.create(MEExpressionTypes.TOKEN_STRING, MEExpressionTypes.TOKEN_STRING_TERMINATOR)
+    )
     val FROM_BYTECODE_PLACE = PlatformPatterns.psiElement()
         .inside(MEStatement::class.java)
         .andNot(PlatformPatterns.psiElement().inside(MELitExpression::class.java))
@@ -198,6 +201,32 @@ object MEExpressionCompletionUtil {
             }
             val classOffset = CharArrayUtil.shiftForward(chars, dotOffset + 1, " \n\t")
             return !CharArrayUtil.regionMatches(chars, classOffset, "class")
+        }
+    }
+
+    fun getStringCompletions(project: Project, contextElement: PsiElement): List<LookupElement> {
+        val expressionAnnotation = contextElement.findMultiInjectionHost()?.parentOfType<PsiAnnotation>()
+            ?: return emptyList()
+        if (!expressionAnnotation.hasQualifiedName(MixinConstants.MixinExtras.EXPRESSION)) {
+            return emptyList()
+        }
+
+        val modifierList = expressionAnnotation.findContainingModifierList() ?: return emptyList()
+
+        val (handler, handlerAnnotation) = modifierList.annotations.mapFirstNotNull { annotation ->
+            val qName = annotation.qualifiedName ?: return@mapFirstNotNull null
+            val handler = MixinAnnotationHandler.forMixinAnnotation(qName, project) ?: return@mapFirstNotNull null
+            handler to annotation
+        } ?: return emptyList()
+
+        return handler.resolveTarget(handlerAnnotation).flatMap {
+            (it as? MethodTargetMember)?.classAndMethod?.method?.instructions?.mapNotNull { insn ->
+                if (insn is LdcInsnNode && insn.cst is String) {
+                    LookupElementBuilder.create(insn.cst)
+                } else {
+                    null
+                }
+            } ?: emptyList()
         }
     }
 
@@ -641,7 +670,6 @@ object MEExpressionCompletionUtil {
                             )
                         }
                     }
-                    // TODO: string literals?
                 }
             }
             is VarInsnNode -> return createLocalVariableLookups(
