@@ -25,7 +25,6 @@ import com.demonwav.mcdev.asset.PlatformAssets
 import com.demonwav.mcdev.creator.buildsystem.BuildSystemPropertiesStep
 import com.demonwav.mcdev.creator.platformtype.PlatformTypeStep
 import com.demonwav.mcdev.creator.step.NewProjectWizardChainStep.Companion.nextStep
-import com.demonwav.mcdev.creator.step.TemplateOutdatedStep
 import com.intellij.ide.projectWizard.ProjectSettingsStep
 import com.intellij.ide.util.projectWizard.WizardContext
 import com.intellij.ide.wizard.AbstractNewProjectWizardBuilder
@@ -58,7 +57,6 @@ class MinecraftModuleBuilder : AbstractNewProjectWizardBuilder() {
         .nextStep(PlatformTypeStep::create)
         .nextStep(::BuildSystemPropertiesStep)
         .nextStep(::ProjectSetupFinalizerWizardStep)
-        .nextStep(::TemplateOutdatedStep)
 
     override fun getIgnoredSteps() = listOf(ProjectSettingsStep::class.java)
 }
