@@ -26,6 +26,7 @@ import com.demonwav.mcdev.platform.mixin.expression.gen.psi.impl.MEStatementImpl
 import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiThrowStatement
+import com.intellij.psi.util.PsiUtil
 
 abstract class METhrowStatementImplMixin(node: ASTNode) : MEStatementImpl(node) {
     override fun matchesJava(java: PsiElement, context: MESourceMatchContext): Boolean {
@@ -33,7 +34,7 @@ abstract class METhrowStatementImplMixin(node: ASTNode) : MEStatementImpl(node) 
             return false
         }
 
-        val javaException = java.exception ?: return false
+        val javaException = PsiUtil.skipParenthesizedExprDown(java.exception) ?: return false
         return valueExpr?.matchesJava(javaException, context) == true
     }
 

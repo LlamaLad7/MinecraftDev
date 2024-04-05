@@ -33,6 +33,7 @@ import com.intellij.psi.PsiInstanceOfExpression
 import com.intellij.psi.PsiTypeCastExpression
 import com.intellij.psi.PsiTypeTestPattern
 import com.intellij.psi.util.JavaPsiPatternUtil
+import com.intellij.psi.util.PsiUtil
 
 abstract class MECastExpressionImplMixin(node: ASTNode) : MEExpressionImpl(node), MECastExpressionMixin {
     override val castType get() = castTypeExpr?.let(METypeUtil::convertExpressionToType)
@@ -44,7 +45,7 @@ abstract class MECastExpressionImplMixin(node: ASTNode) : MEExpressionImpl(node)
         return when (java) {
             is PsiTypeCastExpression -> {
                 val javaType = java.castType?.type ?: return false
-                val javaOperand = java.operand ?: return false
+                val javaOperand = PsiUtil.skipParenthesizedExprDown(java.operand) ?: return false
                 castType?.matchesJava(javaType, context) == true &&
                     castedExpr?.matchesJava(javaOperand, context) == true
             }

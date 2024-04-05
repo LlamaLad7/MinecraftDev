@@ -46,8 +46,8 @@ abstract class MEArrayAccessExpressionImplMixin(node: ASTNode) : MEExpressionImp
             return false
         }
 
-        val javaArray = java.arrayExpression
-        val javaIndex = java.indexExpression ?: return false
+        val javaArray = PsiUtil.skipParenthesizedExprDown(java.arrayExpression) ?: return false
+        val javaIndex = PsiUtil.skipParenthesizedExprDown(java.indexExpression) ?: return false
         return arrayExpr.matchesJava(javaArray, context) && indexExpr?.matchesJava(javaIndex, context) == true
     }
 

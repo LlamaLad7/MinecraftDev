@@ -34,6 +34,7 @@ import com.intellij.psi.PsiInstanceOfExpression
 import com.intellij.psi.PsiTypeTestPattern
 import com.intellij.psi.tree.TokenSet
 import com.intellij.psi.util.JavaPsiPatternUtil
+import com.intellij.psi.util.PsiUtil
 
 abstract class MEBinaryExpressionImplMixin(node: ASTNode) : MEExpressionImpl(node), MEBinaryExpressionMixin {
     override val operator get() = node.findChildByType(operatorTokens)!!.elementType
@@ -83,8 +84,8 @@ abstract class MEBinaryExpressionImplMixin(node: ASTNode) : MEExpressionImpl(nod
                 return false
             }
 
-            val javaLeft = java.lOperand
-            val javaRight = java.rOperand ?: return false
+            val javaLeft = PsiUtil.skipParenthesizedExprDown(java.lOperand) ?: return false
+            val javaRight = PsiUtil.skipParenthesizedExprDown(java.rOperand) ?: return false
             return leftExpr.matchesJava(javaLeft, context) && rightExpr?.matchesJava(javaRight, context) == true
         }
     }
