@@ -66,6 +66,10 @@ class MEExpressionColorSettingsPage : ColorSettingsPage {
                 MEExpressionSyntaxHighlighter.DOT
             ),
             AttributesDescriptor(
+                MCDevBundle.pointer("mixinextras.expression.lang.highlighting.method_reference.display_name"),
+                MEExpressionSyntaxHighlighter.METHOD_REFERENCE
+            ),
+            AttributesDescriptor(
                 MCDevBundle.pointer("mixinextras.expression.lang.highlighting.comma.display_name"),
                 MEExpressionSyntaxHighlighter.COMMA
             ),
@@ -137,6 +141,7 @@ class MEExpressionColorSettingsPage : ColorSettingsPage {
             <class_name>ClassName</class_name>.class,
             <variable>foo</variable>.<member_name>bar</member_name>,
             new <primitive_type>int</primitive_type>[] { 1, 2, 3 },
+            <variable>method</variable>::<call>reference</call>,
             'a bad character: ' # other_identifier
         )[0]
     """.trimIndent()

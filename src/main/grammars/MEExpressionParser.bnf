@@ -120,6 +120,9 @@ expression ::= capturingExpression |
     castExpression |
     parenthesizedExpression |
     methodCallExpression |
+    boundMethodReferenceExpression |
+    freeMethodReferenceExpression |
+    constructorReferenceExpression |
     arrayAccessExpression |
     memberAccessExpression |
     newExpression |
@@ -167,6 +170,31 @@ staticMethodCallExpression ::= name TOKEN_LEFT_PAREN arguments rightParen {
     mixin = "com.demonwav.mcdev.platform.mixin.expression.psi.mixins.impl.MEStaticMethodCallExpressionImplMixin"
     methods = [
         memberName = "name"
+    ]
+}
+
+boundMethodReferenceExpression ::= expression !(TOKEN_METHOD_REF TOKEN_NEW) TOKEN_METHOD_REF name {
+    pin = 3
+    mixin = "com.demonwav.mcdev.platform.mixin.expression.psi.mixins.impl.MEBoundReferenceExpressionImplMixin"
+    methods = [
+        receiverExpr = "expression"
+        memberName = "name"
+    ]
+}
+
+freeMethodReferenceExpression ::= TOKEN_METHOD_REF name {
+    pin = 1
+    mixin = "com.demonwav.mcdev.platform.mixin.expression.psi.mixins.impl.MEFreeMethodReferenceExpressionImplMixin"
+    methods = [
+        memberName = "name"
+    ]
+}
+
+constructorReferenceExpression ::= type TOKEN_METHOD_REF TOKEN_NEW {
+    pin = 3
+    mixin = "com.demonwav.mcdev.platform.mixin.expression.psi.mixins.impl.MEConstructorReferenceExpressionImplMixin"
+    methods = [
+        className = "type"
     ]
 }
 

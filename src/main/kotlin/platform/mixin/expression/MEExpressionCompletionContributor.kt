@@ -70,6 +70,13 @@ class MEExpressionCompletionContributor : CompletionContributor() {
         )
         extend(
             CompletionType.BASIC,
+            MEExpressionCompletionUtil.METHOD_REFERENCE_PLACE,
+            KeywordCompletionProvider(
+                Keyword("new")
+            )
+        )
+        extend(
+            CompletionType.BASIC,
             MEExpressionCompletionUtil.STRING_LITERAL_PLACE,
             object : CompletionProvider<CompletionParameters>() {
                 override fun addCompletions(

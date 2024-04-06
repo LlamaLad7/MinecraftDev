@@ -80,6 +80,7 @@ BITWISE_AND = &
 BITWISE_XOR = "^"
 BITWISE_OR = "|"
 ASSIGN = =
+METHOD_REF = ::
 
 STRING_TERMINATOR = '
 STRING_ESCAPE = \\'|\\\\
@@ -133,6 +134,7 @@ STRING_ESCAPE = \\'|\\\\
     {BITWISE_XOR} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_BITWISE_XOR; }
     {BITWISE_OR} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_BITWISE_OR; }
     {ASSIGN} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_ASSIGN; }
+    {METHOD_REF} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_METHOD_REF; }
     {STRING_TERMINATOR} { yybegin(STRING); return MEExpressionTypes.TOKEN_STRING_TERMINATOR; }
 }
 

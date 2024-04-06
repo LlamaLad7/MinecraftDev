@@ -20,6 +20,8 @@
 
 package com.demonwav.mcdev.mixintestdata.meExpression;
 
+import java.util.stream.Stream;
+
 public class MEExpressionTestData {
     private static final SynchedData<Integer> STINGER_COUNT = null;
     private SynchedDataManager synchedData;
@@ -38,6 +40,8 @@ public class MEExpressionTestData {
 
         String[] strings1 = new String[] { local1, local2 };
         String[] strings2 = new String[one];
+
+        Stream.empty().map(this::nonStaticMapper).map(MEExpressionTestData::staticMapper).map(ConstructedByMethodReference::new);
     }
 
     private static void acceptInaccessibleType(InaccessibleType type) {
@@ -48,6 +52,14 @@ public class MEExpressionTestData {
 
     public int getStingerCount() {
         return (Integer) this.synchedData.get(STINGER_COUNT);
+    }
+
+    private Object nonStaticMapper(Object arg) {
+        return arg;
+    }
+
+    private static Object staticMapper(Object arg) {
+        return arg;
     }
 
     private static class InaccessibleType {
@@ -61,5 +73,9 @@ public class MEExpressionTestData {
     }
 
     public static class SynchedData<V> {
+    }
+
+    public static class ConstructedByMethodReference {
+        public ConstructedByMethodReference(Object bar) {}
     }
 }

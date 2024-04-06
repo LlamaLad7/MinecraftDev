@@ -571,4 +571,73 @@ class MEExpressionCompletionTest : BaseMixinTest() {
             """.trimIndent()
         )
     }
+
+    @Test
+    @DisplayName("Static Method Reference Test")
+    fun staticMethodReferenceTest() {
+        assertLookupAppears(
+            "staticMapper",
+            """
+            package test;
+            
+            import com.demonwav.mcdev.mixintestdata.meExpression.MEExpressionTestData;
+            import com.llamalad7.mixinextras.expression.Expression;
+            import org.spongepowered.asm.mixin.Mixin;
+            import org.spongepowered.asm.mixin.injection.At;
+            import org.spongepowered.asm.mixin.injection.Inject;
+            
+            @Mixin(MEExpressionTestData.class)
+            class MEExpressionCompletionTest {
+                @Expression("::<caret>")
+                @Inject(method = "complexFunction", at = @At("MIXINEXTRAS:EXPRESSION"))
+            }
+            """.trimIndent()
+        )
+    }
+
+    @Test
+    @DisplayName("Non Static Method Reference Test")
+    fun nonStaticMethodReferenceTest() {
+        assertLookupAppears(
+            "nonStaticMapper",
+            """
+            package test;
+            
+            import com.demonwav.mcdev.mixintestdata.meExpression.MEExpressionTestData;
+            import com.llamalad7.mixinextras.expression.Expression;
+            import org.spongepowered.asm.mixin.Mixin;
+            import org.spongepowered.asm.mixin.injection.At;
+            import org.spongepowered.asm.mixin.injection.Inject;
+            
+            @Mixin(MEExpressionTestData.class)
+            class MEExpressionCompletionTest {
+                @Expression("this::<caret>")
+                @Inject(method = "complexFunction", at = @At("MIXINEXTRAS:EXPRESSION"))
+            }
+            """.trimIndent()
+        )
+    }
+
+    @Test
+    @DisplayName("Constructor Method Reference Test")
+    fun constructorMethodReferenceTest() {
+        assertLookupAppears(
+            "ConstructedByMethodReference",
+            """
+            package test;
+            
+            import com.demonwav.mcdev.mixintestdata.meExpression.MEExpressionTestData;
+            import com.llamalad7.mixinextras.expression.Expression;
+            import org.spongepowered.asm.mixin.Mixin;
+            import org.spongepowered.asm.mixin.injection.At;
+            import org.spongepowered.asm.mixin.injection.Inject;
+            
+            @Mixin(MEExpressionTestData.class)
+            class MEExpressionCompletionTest {
+                @Expression("<caret>")
+                @Inject(method = "complexFunction", at = @At("MIXINEXTRAS:EXPRESSION"))
+            }
+            """.trimIndent()
+        )
+    }
 }

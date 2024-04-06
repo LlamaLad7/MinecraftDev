@@ -24,12 +24,14 @@ import com.demonwav.mcdev.MinecraftProjectSettings
 import com.demonwav.mcdev.platform.mixin.expression.MEExpressionMatchUtil.insnOrNull
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEArrayAccessExpression
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEAssignStatement
+import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEBoundMethodReferenceExpression
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MECapturingExpression
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MECastExpression
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEClassConstantExpression
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEExpression
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEExpressionStatement
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEExpressionTypes
+import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEFreeMethodReferenceExpression
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MELitExpression
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEMemberAccessExpression
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEMethodCallExpression
@@ -116,6 +118,7 @@ import com.llamalad7.mixinextras.expression.impl.flow.FlowValue
 import com.llamalad7.mixinextras.expression.impl.pool.IdentifierPool
 import com.llamalad7.mixinextras.utils.Decorations
 import org.apache.commons.lang3.mutable.MutableInt
+import org.objectweb.asm.Handle
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.signature.SignatureReader
@@ -125,6 +128,7 @@ import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.IincInsnNode
 import org.objectweb.asm.tree.InsnNode
 import org.objectweb.asm.tree.IntInsnNode
+import org.objectweb.asm.tree.InvokeDynamicInsnNode
 import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
@@ -142,22 +146,25 @@ object MEExpressionCompletionUtil {
     private val TYPE_PATTERN = PlatformPatterns.psiElement()
         .inside(MEStatement::class.java)
         .validType()
-    private val AFTER_END_EXPRESSION_PATTERN = PlatformPatterns.psiElement().afterLeaf(
-        PlatformPatterns.psiElement().withElementType(
-            TokenSet.create(
-                MEExpressionTypes.TOKEN_IDENTIFIER,
-                MEExpressionTypes.TOKEN_WILDCARD,
-                MEExpressionTypes.TOKEN_RIGHT_PAREN,
-                MEExpressionTypes.TOKEN_RIGHT_BRACKET,
-                MEExpressionTypes.TOKEN_RIGHT_BRACE,
-                MEExpressionTypes.TOKEN_BOOL_LIT,
-                MEExpressionTypes.TOKEN_CLASS,
-                MEExpressionTypes.TOKEN_INT_LIT,
-                MEExpressionTypes.TOKEN_DEC_LIT,
-                MEExpressionTypes.TOKEN_NULL_LIT,
-                MEExpressionTypes.TOKEN_STRING_TERMINATOR,
+    private val AFTER_END_EXPRESSION_PATTERN = StandardPatterns.or(
+        PlatformPatterns.psiElement().afterLeaf(
+            PlatformPatterns.psiElement().withElementType(
+                TokenSet.create(
+                    MEExpressionTypes.TOKEN_IDENTIFIER,
+                    MEExpressionTypes.TOKEN_WILDCARD,
+                    MEExpressionTypes.TOKEN_RIGHT_PAREN,
+                    MEExpressionTypes.TOKEN_RIGHT_BRACKET,
+                    MEExpressionTypes.TOKEN_RIGHT_BRACE,
+                    MEExpressionTypes.TOKEN_BOOL_LIT,
+                    MEExpressionTypes.TOKEN_CLASS,
+                    MEExpressionTypes.TOKEN_INT_LIT,
+                    MEExpressionTypes.TOKEN_DEC_LIT,
+                    MEExpressionTypes.TOKEN_NULL_LIT,
+                    MEExpressionTypes.TOKEN_STRING_TERMINATOR,
+                )
             )
-        )
+        ),
+        PlatformPatterns.psiElement().afterLeaf(PlatformPatterns.psiElement().withText("new").afterLeaf("::")),
     )
 
     val STATEMENT_KEYWORD_PLACE = PlatformPatterns.psiElement().afterLeaf(
@@ -167,6 +174,7 @@ object MEExpressionCompletionUtil {
         NORMAL_ELEMENT,
         StandardPatterns.not(AFTER_END_EXPRESSION_PATTERN),
         StandardPatterns.not(PlatformPatterns.psiElement().afterLeaf(".")),
+        StandardPatterns.not(PlatformPatterns.psiElement().afterLeaf("::")),
     )
     val CLASS_PLACE = StandardPatterns.and(
         NORMAL_ELEMENT,
@@ -179,6 +187,10 @@ object MEExpressionCompletionUtil {
     val INSTANCEOF_PLACE = StandardPatterns.and(
         NORMAL_ELEMENT,
         AFTER_END_EXPRESSION_PATTERN,
+    )
+    val METHOD_REFERENCE_PLACE = StandardPatterns.and(
+        NORMAL_ELEMENT,
+        PlatformPatterns.psiElement().afterLeaf("::"),
     )
     val STRING_LITERAL_PLACE = PlatformPatterns.psiElement().withElementType(
         TokenSet.create(MEExpressionTypes.TOKEN_STRING, MEExpressionTypes.TOKEN_STRING_TERMINATOR)
@@ -201,6 +213,23 @@ object MEExpressionCompletionUtil {
             }
             val classOffset = CharArrayUtil.shiftForward(chars, dotOffset + 1, " \n\t")
             return !CharArrayUtil.regionMatches(chars, classOffset, "class")
+        }
+    }
+
+    private val COLON_COLON_NEW_TAIL = object : TailType() {
+        override fun processTail(editor: Editor, tailOffset: Int): Int {
+            editor.document.insertString(tailOffset, "::new")
+            return moveCaret(editor, tailOffset, 5)
+        }
+
+        override fun isApplicable(context: InsertionContext): Boolean {
+            val chars = context.document.charsSequence
+            val colonColonOffset = CharArrayUtil.shiftForward(chars, context.tailOffset, " \n\t")
+            if (!CharArrayUtil.regionMatches(chars, colonColonOffset, "::")) {
+                return true
+            }
+            val newOffset = CharArrayUtil.shiftForward(chars, colonColonOffset + 2, " \n\t")
+            return !CharArrayUtil.regionMatches(chars, newOffset, "new")
         }
     }
 
@@ -548,6 +577,22 @@ object MEExpressionCompletionUtil {
                 super.visitStaticMethodCallExpression(o)
             }
 
+            override fun visitBoundMethodReferenceExpression(o: MEBoundMethodReferenceExpression) {
+                val name = o.memberName
+                if (name != null && !name.isWildcard && !pool.memberExists(name.text)) {
+                    unresolvedNames += name
+                }
+                super.visitBoundMethodReferenceExpression(o)
+            }
+
+            override fun visitFreeMethodReferenceExpression(o: MEFreeMethodReferenceExpression) {
+                val name = o.memberName
+                if (name != null && !name.isWildcard && !pool.memberExists(name.text)) {
+                    unresolvedNames += name
+                }
+                super.visitFreeMethodReferenceExpression(o)
+            }
+
             override fun visitMemberAccessExpression(o: MEMemberAccessExpression) {
                 val name = o.memberName
                 if (!name.isWildcard && !pool.memberExists(name.text)) {
@@ -810,6 +855,32 @@ object MEExpressionCompletionUtil {
                                     .createEliminable("arraylength")
                             )
                         }
+                    }
+                }
+            }
+            is InvokeDynamicInsnNode -> {
+                if (insn.bsm.owner == "java/lang/invoke/LambdaMetafactory") {
+                    val handle = insn.bsmArgs.getOrNull(1) as? Handle ?: return emptyList()
+                    val definitionValue = "method = \"L${handle.owner};${handle.name}${handle.desc}\""
+                    if (handle.tag !in Opcodes.H_INVOKEVIRTUAL..Opcodes.H_INVOKEINTERFACE) {
+                        return emptyList()
+                    }
+                    if (handle.tag == Opcodes.H_NEWINVOKESPECIAL) {
+                        return listOf(
+                            createTypeLookup(Type.getObjectType(handle.owner))
+                                .withTailText("::new")
+                                .withTail(COLON_COLON_NEW_TAIL)
+                                .createEliminable("constructorRef ${handle.owner}")
+                        )
+                    } else {
+                        return listOf(
+                            LookupElementBuilder.create(handle.name.toValidIdentifier())
+                                .withIcon(PlatformIcons.METHOD_ICON)
+                                .withPresentableText(handle.owner.substringAfterLast('/') + "." + insn.name)
+                                .withTypeText(Type.getReturnType(insn.desc).presentableName())
+                                .withDefinitionAndFold(insn.name.toValidIdentifier(), "method", definitionValue)
+                                .createEliminable("methodRef ${handle.owner}.${handle.name}${handle.desc}")
+                        )
                     }
                 }
             }

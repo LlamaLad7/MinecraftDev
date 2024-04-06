@@ -23,9 +23,11 @@ package com.demonwav.mcdev.platform.mixin.expression
 import com.demonwav.mcdev.asset.MCDevBundle
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEArrayAccessExpression
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEBinaryExpression
+import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEBoundMethodReferenceExpression
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEDeclaration
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEDeclarationItem
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEExpressionTypes
+import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEFreeMethodReferenceExpression
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MELitExpression
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEMemberAccessExpression
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEMethodCallExpression
@@ -76,7 +78,9 @@ class MEExpressionAnnotator : Annotator {
                         )
                         is MESuperCallExpression,
                         is MEMethodCallExpression,
-                        is MEStaticMethodCallExpression -> highlightVariable(
+                        is MEStaticMethodCallExpression,
+                        is MEBoundMethodReferenceExpression,
+                        is MEFreeMethodReferenceExpression -> highlightVariable(
                             holder,
                             element,
                             MEExpressionSyntaxHighlighter.IDENTIFIER_CALL,
