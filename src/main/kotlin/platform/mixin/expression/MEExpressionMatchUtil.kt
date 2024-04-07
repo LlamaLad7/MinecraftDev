@@ -44,7 +44,9 @@ import com.llamalad7.mixinextras.expression.impl.flow.FlowInterpreter
 import com.llamalad7.mixinextras.expression.impl.flow.FlowValue
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import com.llamalad7.mixinextras.expression.impl.pool.IdentifierPool
+import com.llamalad7.mixinextras.expression.impl.pool.MemberDefinition
 import java.util.IdentityHashMap
+import org.objectweb.asm.Handle
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AbstractInsnNode
@@ -162,9 +164,17 @@ object MEExpressionMatchUtil {
             val methods = annotation.findDeclaredAttributeValue("method")?.computeStringArray() ?: emptyList()
             for (method in methods) {
                 val methodRef = MemberReference.parse(method) ?: continue
-                pool.addMember(definitionId) {
-                    it is MethodInsnNode && methodRef.matchMethod(it.owner, it.name, it.desc)
-                }
+                pool.addMember(
+                    definitionId,
+                    object : MemberDefinition {
+                        override fun matches(insn: AbstractInsnNode) =
+                            insn is MethodInsnNode && methodRef.matchMethod(insn.owner, insn.name, insn.desc)
+
+                        override fun matches(handle: Handle) =
+                            handle.tag in Opcodes.H_INVOKEVIRTUAL..Opcodes.H_INVOKEINTERFACE &&
+                                methodRef.matchMethod(handle.owner, handle.name, handle.desc)
+                    }
+                )
             }
 
             val types = annotation.findDeclaredAttributeValue("type")?.resolveTypeArray() ?: emptyList()
