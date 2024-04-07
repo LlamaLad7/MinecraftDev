@@ -860,6 +860,10 @@ object MEExpressionCompletionUtil {
             }
             is InvokeDynamicInsnNode -> {
                 if (insn.bsm.owner == "java/lang/invoke/LambdaMetafactory") {
+                    if (!canCompleteExprs) {
+                        return emptyList()
+                    }
+
                     val handle = insn.bsmArgs.getOrNull(1) as? Handle ?: return emptyList()
                     val definitionValue = "method = \"L${handle.owner};${handle.name}${handle.desc}\""
                     if (handle.tag !in Opcodes.H_INVOKEVIRTUAL..Opcodes.H_INVOKEINTERFACE) {
@@ -876,9 +880,9 @@ object MEExpressionCompletionUtil {
                         return listOf(
                             LookupElementBuilder.create(handle.name.toValidIdentifier())
                                 .withIcon(PlatformIcons.METHOD_ICON)
-                                .withPresentableText(handle.owner.substringAfterLast('/') + "." + insn.name)
-                                .withTypeText(Type.getReturnType(insn.desc).presentableName())
-                                .withDefinitionAndFold(insn.name.toValidIdentifier(), "method", definitionValue)
+                                .withPresentableText(handle.owner.substringAfterLast('/') + "." + handle.name)
+                                .withTypeText(Type.getReturnType(handle.desc).presentableName())
+                                .withDefinitionAndFold(handle.name.toValidIdentifier(), "method", definitionValue)
                                 .createEliminable("methodRef ${handle.owner}.${handle.name}${handle.desc}")
                         )
                     }
