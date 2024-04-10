@@ -23,6 +23,7 @@ package com.demonwav.mcdev.platform.mixin.handlers.mixinextras
 import com.demonwav.mcdev.platform.mixin.inspection.injector.ParameterGroup
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiType
+import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.ClassNode
@@ -49,4 +50,6 @@ class ModifyReceiverHandler : MixinExtrasInjectorAnnotationHandler() {
         val params = getPsiParameters(target.insn, targetClass, annotation) ?: return null
         return ParameterGroup(params) to params[0].type
     }
+
+    override val mixinExtrasExpressionContextType = ExpressionContext.Type.MODIFY_RECEIVER
 }

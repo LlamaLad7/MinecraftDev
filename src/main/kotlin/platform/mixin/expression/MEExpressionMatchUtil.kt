@@ -20,6 +20,8 @@
 
 package com.demonwav.mcdev.platform.mixin.expression
 
+import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
+import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.CollectVisitor
 import com.demonwav.mcdev.platform.mixin.util.LocalInfo
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
@@ -218,6 +220,19 @@ object MEExpressionMatchUtil {
         }
     }
 
+    fun getContextType(project: Project, annotationName: String?): ExpressionContext.Type {
+        if (annotationName == null) {
+            return ExpressionContext.Type.CUSTOM
+        }
+        if (annotationName == MixinConstants.Annotations.SLICE) {
+            return ExpressionContext.Type.SLICE
+        }
+
+        val handler = MixinAnnotationHandler.forMixinAnnotation(annotationName, project) as? InjectorAnnotationHandler
+            ?: return ExpressionContext.Type.CUSTOM
+        return handler.mixinExtrasExpressionContextType
+    }
+
     inline fun findMatchingInstructions(
         targetClass: ClassNode,
         targetMethod: MethodNode,
@@ -225,6 +240,7 @@ object MEExpressionMatchUtil {
         flows: FlowMap,
         expr: Expression,
         insns: Iterable<AbstractInsnNode>,
+        contextType: ExpressionContext.Type,
         forCompletion: Boolean,
         callback: (ExpressionMatch) -> Unit
     ) {
@@ -233,7 +249,7 @@ object MEExpressionMatchUtil {
             val captured = mutableListOf<Pair<FlowValue, Int>>()
 
             val sink = object : Expression.OutputSink {
-                override fun capture(node: FlowValue, expr: Expression?) {
+                override fun capture(node: FlowValue, expr: Expression?, ctx: ExpressionContext?) {
                     captured += node to (expr?.src?.startIndex ?: 0)
                     decorations.getOrPut(insn, ::mutableMapOf).putAll(node.decorations)
                 }
@@ -250,7 +266,8 @@ object MEExpressionMatchUtil {
 
             val flow = flows[insn] ?: continue
             try {
-                if (expr.matches(flow, ExpressionContext(pool, sink, targetClass, targetMethod, forCompletion))) {
+                val context = ExpressionContext(pool, sink, targetClass, targetMethod, contextType, forCompletion)
+                if (expr.matches(flow, context)) {
                     for ((capturedFlow, startOffset) in captured) {
                         val capturedInsn = capturedFlow.insnOrNull ?: continue
                         callback(ExpressionMatch(flow, startOffset, decorations[capturedInsn].orEmpty()))

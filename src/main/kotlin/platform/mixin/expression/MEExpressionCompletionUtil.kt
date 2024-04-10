@@ -78,7 +78,6 @@ import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.codeInsight.lookup.TailTypeDecorator
 import com.intellij.codeInsight.template.Expression
-import com.intellij.codeInsight.template.ExpressionContext
 import com.intellij.codeInsight.template.Template
 import com.intellij.codeInsight.template.TemplateBuilderImpl
 import com.intellij.codeInsight.template.TemplateEditingAdapter
@@ -111,10 +110,12 @@ import com.intellij.psi.util.parentOfType
 import com.intellij.psi.util.parents
 import com.intellij.util.PlatformIcons
 import com.intellij.util.text.CharArrayUtil
-import com.llamalad7.mixinextras.expression.impl.flow.ArrayCreationInfo
 import com.llamalad7.mixinextras.expression.impl.flow.ComplexFlowValue
 import com.llamalad7.mixinextras.expression.impl.flow.DummyFlowValue
 import com.llamalad7.mixinextras.expression.impl.flow.FlowValue
+import com.llamalad7.mixinextras.expression.impl.flow.expansion.InsnExpander
+import com.llamalad7.mixinextras.expression.impl.flow.postprocessing.ArrayCreationInfo
+import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import com.llamalad7.mixinextras.expression.impl.pool.IdentifierPool
 import com.llamalad7.mixinextras.utils.Decorations
 import org.apache.commons.lang3.mutable.MutableInt
@@ -135,6 +136,8 @@ import org.objectweb.asm.tree.MethodNode
 import org.objectweb.asm.tree.MultiANewArrayInsnNode
 import org.objectweb.asm.tree.TypeInsnNode
 import org.objectweb.asm.tree.VarInsnNode
+
+private typealias TemplateExpressionContext = com.intellij.codeInsight.template.ExpressionContext
 
 object MEExpressionCompletionUtil {
     private const val DEBUG_COMPLETION = false
@@ -382,7 +385,8 @@ object MEExpressionCompletionUtil {
                 flows,
                 meStatement,
                 targetMethod.instructions,
-                true
+                ExpressionContext.Type.MODIFY_EXPRESSION_VALUE, // use most permissive type for completion
+                true,
             ) { match ->
                 matchingFlows += match.flow
                 if (DEBUG_COMPLETION) {
@@ -428,7 +432,7 @@ object MEExpressionCompletionUtil {
 
                 val meExpression = MEExpressionMatchUtil.createExpression(exprToMatch.text) ?: continue
 
-                val flattenedInstructions = mutableSetOf<AbstractInsnNode>()
+                val flattenedInstructions = mutableSetOf<ExpandedInstruction>()
                 for (flow in matchingFlows) {
                     getInstructionsInFlowTree(
                         flow,
@@ -443,8 +447,9 @@ object MEExpressionCompletionUtil {
                     pool,
                     flows,
                     meExpression,
-                    flattenedInstructions,
-                    true
+                    flattenedInstructions.map { it.insn },
+                    ExpressionContext.Type.MODIFY_EXPRESSION_VALUE, // use most permissive type for completion
+                    true,
                 ) { match ->
                     newMatchingFlows += match.flow
                     if (DEBUG_COMPLETION) {
@@ -461,7 +466,7 @@ object MEExpressionCompletionUtil {
             subExpr = inputExprOnCursor
         }
 
-        val cursorInstructions = mutableSetOf<AbstractInsnNode>()
+        val cursorInstructions = mutableSetOf<ExpandedInstruction>()
         for (flow in matchingFlows) {
             getInstructionsInFlowTree(flow, cursorInstructions, false)
         }
@@ -469,7 +474,7 @@ object MEExpressionCompletionUtil {
         if (DEBUG_COMPLETION) {
             println("Found ${cursorInstructions.size} matching instructions:")
             for (insn in cursorInstructions) {
-                println("- ${insn.textify()}")
+                println("- ${insn.insn.textify()}")
             }
         }
 
@@ -509,7 +514,8 @@ object MEExpressionCompletionUtil {
                 project,
                 targetClass,
                 targetMethod,
-                insn,
+                insn.insn,
+                insn.originalInsn,
                 flows,
                 mixinClass,
                 canCompleteExprs,
@@ -675,7 +681,7 @@ object MEExpressionCompletionUtil {
 
     private fun getInstructionsInFlowTree(
         flow: FlowValue,
-        outInstructions: MutableSet<AbstractInsnNode>,
+        outInstructions: MutableSet<ExpandedInstruction>,
         strict: Boolean,
     ) {
         if (flow is DummyFlowValue || flow is ComplexFlowValue) {
@@ -683,7 +689,9 @@ object MEExpressionCompletionUtil {
         }
 
         if (!strict) {
-            if (!outInstructions.add(flow.insn)) {
+            val originalInsn =
+                flow.getDecoration<InsnExpander.Expansion>(Decorations.EXPANSION_INFO)?.compound ?: flow.insn
+            if (!outInstructions.add(ExpandedInstruction(flow.insn, originalInsn))) {
                 return
             }
         }
@@ -697,6 +705,7 @@ object MEExpressionCompletionUtil {
         targetClass: ClassNode,
         targetMethod: MethodNode,
         insn: AbstractInsnNode,
+        originalInsn: AbstractInsnNode,
         flows: FlowMap,
         mixinClass: PsiClass,
         canCompleteExprs: Boolean,
@@ -721,7 +730,7 @@ object MEExpressionCompletionUtil {
                 project,
                 targetClass,
                 targetMethod,
-                insn,
+                originalInsn,
                 insn.`var`,
                 insn.opcode in Opcodes.ISTORE..Opcodes.ASTORE,
                 mixinClass
@@ -730,7 +739,7 @@ object MEExpressionCompletionUtil {
                 project,
                 targetClass,
                 targetMethod,
-                insn,
+                originalInsn,
                 insn.`var`,
                 false,
                 mixinClass
@@ -960,7 +969,7 @@ object MEExpressionCompletionUtil {
         project: Project,
         targetClass: ClassNode,
         targetMethod: MethodNode,
-        insn: AbstractInsnNode,
+        originalInsn: AbstractInsnNode,
         index: Int,
         isStore: Boolean,
         mixinClass: PsiClass,
@@ -989,7 +998,7 @@ object MEExpressionCompletionUtil {
                 }
                 val validRange = targetMethod.instructions.indexOf(firstValidInstruction) until
                     targetMethod.instructions.indexOf(localVariable.end)
-                targetMethod.instructions.indexOf(insn) in validRange
+                targetMethod.instructions.indexOf(originalInsn) in validRange
             }
             val locals = localsHere.filter { it.index == index }
 
@@ -1023,7 +1032,7 @@ object MEExpressionCompletionUtil {
         }
 
         // fallback to ASM dataflow
-        val localTypes = AsmDfaUtil.getLocalVariableTypes(project, targetClass, targetMethod, insn)
+        val localTypes = AsmDfaUtil.getLocalVariableTypes(project, targetClass, targetMethod, originalInsn)
             ?: return emptyList()
         val localType = localTypes.getOrNull(index) ?: return emptyList()
         val ordinal = localTypes.asSequence().take(index).filter { it == localType }.count()
@@ -1145,9 +1154,10 @@ object MEExpressionCompletionUtil {
         template.replaceElement(
             elementToReplace,
             object : Expression() {
-                override fun calculateLookupItems(context: ExpressionContext?) = lookupItems
-                override fun calculateQuickResult(context: ExpressionContext?) = calculateResult(context)
-                override fun calculateResult(context: ExpressionContext?) = TextResult("ordinal = $ordinal")
+                override fun calculateLookupItems(context: TemplateExpressionContext?) = lookupItems
+                override fun calculateQuickResult(context: TemplateExpressionContext?) = calculateResult(context)
+                override fun calculateResult(context: TemplateExpressionContext?) =
+                    TextResult("ordinal = $ordinal")
             },
             true,
         )
@@ -1297,6 +1307,8 @@ object MEExpressionCompletionUtil {
     ) : Comparable<EliminableLookup> {
         override fun compareTo(other: EliminableLookup) = priority.compareTo(other.priority)
     }
+
+    private data class ExpandedInstruction(val insn: AbstractInsnNode, val originalInsn: AbstractInsnNode)
 
     private class ParenthesesTailType(private val hasParameters: Boolean) : TailType() {
         override fun processTail(editor: Editor, tailOffset: Int): Int {

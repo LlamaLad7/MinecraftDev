@@ -61,6 +61,7 @@ import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.psi.util.parentOfType
 import com.llamalad7.mixinextras.expression.impl.ast.expressions.Expression
+import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import java.util.IdentityHashMap
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.ClassNode
@@ -163,6 +164,8 @@ class ExpressionInjectionPoint : InjectionPoint<PsiElement>() {
 
         val atId = at.findDeclaredAttributeValue("id")?.constantStringValue ?: ""
 
+        val contextType = MEExpressionMatchUtil.getContextType(project, at.parentOfType<PsiAnnotation>()?.qualifiedName)
+
         val injectorAnnotation = AtResolver.findInjectorAnnotation(at) ?: return null
         val modifierList = injectorAnnotation.parent as? PsiModifierList ?: return null
         val parsedExprs = parseExpressions(project, modifierList, atId)
@@ -172,7 +175,7 @@ class ExpressionInjectionPoint : InjectionPoint<PsiElement>() {
 
         val poolFactory = MEExpressionMatchUtil.createIdentifierPoolFactory(module, targetClass, modifierList)
 
-        return MyCollectVisitor(mode, project, targetClass, parsedExprs, poolFactory)
+        return MyCollectVisitor(mode, project, targetClass, parsedExprs, poolFactory, contextType)
     }
 
     private fun parseExpressions(
@@ -218,6 +221,7 @@ class ExpressionInjectionPoint : InjectionPoint<PsiElement>() {
         private val targetClass: ClassNode,
         private val expressions: List<Pair<Expression, PsiElement>>,
         private val poolFactory: IdentifierPoolFactory,
+        private val contextType: ExpressionContext.Type,
     ) : CollectVisitor<PsiElement>(mode) {
         override fun accept(methodNode: MethodNode) {
             val insns = methodNode.instructions ?: return
@@ -235,6 +239,7 @@ class ExpressionInjectionPoint : InjectionPoint<PsiElement>() {
                     flows,
                     expr,
                     insns,
+                    contextType,
                     false
                 ) { match ->
                     val capturedExpr = psiExpr.findElementAt(match.startOffset)

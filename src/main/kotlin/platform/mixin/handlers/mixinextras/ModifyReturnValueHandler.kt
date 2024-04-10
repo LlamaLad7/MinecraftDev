@@ -25,6 +25,7 @@ import com.demonwav.mcdev.platform.mixin.util.getGenericReturnType
 import com.demonwav.mcdev.util.Parameter
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiType
+import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
 
@@ -40,4 +41,6 @@ class ModifyReturnValueHandler : MixinExtrasInjectorAnnotationHandler() {
         val returnType = targetMethod.getGenericReturnType(targetClass, annotation.project)
         return ParameterGroup(listOf(Parameter("original", returnType))) to returnType
     }
+
+    override val mixinExtrasExpressionContextType = ExpressionContext.Type.MODIFY_RETURN_VALUE
 }

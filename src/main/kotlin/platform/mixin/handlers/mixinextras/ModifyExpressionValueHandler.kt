@@ -27,6 +27,7 @@ import com.demonwav.mcdev.util.Parameter
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiType
+import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import com.llamalad7.mixinextras.utils.Decorations
 import com.llamalad7.mixinextras.utils.TypeUtils
 import org.objectweb.asm.Type
@@ -76,4 +77,6 @@ class ModifyExpressionValueHandler : MixinExtrasInjectorAnnotationHandler() {
         }
         return psiReturnType
     }
+
+    override val mixinExtrasExpressionContextType = ExpressionContext.Type.MODIFY_EXPRESSION_VALUE
 }

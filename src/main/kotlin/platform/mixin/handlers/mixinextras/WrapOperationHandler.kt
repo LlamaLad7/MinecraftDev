@@ -30,6 +30,7 @@ import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiPrimitiveType
 import com.intellij.psi.PsiType
+import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import com.llamalad7.mixinextras.utils.Decorations
 import com.llamalad7.mixinextras.utils.TypeUtils
 import org.objectweb.asm.Type
@@ -101,4 +102,6 @@ class WrapOperationHandler : MixinExtrasInjectorAnnotationHandler() {
         return JavaPsiFacade.getElementFactory(project)
             .createTypeFromText("$OPERATION<${boxedType.canonicalText}>", context)
     }
+
+    override val mixinExtrasExpressionContextType = ExpressionContext.Type.WRAP_OPERATION
 }
