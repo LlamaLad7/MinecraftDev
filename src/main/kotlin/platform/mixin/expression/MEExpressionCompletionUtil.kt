@@ -21,7 +21,8 @@
 package com.demonwav.mcdev.platform.mixin.expression
 
 import com.demonwav.mcdev.MinecraftProjectSettings
-import com.demonwav.mcdev.platform.mixin.expression.MEExpressionMatchUtil.insnOrNull
+import com.demonwav.mcdev.platform.mixin.expression.MEExpressionMatchUtil.virtualInsn
+import com.demonwav.mcdev.platform.mixin.expression.MEExpressionMatchUtil.virtualInsnOrNull
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEArrayAccessExpression
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEAssignStatement
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEBoundMethodReferenceExpression
@@ -384,13 +385,13 @@ object MEExpressionCompletionUtil {
                 pool,
                 flows,
                 meStatement,
-                targetMethod.instructions,
+                flows.keys,
                 ExpressionContext.Type.MODIFY_EXPRESSION_VALUE, // use most permissive type for completion
                 true,
             ) { match ->
                 matchingFlows += match.flow
                 if (DEBUG_COMPLETION) {
-                    println("Matched ${match.flow.insnOrNull?.textify()}")
+                    println("Matched ${match.flow.virtualInsnOrNull?.insn?.textify()}")
                 }
             }
         }
@@ -453,7 +454,7 @@ object MEExpressionCompletionUtil {
                 ) { match ->
                     newMatchingFlows += match.flow
                     if (DEBUG_COMPLETION) {
-                        println("Matched ${match.flow.insnOrNull?.textify()}")
+                        println("Matched ${match.flow.virtualInsnOrNull?.insn?.textify()}")
                     }
                 }
             }
@@ -474,7 +475,7 @@ object MEExpressionCompletionUtil {
         if (DEBUG_COMPLETION) {
             println("Found ${cursorInstructions.size} matching instructions:")
             for (insn in cursorInstructions) {
-                println("- ${insn.insn.textify()}")
+                println("- ${insn.insn.insn.textify()}")
             }
         }
 
@@ -666,13 +667,13 @@ object MEExpressionCompletionUtil {
         }
 
         var rootFlow = flow
-        val insn = flow.insnOrNull ?: return emptyList()
-        if (insn.opcode == Opcodes.NEW) {
+        val insn = flow.virtualInsnOrNull ?: return emptyList()
+        if (insn.insn.opcode == Opcodes.NEW) {
             rootFlow = flow.next.firstOrNull {
-                val nextInsn = it.left.insnOrNull ?: return@firstOrNull false
+                val nextInsn = it.left.virtualInsnOrNull ?: return@firstOrNull false
                 it.right == 0 &&
-                    nextInsn.opcode == Opcodes.INVOKESPECIAL &&
-                    (nextInsn as MethodInsnNode).name == "<init>"
+                    nextInsn.insn.opcode == Opcodes.INVOKESPECIAL &&
+                    (nextInsn.insn as MethodInsnNode).name == "<init>"
             }?.left ?: rootFlow
         }
 
@@ -691,7 +692,7 @@ object MEExpressionCompletionUtil {
         if (!strict) {
             val originalInsn =
                 flow.getDecoration<InsnExpander.Expansion>(Decorations.EXPANSION_INFO)?.compound ?: flow.insn
-            if (!outInstructions.add(ExpandedInstruction(flow.insn, originalInsn))) {
+            if (!outInstructions.add(ExpandedInstruction(flow.virtualInsn, originalInsn))) {
                 return
             }
         }
@@ -704,23 +705,23 @@ object MEExpressionCompletionUtil {
         project: Project,
         targetClass: ClassNode,
         targetMethod: MethodNode,
-        insn: AbstractInsnNode,
+        insn: VirtualInsn,
         originalInsn: AbstractInsnNode,
         flows: FlowMap,
         mixinClass: PsiClass,
         canCompleteExprs: Boolean,
         canCompleteTypes: Boolean
     ): List<EliminableLookup> {
-        when (insn) {
+        when (insn.insn) {
             is LdcInsnNode -> {
-                when (val cst = insn.cst) {
+                when (val cst = insn.insn.cst) {
                     is Type -> {
                         if (canCompleteTypes && cst.isAccessibleFrom(mixinClass)) {
                             return listOf(
                                 createTypeLookup(cst)
                                     .withTailText(".class")
                                     .withTail(DOT_CLASS_TAIL)
-                                    .createEliminable("class ${insn.cst}")
+                                    .createEliminable("class ${insn.insn.cst}")
                             )
                         }
                     }
@@ -731,8 +732,8 @@ object MEExpressionCompletionUtil {
                 targetClass,
                 targetMethod,
                 originalInsn,
-                insn.`var`,
-                insn.opcode in Opcodes.ISTORE..Opcodes.ASTORE,
+                insn.insn.`var`,
+                insn.insn.opcode in Opcodes.ISTORE..Opcodes.ASTORE,
                 mixinClass
             )
             is IincInsnNode -> return createLocalVariableLookups(
@@ -740,49 +741,51 @@ object MEExpressionCompletionUtil {
                 targetClass,
                 targetMethod,
                 originalInsn,
-                insn.`var`,
+                insn.insn.`var`,
                 false,
                 mixinClass
             )
             is FieldInsnNode -> {
                 if (canCompleteExprs) {
-                    val definitionValue = "field = \"L${insn.owner};${insn.name}:${insn.desc}\""
-                    var lookup = LookupElementBuilder.create(insn.name.toValidIdentifier())
+                    val definitionValue = "field = \"L${insn.insn.owner};${insn.insn.name}:${insn.insn.desc}\""
+                    var lookup = LookupElementBuilder.create(insn.insn.name.toValidIdentifier())
                         .withIcon(PlatformIcons.FIELD_ICON)
-                        .withPresentableText(insn.owner.substringAfterLast('/') + "." + insn.name)
-                        .withTypeText(Type.getType(insn.desc).presentableName())
-                        .withDefinitionAndFold(insn.name.toValidIdentifier(), "field", definitionValue)
-                    if (insn.opcode == Opcodes.GETSTATIC || insn.opcode == Opcodes.PUTSTATIC) {
-                        lookup = lookup.withLookupString(insn.owner.substringAfterLast('/') + "." + insn.name)
+                        .withPresentableText(insn.insn.owner.substringAfterLast('/') + "." + insn.insn.name)
+                        .withTypeText(Type.getType(insn.insn.desc).presentableName())
+                        .withDefinitionAndFold(insn.insn.name.toValidIdentifier(), "field", definitionValue)
+                    if (insn.insn.opcode == Opcodes.GETSTATIC || insn.insn.opcode == Opcodes.PUTSTATIC) {
+                        lookup = lookup.withLookupString(insn.insn.owner.substringAfterLast('/') + "." + insn.insn.name)
                     }
-                    return listOf(lookup.createEliminable("field ${insn.owner}.${insn.name}:${insn.desc}"))
+                    return listOf(
+                        lookup.createEliminable("field ${insn.insn.owner}.${insn.insn.name}:${insn.insn.desc}")
+                    )
                 }
             }
             is MethodInsnNode -> {
                 if (canCompleteExprs) {
-                    val definitionValue = "method = \"L${insn.owner};${insn.name}${insn.desc}\""
-                    var lookup = LookupElementBuilder.create(insn.name.toValidIdentifier())
+                    val definitionValue = "method = \"L${insn.insn.owner};${insn.insn.name}${insn.insn.desc}\""
+                    var lookup = LookupElementBuilder.create(insn.insn.name.toValidIdentifier())
                         .withIcon(PlatformIcons.METHOD_ICON)
-                        .withPresentableText(insn.owner.substringAfterLast('/') + "." + insn.name)
+                        .withPresentableText(insn.insn.owner.substringAfterLast('/') + "." + insn.insn.name)
                         .withTailText(
-                            "(" + Type.getArgumentTypes(insn.desc).joinToString { it.presentableName() } + ")"
+                            "(" + Type.getArgumentTypes(insn.insn.desc).joinToString { it.presentableName() } + ")"
                         )
-                        .withTypeText(Type.getReturnType(insn.desc).presentableName())
-                        .withDefinitionAndFold(insn.name.toValidIdentifier(), "method", definitionValue)
-                    if (insn.opcode == Opcodes.INVOKESTATIC) {
-                        lookup = lookup.withLookupString(insn.owner.substringAfterLast('/') + "." + insn.name)
+                        .withTypeText(Type.getReturnType(insn.insn.desc).presentableName())
+                        .withDefinitionAndFold(insn.insn.name.toValidIdentifier(), "method", definitionValue)
+                    if (insn.insn.opcode == Opcodes.INVOKESTATIC) {
+                        lookup = lookup.withLookupString(insn.insn.owner.substringAfterLast('/') + "." + insn.insn.name)
                     }
                     return listOf(
-                        lookup.withTail(ParenthesesTailType(!insn.desc.startsWith("()")))
-                            .createEliminable("invoke ${insn.owner}.${insn.name}${insn.desc}")
+                        lookup.withTail(ParenthesesTailType(!insn.insn.desc.startsWith("()")))
+                            .createEliminable("invoke ${insn.insn.owner}.${insn.insn.name}${insn.insn.desc}")
                     )
                 }
             }
             is TypeInsnNode -> {
-                val type = Type.getObjectType(insn.desc)
+                val type = Type.getObjectType(insn.insn.desc)
                 if (canCompleteTypes && type.isAccessibleFrom(mixinClass)) {
                     val lookup = createTypeLookup(type)
-                    when (insn.opcode) {
+                    when (insn.insn.opcode) {
                         Opcodes.ANEWARRAY -> {
                             return listOf(
                                 lookup.withTail(
@@ -791,29 +794,29 @@ object MEExpressionCompletionUtil {
                                         flows[insn]?.hasDecoration(Decorations.ARRAY_CREATION_INFO) == true,
                                     )
                                 )
-                                    .createEliminable("new [${insn.desc}")
+                                    .createEliminable("new [${insn.insn.desc}")
                             )
                         }
                         Opcodes.NEW -> {
                             val initCall = flows[insn]?.next?.firstOrNull {
-                                val nextInsn = it.left.insnOrNull ?: return@firstOrNull false
+                                val nextInsn = it.left.virtualInsnOrNull ?: return@firstOrNull false
                                 it.right == 0 &&
-                                    nextInsn.opcode == Opcodes.INVOKESPECIAL &&
-                                    (nextInsn as MethodInsnNode).name == "<init>"
-                            }?.left?.insn as MethodInsnNode?
+                                    nextInsn.insn.opcode == Opcodes.INVOKESPECIAL &&
+                                    (nextInsn.insn as MethodInsnNode).name == "<init>"
+                            }?.left?.virtualInsn?.insn as MethodInsnNode?
                             return listOf(
                                 lookup.withTail(ParenthesesTailType(initCall?.desc?.startsWith("()") == false))
-                                    .createEliminable("new ${insn.desc}${initCall?.desc}")
+                                    .createEliminable("new ${insn.insn.desc}${initCall?.desc}")
                             )
                         }
-                        else -> return listOf(lookup.createEliminable("type ${insn.desc}"))
+                        else -> return listOf(lookup.createEliminable("type ${insn.insn.desc}"))
                     }
                 }
             }
             is IntInsnNode -> {
-                if (insn.opcode == Opcodes.NEWARRAY) {
+                if (insn.insn.opcode == Opcodes.NEWARRAY) {
                     if (canCompleteTypes) {
-                        val type = when (insn.operand) {
+                        val type = when (insn.insn.operand) {
                             Opcodes.T_BOOLEAN -> "boolean"
                             Opcodes.T_CHAR -> "char"
                             Opcodes.T_FLOAT -> "float"
@@ -840,7 +843,7 @@ object MEExpressionCompletionUtil {
             }
             is MultiANewArrayInsnNode -> {
                 if (canCompleteTypes) {
-                    val type = Type.getType(insn.desc)
+                    val type = Type.getType(insn.insn.desc)
                     return listOf(
                         createTypeLookup(type.elementType)
                             .withTail(
@@ -849,12 +852,12 @@ object MEExpressionCompletionUtil {
                                     flows[insn]?.hasDecoration(Decorations.ARRAY_CREATION_INFO) == true
                                 )
                             )
-                            .createEliminable("new ${insn.desc}")
+                            .createEliminable("new ${insn.insn.desc}")
                     )
                 }
             }
             is InsnNode -> {
-                when (insn.opcode) {
+                when (insn.insn.opcode) {
                     Opcodes.ARRAYLENGTH -> {
                         if (canCompleteExprs) {
                             return listOf(
@@ -868,12 +871,12 @@ object MEExpressionCompletionUtil {
                 }
             }
             is InvokeDynamicInsnNode -> {
-                if (insn.bsm.owner == "java/lang/invoke/LambdaMetafactory") {
+                if (insn.insn.bsm.owner == "java/lang/invoke/LambdaMetafactory") {
                     if (!canCompleteExprs) {
                         return emptyList()
                     }
 
-                    val handle = insn.bsmArgs.getOrNull(1) as? Handle ?: return emptyList()
+                    val handle = insn.insn.bsmArgs.getOrNull(1) as? Handle ?: return emptyList()
                     val definitionValue = "method = \"L${handle.owner};${handle.name}${handle.desc}\""
                     if (handle.tag !in Opcodes.H_INVOKEVIRTUAL..Opcodes.H_INVOKEINTERFACE) {
                         return emptyList()
@@ -1308,7 +1311,7 @@ object MEExpressionCompletionUtil {
         override fun compareTo(other: EliminableLookup) = priority.compareTo(other.priority)
     }
 
-    private data class ExpandedInstruction(val insn: AbstractInsnNode, val originalInsn: AbstractInsnNode)
+    private data class ExpandedInstruction(val insn: VirtualInsn, val originalInsn: AbstractInsnNode)
 
     private class ParenthesesTailType(private val hasParameters: Boolean) : TailType() {
         override fun processTail(editor: Editor, tailOffset: Int): Int {

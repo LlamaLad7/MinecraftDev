@@ -44,9 +44,11 @@ import com.llamalad7.mixinextras.expression.impl.ast.expressions.Expression
 import com.llamalad7.mixinextras.expression.impl.flow.ComplexDataException
 import com.llamalad7.mixinextras.expression.impl.flow.FlowInterpreter
 import com.llamalad7.mixinextras.expression.impl.flow.FlowValue
+import com.llamalad7.mixinextras.expression.impl.flow.expansion.InsnExpander
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import com.llamalad7.mixinextras.expression.impl.pool.IdentifierPool
 import com.llamalad7.mixinextras.expression.impl.pool.MemberDefinition
+import com.llamalad7.mixinextras.utils.Decorations
 import java.util.IdentityHashMap
 import org.objectweb.asm.Handle
 import org.objectweb.asm.Opcodes
@@ -60,7 +62,15 @@ import org.objectweb.asm.tree.VarInsnNode
 import org.objectweb.asm.tree.analysis.Analyzer
 
 typealias IdentifierPoolFactory = (MethodNode) -> IdentifierPool
-typealias FlowMap = Map<AbstractInsnNode, FlowValue>
+typealias FlowMap = Map<VirtualInsn, FlowValue>
+
+/**
+ * An instruction that MixinExtras generates (via instruction expansion), as opposed to an instruction in the original
+ * method. One type of instruction cannot be directly assigned to another, to avoid a method instruction being used when
+ * a virtual instruction is expected and vice versa.
+ */
+@JvmInline
+value class VirtualInsn(val insn: AbstractInsnNode)
 
 object MEExpressionMatchUtil {
     private val LOGGER = logger<MEExpressionMatchUtil>()
@@ -137,7 +147,7 @@ object MEExpressionMatchUtil {
                 return@cached null
             }
 
-            interpreter.finish()
+            interpreter.finish().mapKeys { (insn, _) -> VirtualInsn(insn) }
         }
     }
 
@@ -239,13 +249,13 @@ object MEExpressionMatchUtil {
         pool: IdentifierPool,
         flows: FlowMap,
         expr: Expression,
-        insns: Iterable<AbstractInsnNode>,
+        insns: Iterable<VirtualInsn>,
         contextType: ExpressionContext.Type,
         forCompletion: Boolean,
         callback: (ExpressionMatch) -> Unit
     ) {
         for (insn in insns) {
-            val decorations = IdentityHashMap<AbstractInsnNode, MutableMap<String, Any?>>()
+            val decorations = IdentityHashMap<VirtualInsn, MutableMap<String, Any?>>()
             val captured = mutableListOf<Pair<FlowValue, Int>>()
 
             val sink = object : Expression.OutputSink {
@@ -255,12 +265,12 @@ object MEExpressionMatchUtil {
                 }
 
                 override fun decorate(insn: AbstractInsnNode, key: String, value: Any?) {
-                    decorations.getOrPut(insn, ::mutableMapOf)[key] = value
+                    decorations.getOrPut(VirtualInsn(insn), ::mutableMapOf)[key] = value
                 }
 
                 override fun decorateInjectorSpecific(insn: AbstractInsnNode, key: String, value: Any?) {
                     // Our maps are per-injector anyway, so this is just a normal decoration.
-                    decorations.getOrPut(insn, ::mutableMapOf)[key] = value
+                    decorations.getOrPut(VirtualInsn(insn), ::mutableMapOf)[key] = value
                 }
             }
 
@@ -269,8 +279,11 @@ object MEExpressionMatchUtil {
                 val context = ExpressionContext(pool, sink, targetClass, targetMethod, contextType, forCompletion)
                 if (expr.matches(flow, context)) {
                     for ((capturedFlow, startOffset) in captured) {
-                        val capturedInsn = capturedFlow.insnOrNull ?: continue
-                        callback(ExpressionMatch(flow, startOffset, decorations[capturedInsn].orEmpty()))
+                        val capturedInsn = capturedFlow.virtualInsnOrNull ?: continue
+                        val originalInsn =
+                            capturedFlow.getDecoration<InsnExpander.Expansion>(Decorations.EXPANSION_INFO)?.compound
+                                ?: capturedInsn.insn
+                        callback(ExpressionMatch(flow, originalInsn, startOffset, decorations[capturedInsn].orEmpty()))
                     }
                 }
             } catch (e: ProcessCanceledException) {
@@ -281,14 +294,17 @@ object MEExpressionMatchUtil {
         }
     }
 
-    val FlowValue.insnOrNull: AbstractInsnNode? get() = try {
-        insn
+    val FlowValue.virtualInsn: VirtualInsn get() = VirtualInsn(insn)
+
+    val FlowValue.virtualInsnOrNull: VirtualInsn? get() = try {
+        VirtualInsn(insn)
     } catch (e: ComplexDataException) {
         null
     }
 
     class ExpressionMatch @PublishedApi internal constructor(
         val flow: FlowValue,
+        val originalInsn: AbstractInsnNode,
         val startOffset: Int,
         val decorations: Map<String, Any?>,
     )
