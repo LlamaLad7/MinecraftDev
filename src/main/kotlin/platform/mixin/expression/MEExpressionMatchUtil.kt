@@ -49,7 +49,6 @@ import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import com.llamalad7.mixinextras.expression.impl.pool.IdentifierPool
 import com.llamalad7.mixinextras.expression.impl.pool.MemberDefinition
 import com.llamalad7.mixinextras.utils.Decorations
-import java.util.IdentityHashMap
 import org.objectweb.asm.Handle
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
@@ -255,7 +254,7 @@ object MEExpressionMatchUtil {
         callback: (ExpressionMatch) -> Unit
     ) {
         for (insn in insns) {
-            val decorations = IdentityHashMap<VirtualInsn, MutableMap<String, Any?>>()
+            val decorations = mutableMapOf<VirtualInsn, MutableMap<String, Any?>>()
             val captured = mutableListOf<Pair<FlowValue, Int>>()
 
             val sink = object : Expression.OutputSink {
