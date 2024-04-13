@@ -115,7 +115,6 @@ import com.llamalad7.mixinextras.expression.impl.flow.ComplexFlowValue
 import com.llamalad7.mixinextras.expression.impl.flow.DummyFlowValue
 import com.llamalad7.mixinextras.expression.impl.flow.FlowValue
 import com.llamalad7.mixinextras.expression.impl.flow.expansion.InsnExpander
-import com.llamalad7.mixinextras.expression.impl.flow.postprocessing.ArrayCreationInfo
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import com.llamalad7.mixinextras.expression.impl.pool.IdentifierPool
 import com.llamalad7.mixinextras.utils.Decorations
@@ -661,11 +660,6 @@ object MEExpressionCompletionUtil {
     }
 
     private fun getFlowInputs(flow: FlowValue): List<FlowValue> {
-        val arrayCreationInfo = flow.getDecoration<ArrayCreationInfo>(Decorations.ARRAY_CREATION_INFO)
-        if (arrayCreationInfo != null) {
-            return arrayCreationInfo.values
-        }
-
         var rootFlow = flow
         val insn = flow.virtualInsnOrNull ?: return emptyList()
         if (insn.insn.opcode == Opcodes.NEW) {
