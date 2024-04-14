@@ -38,7 +38,7 @@ import org.objectweb.asm.tree.MethodNode
 class ModifyExpressionValueHandler : MixinExtrasInjectorAnnotationHandler() {
     override val supportedInstructionTypes = listOf(
         InstructionType.METHOD_CALL, InstructionType.FIELD_GET, InstructionType.INSTANTIATION, InstructionType.CONSTANT,
-        InstructionType.SIMPLE_EXPRESSION
+        InstructionType.SIMPLE_EXPRESSION, InstructionType.STRING_CONCAT_EXPRESSION
     )
 
     override fun extraTargetRestrictions(insn: AbstractInsnNode): Boolean {
@@ -68,6 +68,9 @@ class ModifyExpressionValueHandler : MixinExtrasInjectorAnnotationHandler() {
         target: TargetInsn,
         annotation: PsiAnnotation
     ): PsiType? {
+        if (target.hasDecoration(Decorations.IS_STRING_CONCAT_EXPRESSION)) {
+            return PsiType.getJavaLangString(annotation.manager, annotation.resolveScope)
+        }
         val psiReturnType = getPsiReturnType(target.insn, annotation)
         val rawReturnType = getInsnReturnType(target.insn)
         val exprType = target.getDecoration<Type>(Decorations.SIMPLE_EXPRESSION_TYPE)
