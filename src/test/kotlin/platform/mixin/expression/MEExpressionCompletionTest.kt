@@ -350,7 +350,7 @@ class MEExpressionCompletionTest : BaseMixinTest() {
     @DisplayName("Type Completion Test")
     fun typeCompletionTest() {
         doBeforeAfterTest(
-            "StringBuilder",
+            "ArrayList",
             """
             package test;
             
@@ -376,10 +376,12 @@ class MEExpressionCompletionTest : BaseMixinTest() {
             import org.spongepowered.asm.mixin.injection.At;
             import org.spongepowered.asm.mixin.injection.Inject;
             
+            import java.util.ArrayList;
+            
             @Mixin(MEExpressionTestData.class)
             class MEExpressionCompletionTest {
-                @Definition(id = "StringBuilder", type = StringBuilder.class)
-                @Expression("new StringBuilder(<caret>)")
+                @Definition(id = "ArrayList", type = ArrayList.class)
+                @Expression("new ArrayList(<caret>)")
                 @Inject(method = "complexFunction", at = @At("MIXINEXTRAS:EXPRESSION"))
             }
             """.trimIndent(),

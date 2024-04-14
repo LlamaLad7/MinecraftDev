@@ -115,6 +115,7 @@ import com.llamalad7.mixinextras.expression.impl.flow.ComplexFlowValue
 import com.llamalad7.mixinextras.expression.impl.flow.DummyFlowValue
 import com.llamalad7.mixinextras.expression.impl.flow.FlowValue
 import com.llamalad7.mixinextras.expression.impl.flow.expansion.InsnExpander
+import com.llamalad7.mixinextras.expression.impl.flow.postprocessing.InstantiationInfo
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import com.llamalad7.mixinextras.expression.impl.pool.IdentifierPool
 import com.llamalad7.mixinextras.utils.Decorations
@@ -663,12 +664,7 @@ object MEExpressionCompletionUtil {
         var rootFlow = flow
         val insn = flow.virtualInsnOrNull ?: return emptyList()
         if (insn.insn.opcode == Opcodes.NEW) {
-            rootFlow = flow.next.firstOrNull {
-                val nextInsn = it.left.virtualInsnOrNull ?: return@firstOrNull false
-                it.right == 0 &&
-                    nextInsn.insn.opcode == Opcodes.INVOKESPECIAL &&
-                    (nextInsn.insn as MethodInsnNode).name == "<init>"
-            }?.left ?: rootFlow
+            rootFlow = flow.getDecoration<InstantiationInfo>(Decorations.INSTANTIATION_INFO)?.initCall ?: rootFlow
         }
 
         return (0 until rootFlow.inputCount()).map(rootFlow::getInput)
@@ -792,12 +788,11 @@ object MEExpressionCompletionUtil {
                             )
                         }
                         Opcodes.NEW -> {
-                            val initCall = flows[insn]?.next?.firstOrNull {
-                                val nextInsn = it.left.virtualInsnOrNull ?: return@firstOrNull false
-                                it.right == 0 &&
-                                    nextInsn.insn.opcode == Opcodes.INVOKESPECIAL &&
-                                    (nextInsn.insn as MethodInsnNode).name == "<init>"
-                            }?.left?.virtualInsn?.insn as MethodInsnNode?
+                            val initCall = flows[insn]
+                                ?.getDecoration<InstantiationInfo>(Decorations.INSTANTIATION_INFO)
+                                ?.initCall
+                                ?.virtualInsnOrNull
+                                ?.insn as MethodInsnNode?
                             return listOf(
                                 lookup.withTail(ParenthesesTailType(initCall?.desc?.startsWith("()") == false))
                                     .createEliminable("new ${insn.insn.desc}${initCall?.desc}")

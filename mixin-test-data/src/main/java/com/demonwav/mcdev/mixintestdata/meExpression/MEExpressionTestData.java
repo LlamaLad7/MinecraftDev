@@ -20,6 +20,7 @@
 
 package com.demonwav.mcdev.mixintestdata.meExpression;
 
+import java.util.ArrayList;
 import java.util.stream.Stream;
 
 public class MEExpressionTestData {
@@ -33,6 +34,8 @@ public class MEExpressionTestData {
 
         System.out.println(new StringBuilder(local1).append(", ").append(local2));
         System.out.println(one);
+
+        new ArrayList<>(10);
 
         InaccessibleType varOfInaccessibleType = new InaccessibleType();
         acceptInaccessibleType(varOfInaccessibleType);
