@@ -660,16 +660,6 @@ object MEExpressionCompletionUtil {
         }
     }
 
-    private fun getFlowInputs(flow: FlowValue): List<FlowValue> {
-        var rootFlow = flow
-        val insn = flow.virtualInsnOrNull ?: return emptyList()
-        if (insn.insn.opcode == Opcodes.NEW) {
-            rootFlow = flow.getDecoration<InstantiationInfo>(Decorations.INSTANTIATION_INFO)?.initCall ?: rootFlow
-        }
-
-        return (0 until rootFlow.inputCount()).map(rootFlow::getInput)
-    }
-
     private fun getInstructionsInFlowTree(
         flow: FlowValue,
         outInstructions: MutableSet<ExpandedInstruction>,
@@ -680,14 +670,13 @@ object MEExpressionCompletionUtil {
         }
 
         if (!strict) {
-            val originalInsn =
-                flow.getDecoration<InsnExpander.Expansion>(Decorations.EXPANSION_INFO)?.compound ?: flow.insn
+            val originalInsn = InsnExpander.getRepresentative(flow) ?: flow.insn
             if (!outInstructions.add(ExpandedInstruction(flow.virtualInsn, originalInsn))) {
                 return
             }
         }
-        for (input in getFlowInputs(flow)) {
-            getInstructionsInFlowTree(input, outInstructions, false)
+        for (i in 0 until flow.inputCount()) {
+            getInstructionsInFlowTree(flow.getInput(i), outInstructions, false)
         }
     }
 

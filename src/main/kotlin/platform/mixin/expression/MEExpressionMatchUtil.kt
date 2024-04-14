@@ -48,7 +48,6 @@ import com.llamalad7.mixinextras.expression.impl.flow.expansion.InsnExpander
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import com.llamalad7.mixinextras.expression.impl.pool.IdentifierPool
 import com.llamalad7.mixinextras.expression.impl.pool.MemberDefinition
-import com.llamalad7.mixinextras.utils.Decorations
 import org.objectweb.asm.Handle
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
@@ -146,7 +145,7 @@ object MEExpressionMatchUtil {
                 return@cached null
             }
 
-            interpreter.finish().mapKeys { (insn, _) -> VirtualInsn(insn) }
+            interpreter.finish().asSequence().mapNotNull { flow -> flow.virtualInsnOrNull?.let { it to flow } }.toMap()
         }
     }
 
@@ -279,9 +278,7 @@ object MEExpressionMatchUtil {
                 if (expr.matches(flow, context)) {
                     for ((capturedFlow, startOffset) in captured) {
                         val capturedInsn = capturedFlow.virtualInsnOrNull ?: continue
-                        val originalInsn =
-                            capturedFlow.getDecoration<InsnExpander.Expansion>(Decorations.EXPANSION_INFO)?.compound
-                                ?: capturedInsn.insn
+                        val originalInsn = InsnExpander.getRepresentative(capturedFlow) ?: capturedInsn.insn
                         callback(ExpressionMatch(flow, originalInsn, startOffset, decorations[capturedInsn].orEmpty()))
                     }
                 }
