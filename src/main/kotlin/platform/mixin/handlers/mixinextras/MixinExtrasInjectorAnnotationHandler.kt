@@ -83,6 +83,9 @@ abstract class MixinExtrasInjectorAnnotationHandler : InjectorAnnotationHandler(
         },
         SIMPLE_EXPRESSION {
             override fun matches(target: TargetInsn) = target.hasDecoration(Decorations.SIMPLE_EXPRESSION_TYPE)
+        },
+        STRING_CONCAT_EXPRESSION {
+            override fun matches(target: TargetInsn) = target.hasDecoration(Decorations.IS_STRING_CONCAT_EXPRESSION)
         };
 
         abstract fun matches(target: TargetInsn): Boolean
