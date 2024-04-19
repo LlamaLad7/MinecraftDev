@@ -94,6 +94,8 @@ class MEExpressionInjector : MultiHostInjector {
             return
         }
 
+        // A Frankenstein injection is an injection where we don't know the entire contents, and therefore errors should
+        // not be reported.
         var isFrankenstein = false
         registrar.startInjecting(MEExpressionLanguage)
 

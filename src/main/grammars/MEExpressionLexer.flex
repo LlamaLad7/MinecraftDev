@@ -30,11 +30,12 @@ import com.intellij.psi.TokenType;
 %public
 %class MEExpressionLexer
 %implements FlexLexer
-%unicode
 %function advance
 %type IElementType
-%eof{ return;
-%eof}
+
+%state STRING
+
+%unicode
 
 WHITE_SPACE = [\ \n\t\r]
 RESERVED = assert|break|case|catch|const|continue|default|else|finally|for|goto|if|switch|synchronized|try|while|yield|_
@@ -85,63 +86,61 @@ METHOD_REF = ::
 STRING_TERMINATOR = '
 STRING_ESCAPE = \\'|\\\\
 
-%state STRING
-
 %%
 
 <YYINITIAL> {
-    {WHITE_SPACE}+ { yybegin(YYINITIAL); return TokenType.WHITE_SPACE; }
-    {RESERVED} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_RESERVED; }
-    {WILDCARD} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_WILDCARD; }
-    {NEW} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_NEW; }
-    {INSTANCEOF} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_INSTANCEOF; }
-    {BOOL_LIT} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_BOOL_LIT; }
-    {NULL_LIT} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_NULL_LIT; }
-    {DO} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_DO; }
-    {RETURN} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_RETURN; }
-    {THROW} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_THROW; }
-    {THIS} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_THIS; }
-    {SUPER} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_SUPER; }
-    {CLASS} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_CLASS; }
-    {IDENTIFIER} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_IDENTIFIER; }
-    {INT_LIT} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_INT_LIT; }
-    {DEC_LIT} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_DEC_LIT; }
-    {PLUS} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_PLUS; }
-    {MINUS} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_MINUS; }
-    {MULT} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_MULT; }
-    {DIV} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_DIV; }
-    {MOD} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_MOD; }
-    {BITWISE_NOT} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_BITWISE_NOT; }
-    {DOT} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_DOT; }
-    {COMMA} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_COMMA; }
-    {LEFT_PAREN} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_LEFT_PAREN; }
-    {RIGHT_PAREN} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_RIGHT_PAREN; }
-    {LEFT_BRACKET} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_LEFT_BRACKET; }
-    {RIGHT_BRACKET} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_RIGHT_BRACKET; }
-    {LEFT_BRACE} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_LEFT_BRACE; }
-    {RIGHT_BRACE} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_RIGHT_BRACE; }
-    {AT} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_AT; }
-    {SHL} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_SHL; }
-    {SHR} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_SHR; }
-    {USHR} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_USHR; }
-    {LT} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_LT; }
-    {LE} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_LE; }
-    {GT} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_GT; }
-    {GE} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_GE; }
-    {EQ} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_EQ; }
-    {NE} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_NE; }
-    {BITWISE_AND} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_BITWISE_AND; }
-    {BITWISE_XOR} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_BITWISE_XOR; }
-    {BITWISE_OR} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_BITWISE_OR; }
-    {ASSIGN} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_ASSIGN; }
-    {METHOD_REF} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_METHOD_REF; }
+    {WHITE_SPACE}+ { return TokenType.WHITE_SPACE; }
+    {RESERVED} { return MEExpressionTypes.TOKEN_RESERVED; }
+    {WILDCARD} { return MEExpressionTypes.TOKEN_WILDCARD; }
+    {NEW} { return MEExpressionTypes.TOKEN_NEW; }
+    {INSTANCEOF} { return MEExpressionTypes.TOKEN_INSTANCEOF; }
+    {BOOL_LIT} { return MEExpressionTypes.TOKEN_BOOL_LIT; }
+    {NULL_LIT} { return MEExpressionTypes.TOKEN_NULL_LIT; }
+    {DO} { return MEExpressionTypes.TOKEN_DO; }
+    {RETURN} { return MEExpressionTypes.TOKEN_RETURN; }
+    {THROW} { return MEExpressionTypes.TOKEN_THROW; }
+    {THIS} { return MEExpressionTypes.TOKEN_THIS; }
+    {SUPER} { return MEExpressionTypes.TOKEN_SUPER; }
+    {CLASS} { return MEExpressionTypes.TOKEN_CLASS; }
+    {IDENTIFIER} { return MEExpressionTypes.TOKEN_IDENTIFIER; }
+    {INT_LIT} { return MEExpressionTypes.TOKEN_INT_LIT; }
+    {DEC_LIT} { return MEExpressionTypes.TOKEN_DEC_LIT; }
+    {PLUS} { return MEExpressionTypes.TOKEN_PLUS; }
+    {MINUS} { return MEExpressionTypes.TOKEN_MINUS; }
+    {MULT} { return MEExpressionTypes.TOKEN_MULT; }
+    {DIV} { return MEExpressionTypes.TOKEN_DIV; }
+    {MOD} { return MEExpressionTypes.TOKEN_MOD; }
+    {BITWISE_NOT} { return MEExpressionTypes.TOKEN_BITWISE_NOT; }
+    {DOT} { return MEExpressionTypes.TOKEN_DOT; }
+    {COMMA} { return MEExpressionTypes.TOKEN_COMMA; }
+    {LEFT_PAREN} { return MEExpressionTypes.TOKEN_LEFT_PAREN; }
+    {RIGHT_PAREN} { return MEExpressionTypes.TOKEN_RIGHT_PAREN; }
+    {LEFT_BRACKET} { return MEExpressionTypes.TOKEN_LEFT_BRACKET; }
+    {RIGHT_BRACKET} { return MEExpressionTypes.TOKEN_RIGHT_BRACKET; }
+    {LEFT_BRACE} { return MEExpressionTypes.TOKEN_LEFT_BRACE; }
+    {RIGHT_BRACE} { return MEExpressionTypes.TOKEN_RIGHT_BRACE; }
+    {AT} { return MEExpressionTypes.TOKEN_AT; }
+    {SHL} { return MEExpressionTypes.TOKEN_SHL; }
+    {SHR} { return MEExpressionTypes.TOKEN_SHR; }
+    {USHR} { return MEExpressionTypes.TOKEN_USHR; }
+    {LT} { return MEExpressionTypes.TOKEN_LT; }
+    {LE} { return MEExpressionTypes.TOKEN_LE; }
+    {GT} { return MEExpressionTypes.TOKEN_GT; }
+    {GE} { return MEExpressionTypes.TOKEN_GE; }
+    {EQ} { return MEExpressionTypes.TOKEN_EQ; }
+    {NE} { return MEExpressionTypes.TOKEN_NE; }
+    {BITWISE_AND} { return MEExpressionTypes.TOKEN_BITWISE_AND; }
+    {BITWISE_XOR} { return MEExpressionTypes.TOKEN_BITWISE_XOR; }
+    {BITWISE_OR} { return MEExpressionTypes.TOKEN_BITWISE_OR; }
+    {ASSIGN} { return MEExpressionTypes.TOKEN_ASSIGN; }
+    {METHOD_REF} { return MEExpressionTypes.TOKEN_METHOD_REF; }
     {STRING_TERMINATOR} { yybegin(STRING); return MEExpressionTypes.TOKEN_STRING_TERMINATOR; }
 }
 
 <STRING> {
-    {STRING_ESCAPE} { yybegin(STRING); return MEExpressionTypes.TOKEN_STRING_ESCAPE; }
+    {STRING_ESCAPE} { return MEExpressionTypes.TOKEN_STRING_ESCAPE; }
     {STRING_TERMINATOR} { yybegin(YYINITIAL); return MEExpressionTypes.TOKEN_STRING_TERMINATOR; }
-    [^'\\]+ { yybegin(STRING); return MEExpressionTypes.TOKEN_STRING; }
+    [^'\\]+ { return MEExpressionTypes.TOKEN_STRING; }
 }
 
 [^] { return TokenType.BAD_CHARACTER; }

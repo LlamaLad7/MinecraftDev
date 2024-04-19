@@ -861,6 +861,10 @@ object LocalVariables {
         }
     }
 
+    /**
+     * Represents a local variable in source code and its probable relationship to the bytecode. Don't store instances
+     * of this class.
+     */
     data class SourceLocalVariable(
         val name: String,
         val type: PsiType,
