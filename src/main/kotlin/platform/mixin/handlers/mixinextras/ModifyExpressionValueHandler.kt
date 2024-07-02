@@ -28,8 +28,8 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiType
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
-import com.llamalad7.mixinextras.utils.Decorations
-import com.llamalad7.mixinextras.utils.TypeUtils
+import com.llamalad7.mixinextras.expression.impl.utils.ExpressionASMUtils
+import com.llamalad7.mixinextras.expression.impl.utils.ExpressionDecorations
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.ClassNode
@@ -57,8 +57,8 @@ class ModifyExpressionValueHandler : MixinExtrasInjectorAnnotationHandler() {
     }
 
     override fun intLikeTypePositions(target: TargetInsn): List<MethodSignature.TypePosition> {
-        val expressionType = target.getDecoration<Type>(Decorations.SIMPLE_EXPRESSION_TYPE)
-        if (expressionType == TypeUtils.INTLIKE_TYPE) {
+        val expressionType = target.getDecoration<Type>(ExpressionDecorations.SIMPLE_EXPRESSION_TYPE)
+        if (expressionType == ExpressionASMUtils.INTLIKE_TYPE) {
             return listOf(MethodSignature.TypePosition.Return, MethodSignature.TypePosition.Param(0))
         }
         return emptyList()
@@ -68,12 +68,12 @@ class ModifyExpressionValueHandler : MixinExtrasInjectorAnnotationHandler() {
         target: TargetInsn,
         annotation: PsiAnnotation
     ): PsiType? {
-        if (target.hasDecoration(Decorations.IS_STRING_CONCAT_EXPRESSION)) {
+        if (target.hasDecoration(ExpressionDecorations.IS_STRING_CONCAT_EXPRESSION)) {
             return PsiType.getJavaLangString(annotation.manager, annotation.resolveScope)
         }
         val psiReturnType = getPsiReturnType(target.insn, annotation)
         val rawReturnType = getInsnReturnType(target.insn)
-        val exprType = target.getDecoration<Type>(Decorations.SIMPLE_EXPRESSION_TYPE)
+        val exprType = target.getDecoration<Type>(ExpressionDecorations.SIMPLE_EXPRESSION_TYPE)
         if (exprType != null && rawReturnType != exprType) {
             // The expression knows more than the standard logic does.
             return exprType.toPsiType(JavaPsiFacade.getElementFactory(annotation.project))

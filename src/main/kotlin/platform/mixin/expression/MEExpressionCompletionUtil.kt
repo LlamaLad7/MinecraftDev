@@ -118,7 +118,7 @@ import com.llamalad7.mixinextras.expression.impl.flow.expansion.InsnExpander
 import com.llamalad7.mixinextras.expression.impl.flow.postprocessing.InstantiationInfo
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import com.llamalad7.mixinextras.expression.impl.pool.IdentifierPool
-import com.llamalad7.mixinextras.utils.Decorations
+import com.llamalad7.mixinextras.expression.impl.utils.FlowDecorations
 import org.apache.commons.lang3.mutable.MutableInt
 import org.objectweb.asm.Handle
 import org.objectweb.asm.Opcodes
@@ -770,7 +770,7 @@ object MEExpressionCompletionUtil {
                                 lookup.withTail(
                                     BracketsTailType(
                                         1,
-                                        flows[insn]?.hasDecoration(Decorations.ARRAY_CREATION_INFO) == true,
+                                        flows[insn]?.hasDecoration(FlowDecorations.ARRAY_CREATION_INFO) == true,
                                     )
                                 )
                                     .createEliminable("new [${insn.insn.desc}")
@@ -778,7 +778,7 @@ object MEExpressionCompletionUtil {
                         }
                         Opcodes.NEW -> {
                             val initCall = flows[insn]
-                                ?.getDecoration<InstantiationInfo>(Decorations.INSTANTIATION_INFO)
+                                ?.getDecoration<InstantiationInfo>(FlowDecorations.INSTANTIATION_INFO)
                                 ?.initCall
                                 ?.virtualInsnOrNull
                                 ?.insn as MethodInsnNode?
@@ -811,7 +811,7 @@ object MEExpressionCompletionUtil {
                                 .withTail(
                                     BracketsTailType(
                                         1,
-                                        flows[insn]?.hasDecoration(Decorations.ARRAY_CREATION_INFO) == true,
+                                        flows[insn]?.hasDecoration(FlowDecorations.ARRAY_CREATION_INFO) == true,
                                     )
                                 )
                                 .createEliminable("new $type[]")
@@ -827,7 +827,7 @@ object MEExpressionCompletionUtil {
                             .withTail(
                                 BracketsTailType(
                                     type.dimensions,
-                                    flows[insn]?.hasDecoration(Decorations.ARRAY_CREATION_INFO) == true
+                                    flows[insn]?.hasDecoration(FlowDecorations.ARRAY_CREATION_INFO) == true
                                 )
                             )
                             .createEliminable("new ${insn.insn.desc}")

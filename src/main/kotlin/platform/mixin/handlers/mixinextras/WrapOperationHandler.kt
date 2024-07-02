@@ -29,8 +29,8 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiType
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
-import com.llamalad7.mixinextras.utils.Decorations
-import com.llamalad7.mixinextras.utils.TypeUtils
+import com.llamalad7.mixinextras.expression.impl.utils.ExpressionASMUtils
+import com.llamalad7.mixinextras.expression.impl.utils.ExpressionDecorations
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
@@ -60,11 +60,14 @@ class WrapOperationHandler : MixinExtrasInjectorAnnotationHandler() {
     }
 
     override fun intLikeTypePositions(target: TargetInsn) = buildList {
-        if (target.getDecoration<Type>(Decorations.SIMPLE_OPERATION_RETURN_TYPE) == TypeUtils.INTLIKE_TYPE) {
+        if (
+            target.getDecoration<Type>(ExpressionDecorations.SIMPLE_OPERATION_RETURN_TYPE)
+            == ExpressionASMUtils.INTLIKE_TYPE
+        ) {
             add(MethodSignature.TypePosition.Return)
         }
-        target.getDecoration<Array<Type>>(Decorations.SIMPLE_OPERATION_ARGS)?.forEachIndexed { i, it ->
-            if (it == TypeUtils.INTLIKE_TYPE) {
+        target.getDecoration<Array<Type>>(ExpressionDecorations.SIMPLE_OPERATION_ARGS)?.forEachIndexed { i, it ->
+            if (it == ExpressionASMUtils.INTLIKE_TYPE) {
                 add(MethodSignature.TypePosition.Param(i))
             }
         }
@@ -76,8 +79,11 @@ class WrapOperationHandler : MixinExtrasInjectorAnnotationHandler() {
         annotation: PsiAnnotation
     ): List<Parameter>? {
         getPsiParameters(target.insn, targetClass, annotation)?.let { return it }
-        val args = target.getDecoration<Array<Type>>(Decorations.SIMPLE_OPERATION_ARGS) ?: return null
-        return args.toList().toParameters(annotation, target.getDecoration(Decorations.SIMPLE_OPERATION_PARAM_NAMES))
+        val args = target.getDecoration<Array<Type>>(ExpressionDecorations.SIMPLE_OPERATION_ARGS) ?: return null
+        return args.toList().toParameters(
+            annotation,
+            target.getDecoration(ExpressionDecorations.SIMPLE_OPERATION_PARAM_NAMES)
+        )
     }
 
     private fun getReturnType(
@@ -85,7 +91,7 @@ class WrapOperationHandler : MixinExtrasInjectorAnnotationHandler() {
         annotation: PsiAnnotation
     ): PsiType? {
         getPsiReturnType(target.insn, annotation)?.let { return it }
-        val type = target.getDecoration<Type>(Decorations.SIMPLE_OPERATION_RETURN_TYPE) ?: return null
+        val type = target.getDecoration<Type>(ExpressionDecorations.SIMPLE_OPERATION_RETURN_TYPE) ?: return null
         return type.toPsiType(JavaPsiFacade.getElementFactory(annotation.project))
     }
 

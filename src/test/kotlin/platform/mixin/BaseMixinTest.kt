@@ -41,7 +41,7 @@ abstract class BaseMixinTest : BaseMinecraftTest(PlatformType.MIXIN) {
     fun initMixin() {
         runWriteTask {
             mixinLibrary = createLibrary(project, "mixin")
-            mixinExtrasLibrary = createLibrary(project, "mixinextras-common") // TODO: this will probably change
+            mixinExtrasLibrary = createLibrary(project, "mixinextras-common")
             testDataLibrary = createLibrary(project, "mixin-test-data")
         }
 
