@@ -40,6 +40,7 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiModifierList
 import com.llamalad7.mixinextras.expression.impl.ExpressionParserFacade
+import com.llamalad7.mixinextras.expression.impl.ExpressionService
 import com.llamalad7.mixinextras.expression.impl.ast.expressions.Expression
 import com.llamalad7.mixinextras.expression.impl.flow.ComplexDataException
 import com.llamalad7.mixinextras.expression.impl.flow.FlowInterpreter
@@ -73,13 +74,17 @@ value class VirtualInsn(val insn: AbstractInsnNode)
 object MEExpressionMatchUtil {
     private val LOGGER = logger<MEExpressionMatchUtil>()
 
+    init {
+        ExpressionService.offerInstance(MEExpressionService)
+    }
+
     fun getFlowMap(project: Project, classIn: ClassNode, methodIn: MethodNode): FlowMap? {
         if (methodIn.instructions == null) {
             return null
         }
 
         return methodIn.cached(classIn, project) { classNode, methodNode ->
-            val interpreter = object : FlowInterpreter(classNode, methodNode) {
+            val interpreter = object : FlowInterpreter(classNode, methodNode, MEFlowContext(project)) {
                 override fun newValue(type: Type?): FlowValue? {
                     ProgressManager.checkCanceled()
                     return super.newValue(type)

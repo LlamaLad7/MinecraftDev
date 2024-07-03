@@ -76,7 +76,7 @@ import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.PsiUtil
 import com.intellij.refactoring.util.LambdaRefactoringUtil
 import com.intellij.util.CommonJavaRefactoringUtil
-import com.llamalad7.mixinextras.utils.TypeUtils
+import com.llamalad7.mixinextras.expression.impl.utils.ExpressionASMUtils
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.reflect.InvocationTargetException
@@ -143,7 +143,7 @@ private fun hasModifier(access: Int, @PsiModifier.ModifierConstant modifier: Str
 }
 
 fun Type.toPsiType(elementFactory: PsiElementFactory, context: PsiElement? = null): PsiType {
-    if (this == TypeUtils.INTLIKE_TYPE) {
+    if (this == ExpressionASMUtils.INTLIKE_TYPE) {
         return PsiTypes.intType()
     }
     val javaClassName = className.replace("(\\$)(\\D)".toRegex()) { "." + it.groupValues[2] }

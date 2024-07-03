@@ -38,7 +38,7 @@ import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypes
-import com.llamalad7.mixinextras.utils.Decorations
+import com.llamalad7.mixinextras.expression.impl.utils.ExpressionDecorations
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AbstractInsnNode
@@ -78,14 +78,16 @@ abstract class MixinExtrasInjectorAnnotationHandler : InjectorAnnotationHandler(
         },
         SIMPLE_OPERATION {
             override fun matches(target: TargetInsn) =
-                target.hasDecoration(Decorations.SIMPLE_OPERATION_ARGS) &&
-                    target.hasDecoration(Decorations.SIMPLE_OPERATION_RETURN_TYPE)
+                target.hasDecoration(ExpressionDecorations.SIMPLE_OPERATION_ARGS) &&
+                    target.hasDecoration(ExpressionDecorations.SIMPLE_OPERATION_RETURN_TYPE)
         },
         SIMPLE_EXPRESSION {
-            override fun matches(target: TargetInsn) = target.hasDecoration(Decorations.SIMPLE_EXPRESSION_TYPE)
+            override fun matches(target: TargetInsn) =
+                target.hasDecoration(ExpressionDecorations.SIMPLE_EXPRESSION_TYPE)
         },
         STRING_CONCAT_EXPRESSION {
-            override fun matches(target: TargetInsn) = target.hasDecoration(Decorations.IS_STRING_CONCAT_EXPRESSION)
+            override fun matches(target: TargetInsn) =
+                target.hasDecoration(ExpressionDecorations.IS_STRING_CONCAT_EXPRESSION)
         };
 
         abstract fun matches(target: TargetInsn): Boolean

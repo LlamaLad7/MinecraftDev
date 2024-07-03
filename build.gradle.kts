@@ -83,12 +83,13 @@ repositories {
     maven("https://maven.fabricmc.net/") {
         content {
             includeModule("net.fabricmc", "mapping-io")
+            includeModule("net.fabricmc", "fabric-loader")
         }
     }
     mavenCentral()
 
     // TODO: temporary waiting for MixinExtras expression library
-    maven("https://repo.spongepowered.org/")
+    maven("https://repo.spongepowered.org/maven/")
     maven("https://jitpack.io/") {
         content {
             includeGroupByRegex("com\\.github\\..+")
@@ -100,9 +101,11 @@ dependencies {
     // Add tools.jar for the JDI API
     implementation(files(Jvm.current().toolsJar))
 
-    // TODO: temporary waiting for MixinExtras expression library
-    testLibs(implementation("com.github.LlamaLad7.MixinExtras:mixinextras-common:86c9835")!!)
-    implementation("org.spongepowered:mixin:0.8.4")
+    // TODO: temporary waiting for a release
+    fun mixinExtras(variant: String) = "com.github.LlamaLad7.MixinExtras:mixinextras-$variant:4d2e01e"
+
+    implementation(mixinExtras("expressions"))
+    testLibs(mixinExtras("common"))
     implementation("org.ow2.asm:asm-util:9.3")
 
     // Kotlin
@@ -132,6 +135,7 @@ dependencies {
             classifier = "shaded"
         }
     }
+    testLibs(libs.test.fabricloader)
     testLibs(libs.test.nbt) {
         artifact {
             extension = "nbt"
