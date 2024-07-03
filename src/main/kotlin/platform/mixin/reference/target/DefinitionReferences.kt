@@ -48,6 +48,8 @@ import com.intellij.psi.ResolveResult
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.containers.sequenceOfNotNull
 import com.llamalad7.mixinextras.expression.impl.flow.FlowValue
+import com.llamalad7.mixinextras.expression.impl.flow.postprocessing.LMFInfo
+import com.llamalad7.mixinextras.expression.impl.utils.FlowDecorations
 import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 
@@ -154,12 +156,20 @@ object MethodDefinitionReference : AbstractDefinitionReference() {
         .insideAnnotationAttribute(MixinConstants.MixinExtras.DEFINITION, "method")
 
     override fun getFullReferenceIfMatches(memberReference: MemberReference, node: FlowValue): MemberReference? {
+        val info = node.getDecoration<LMFInfo>(FlowDecorations.LMF_INFO)
         val insn = node.insn
-        if (insn !is MethodInsnNode || !memberReference.matchMethod(insn.owner, insn.name, insn.desc)) {
+        val (owner, name, desc) = when {
+            info != null && (info.type == LMFInfo.Type.FREE_METHOD || info.type == LMFInfo.Type.BOUND_METHOD) ->
+                Triple(info.impl.owner, info.impl.name, info.impl.desc)
+
+            insn is MethodInsnNode -> Triple(insn.owner, insn.name, insn.desc)
+            else -> return null
+        }
+        if (!memberReference.matchMethod(owner, name, desc)) {
             return null
         }
 
-        return MemberReference(insn.name, insn.desc, insn.owner.replace('/', '.'))
+        return MemberReference(name, desc, owner.replace('/', '.'))
     }
 
     override fun getMatchesInClass(memberReference: MemberReference, clazz: PsiClass) =
