@@ -20,6 +20,7 @@
 
 package com.demonwav.mcdev.platform.mixin.reference.target
 
+import com.demonwav.mcdev.platform.mixin.expression.MEExpressionMatchUtil
 import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.reference.MixinReference
 import com.demonwav.mcdev.platform.mixin.util.MethodTargetMember
@@ -46,12 +47,12 @@ import com.intellij.psi.PsiMember
 import com.intellij.psi.ResolveResult
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.containers.sequenceOfNotNull
-import org.objectweb.asm.tree.AbstractInsnNode
+import com.llamalad7.mixinextras.expression.impl.flow.FlowValue
 import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 
 abstract class AbstractDefinitionReference : PolyReferenceResolver(), MixinReference {
-    abstract fun getFullReferenceIfMatches(memberReference: MemberReference, insn: AbstractInsnNode): MemberReference?
+    abstract fun getFullReferenceIfMatches(memberReference: MemberReference, node: FlowValue): MemberReference?
     abstract fun getMatchesInClass(memberReference: MemberReference, clazz: PsiClass): Sequence<PsiMember>
     abstract fun referenceToString(memberReference: MemberReference): String
 
@@ -110,8 +111,14 @@ abstract class AbstractDefinitionReference : PolyReferenceResolver(), MixinRefer
                 continue
             }
 
-            for (insn in target.classAndMethod.method.instructions) {
-                val fullReference = getFullReferenceIfMatches(memberReference, insn) ?: continue
+            val flow = MEExpressionMatchUtil.getFlowMap(
+                project,
+                target.classAndMethod.clazz,
+                target.classAndMethod.method
+            ) ?: continue
+
+            for (node in flow.values) {
+                val fullReference = getFullReferenceIfMatches(memberReference, node) ?: continue
                 result += fullReference
             }
         }
@@ -124,7 +131,8 @@ object FieldDefinitionReference : AbstractDefinitionReference() {
     val ELEMENT_PATTERN = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
         .insideAnnotationAttribute(MixinConstants.MixinExtras.DEFINITION, "field")
 
-    override fun getFullReferenceIfMatches(memberReference: MemberReference, insn: AbstractInsnNode): MemberReference? {
+    override fun getFullReferenceIfMatches(memberReference: MemberReference, node: FlowValue): MemberReference? {
+        val insn = node.insn
         if (insn !is FieldInsnNode || !memberReference.matchField(insn.owner, insn.name, insn.desc)) {
             return null
         }
@@ -145,7 +153,8 @@ object MethodDefinitionReference : AbstractDefinitionReference() {
     val ELEMENT_PATTERN = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
         .insideAnnotationAttribute(MixinConstants.MixinExtras.DEFINITION, "method")
 
-    override fun getFullReferenceIfMatches(memberReference: MemberReference, insn: AbstractInsnNode): MemberReference? {
+    override fun getFullReferenceIfMatches(memberReference: MemberReference, node: FlowValue): MemberReference? {
+        val insn = node.insn
         if (insn !is MethodInsnNode || !memberReference.matchMethod(insn.owner, insn.name, insn.desc)) {
             return null
         }
