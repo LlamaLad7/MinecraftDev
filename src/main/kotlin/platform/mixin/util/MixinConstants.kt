@@ -84,6 +84,7 @@ object MixinConstants {
     }
 
     object MixinExtras {
+        const val PACKAGE = "com.llamalad7.mixinextras."
         const val OPERATION = "com.llamalad7.mixinextras.injector.wrapoperation.Operation"
         const val WRAP_OPERATION = "com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation"
         const val WRAP_METHOD = "com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod"
