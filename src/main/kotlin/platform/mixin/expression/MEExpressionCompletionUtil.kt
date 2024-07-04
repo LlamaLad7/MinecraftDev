@@ -728,7 +728,7 @@ object MEExpressionCompletionUtil {
             is FieldInsnNode -> {
                 if (canCompleteExprs) {
                     val definitionValue = "field = \"L${insn.insn.owner};${insn.insn.name}:${insn.insn.desc}\""
-                    var lookup = LookupElementBuilder.create(insn.insn.name.toValidIdentifier())
+                    var lookup = createUniqueLookup(insn.insn.name.toValidIdentifier())
                         .withIcon(PlatformIcons.FIELD_ICON)
                         .withPresentableText(insn.insn.owner.substringAfterLast('/') + "." + insn.insn.name)
                         .withTypeText(Type.getType(insn.insn.desc).presentableName())
@@ -744,7 +744,7 @@ object MEExpressionCompletionUtil {
             is MethodInsnNode -> {
                 if (canCompleteExprs) {
                     val definitionValue = "method = \"L${insn.insn.owner};${insn.insn.name}${insn.insn.desc}\""
-                    var lookup = LookupElementBuilder.create(insn.insn.name.toValidIdentifier())
+                    var lookup = createUniqueLookup(insn.insn.name.toValidIdentifier())
                         .withIcon(PlatformIcons.METHOD_ICON)
                         .withPresentableText(insn.insn.owner.substringAfterLast('/') + "." + insn.insn.name)
                         .withDescTailText(insn.insn.desc)
@@ -808,7 +808,7 @@ object MEExpressionCompletionUtil {
                             else -> "unknown" // wtf?
                         }
                         return listOf(
-                            LookupElementBuilder.create(type)
+                            createUniqueLookup(type)
                                 .withIcon(PlatformIcons.CLASS_ICON)
                                 .withTail(
                                     BracketsTailType(
@@ -841,7 +841,7 @@ object MEExpressionCompletionUtil {
                     Opcodes.ARRAYLENGTH -> {
                         if (canCompleteExprs) {
                             return listOf(
-                                LookupElementBuilder.create("length")
+                                createUniqueLookup("length")
                                     .withIcon(PlatformIcons.FIELD_ICON)
                                     .withTypeText("int")
                                     .createEliminable("arraylength")
@@ -870,7 +870,7 @@ object MEExpressionCompletionUtil {
                         )
                     } else {
                         return listOf(
-                            LookupElementBuilder.create(handle.name.toValidIdentifier())
+                            createUniqueLookup(handle.name.toValidIdentifier())
                                 .withIcon(PlatformIcons.METHOD_ICON)
                                 .withPresentableText(handle.owner.substringAfterLast('/') + "." + handle.name)
                                 .withTypeText(Type.getReturnType(handle.desc).presentableName())
@@ -937,7 +937,7 @@ object MEExpressionCompletionUtil {
     private fun createTypeLookup(type: Type): LookupElementBuilder {
         val definitionId = type.typeNameToInsert()
 
-        val lookupElement = LookupElementBuilder.create(definitionId)
+        val lookupElement = createUniqueLookup(definitionId)
             .withIcon(PlatformIcons.CLASS_ICON)
             .withPresentableText(type.presentableName())
 
@@ -999,7 +999,7 @@ object MEExpressionCompletionUtil {
                 val ordinal = localsOfMyType.indexOf(localVariable)
                 val isImplicit = localsOfMyType.size == 1
                 val localName = localVariable.name.toValidIdentifier()
-                LookupElementBuilder.create(localName)
+                createUniqueLookup(localName)
                     .withIcon(PlatformIcons.VARIABLE_ICON)
                     .withTypeText(localPsiType.presentableText)
                     .withLocalDefinition(
@@ -1022,7 +1022,7 @@ object MEExpressionCompletionUtil {
         val localName = localType.typeNameToInsert().replace("[]", "Array") + (ordinal + 1)
         val isImplicit = localTypes.count { it == localType } == 1
         return listOf(
-            LookupElementBuilder.create(localName)
+            createUniqueLookup(localName)
                 .withIcon(PlatformIcons.VARIABLE_ICON)
                 .withTypeText(localType.presentableName())
                 .withLocalDefinition(localName, localType, ordinal, isArgsOnly, isImplicit, mixinClass)
@@ -1284,6 +1284,8 @@ object MEExpressionCompletionUtil {
 
         return variants
     }
+
+    private fun createUniqueLookup(text: String) = LookupElementBuilder.create(Any(), text)
 
     private fun LookupElement.createEliminable(uniquenessKey: String, priority: Int = 0) =
         EliminableLookup(uniquenessKey, this, priority)
