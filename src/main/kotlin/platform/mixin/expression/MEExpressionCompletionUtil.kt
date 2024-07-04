@@ -1178,6 +1178,11 @@ object MEExpressionCompletionUtil {
 
     private fun addDefinition(context: InsertionContext, id: String, definitionValue: String): PsiAnnotation? {
         val contextElement = context.file.findElementAt(context.startOffset) ?: return null
+        return addDefinition(contextElement, id, definitionValue)
+    }
+
+    fun addDefinition(contextElement: PsiElement, id: String, definitionValue: String): PsiAnnotation? {
+        val project = contextElement.project
         val injectionHost = contextElement.findMultiInjectionHost() ?: return null
         val expressionAnnotation = injectionHost.parentOfType<PsiAnnotation>() ?: return null
         if (!expressionAnnotation.hasQualifiedName(MixinConstants.MixinExtras.EXPRESSION)) {
@@ -1195,14 +1200,14 @@ object MEExpressionCompletionUtil {
         }
 
         // create and add the new @Definition annotation
-        var newAnnotation = JavaPsiFacade.getElementFactory(context.project).createAnnotationFromText(
+        var newAnnotation = JavaPsiFacade.getElementFactory(project).createAnnotationFromText(
             "@${MixinConstants.MixinExtras.DEFINITION}(id = \"$id\", $definitionValue)",
             modifierList,
         )
         var anchor = modifierList.annotations.lastOrNull { it.hasQualifiedName(MixinConstants.MixinExtras.DEFINITION) }
         if (anchor == null) {
             val definitionPosRelativeToExpression =
-                MinecraftProjectSettings.getInstance(context.project).definitionPosRelativeToExpression
+                MinecraftProjectSettings.getInstance(project).definitionPosRelativeToExpression
             if (definitionPosRelativeToExpression == BeforeOrAfter.AFTER) {
                 anchor = expressionAnnotation
             }
@@ -1211,11 +1216,11 @@ object MEExpressionCompletionUtil {
 
         // add imports and reformat
         newAnnotation =
-            JavaCodeStyleManager.getInstance(context.project).shortenClassReferences(newAnnotation) as PsiAnnotation
-        JavaCodeStyleManager.getInstance(context.project).optimizeImports(modifierList.containingFile)
+            JavaCodeStyleManager.getInstance(project).shortenClassReferences(newAnnotation) as PsiAnnotation
+        JavaCodeStyleManager.getInstance(project).optimizeImports(modifierList.containingFile)
         val annotationIndex = modifierList.annotations.indexOf(newAnnotation)
         val formattedModifierList =
-            CodeStyleManager.getInstance(context.project).reformat(modifierList) as PsiModifierList
+            CodeStyleManager.getInstance(project).reformat(modifierList) as PsiModifierList
         return formattedModifierList.annotations.getOrNull(annotationIndex)
     }
 
