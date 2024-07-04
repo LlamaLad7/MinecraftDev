@@ -1276,6 +1276,12 @@ object MEExpressionCompletionUtil {
                     variants += arrayLitExpr
                 }
             }
+            is MESuperCallExpression -> {
+                // Might be missing its parentheses
+                val callExpr = factory.createExpression("super.?()") as MESuperCallExpression
+                expression.memberName?.let { callExpr.memberName!!.replace(it) }
+                variants += callExpr
+            }
         }
 
         return variants
