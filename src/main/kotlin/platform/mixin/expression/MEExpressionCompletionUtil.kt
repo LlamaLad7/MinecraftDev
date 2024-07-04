@@ -21,7 +21,6 @@
 package com.demonwav.mcdev.platform.mixin.expression
 
 import com.demonwav.mcdev.MinecraftProjectSettings
-import com.demonwav.mcdev.platform.mixin.expression.MEExpressionCompletionUtil.presentableName
 import com.demonwav.mcdev.platform.mixin.expression.MEExpressionMatchUtil.virtualInsn
 import com.demonwav.mcdev.platform.mixin.expression.MEExpressionMatchUtil.virtualInsnOrNull
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEArrayAccessExpression
@@ -692,6 +691,7 @@ object MEExpressionCompletionUtil {
         canCompleteExprs: Boolean,
         canCompleteTypes: Boolean
     ): List<EliminableLookup> {
+        val flow = flows[insn]
         when (insn.insn) {
             is LdcInsnNode -> {
                 when (val cst = insn.insn.cst) {
@@ -765,18 +765,11 @@ object MEExpressionCompletionUtil {
                     val lookup = createTypeLookup(type)
                     when (insn.insn.opcode) {
                         Opcodes.ANEWARRAY -> {
-                            return listOf(
-                                lookup.withTail(
-                                    BracketsTailType(
-                                        1,
-                                        flows[insn]?.hasDecoration(FlowDecorations.ARRAY_CREATION_INFO) == true,
-                                    )
-                                )
-                                    .createEliminable("new [${insn.insn.desc}")
-                            )
+                            val arrayType = Type.getType('[' + Type.getObjectType(insn.insn.desc).descriptor)
+                            return createNewArrayCompletion(flow, arrayType)
                         }
                         Opcodes.NEW -> {
-                            val initCall = flows[insn]
+                            val initCall = flow
                                 ?.getDecoration<InstantiationInfo>(FlowDecorations.INSTANTIATION_INFO)
                                 ?.initCall
                                 ?.virtualInsnOrNull
@@ -796,44 +789,27 @@ object MEExpressionCompletionUtil {
             is IntInsnNode -> {
                 if (insn.insn.opcode == Opcodes.NEWARRAY) {
                     if (canCompleteTypes) {
-                        val type = when (insn.insn.operand) {
-                            Opcodes.T_BOOLEAN -> "boolean"
-                            Opcodes.T_CHAR -> "char"
-                            Opcodes.T_FLOAT -> "float"
-                            Opcodes.T_DOUBLE -> "double"
-                            Opcodes.T_BYTE -> "byte"
-                            Opcodes.T_SHORT -> "short"
-                            Opcodes.T_INT -> "int"
-                            Opcodes.T_LONG -> "long"
-                            else -> "unknown" // wtf?
-                        }
-                        return listOf(
-                            createUniqueLookup(type)
-                                .withIcon(PlatformIcons.CLASS_ICON)
-                                .withTail(
-                                    BracketsTailType(
-                                        1,
-                                        flows[insn]?.hasDecoration(FlowDecorations.ARRAY_CREATION_INFO) == true,
-                                    )
-                                )
-                                .createEliminable("new $type[]")
+                        val arrayType = Type.getType(
+                            when (insn.insn.operand) {
+                                Opcodes.T_BOOLEAN -> "[B"
+                                Opcodes.T_CHAR -> "[C"
+                                Opcodes.T_FLOAT -> "[F"
+                                Opcodes.T_DOUBLE -> "[D"
+                                Opcodes.T_BYTE -> "[B"
+                                Opcodes.T_SHORT -> "[S"
+                                Opcodes.T_INT -> "[I"
+                                Opcodes.T_LONG -> "[J"
+                                else -> "[Lnull;" // wtf?
+                            }
                         )
+                        return createNewArrayCompletion(flow, arrayType)
                     }
                 }
             }
             is MultiANewArrayInsnNode -> {
                 if (canCompleteTypes) {
-                    val type = Type.getType(insn.insn.desc)
-                    return listOf(
-                        createTypeLookup(type.elementType)
-                            .withTail(
-                                BracketsTailType(
-                                    type.dimensions,
-                                    flows[insn]?.hasDecoration(FlowDecorations.ARRAY_CREATION_INFO) == true
-                                )
-                            )
-                            .createEliminable("new ${insn.insn.desc}")
-                    )
+                    val arrayType = Type.getType(insn.insn.desc)
+                    return createNewArrayCompletion(flow, arrayType)
                 }
             }
             is InsnNode -> {
@@ -946,6 +922,22 @@ object MEExpressionCompletionUtil {
         } else {
             lookupElement.withDefinition(definitionId, "type = ${type.canonicalName}.class")
         }
+    }
+
+    private fun createNewArrayCompletion(flow: FlowValue?, arrayType: Type): List<EliminableLookup> {
+        val hasInitializer = flow?.hasDecoration(FlowDecorations.ARRAY_CREATION_INFO) == true
+        val initializerText = if (hasInitializer) "{}" else ""
+        return listOf(
+            createTypeLookup(arrayType.elementType)
+                .withTailText("[]".repeat(arrayType.dimensions) + initializerText)
+                .withTail(
+                    BracketsTailType(
+                        arrayType.dimensions,
+                        hasInitializer,
+                    )
+                )
+                .createEliminable("new ${arrayType.descriptor}$initializerText")
+        )
     }
 
     private fun createLocalVariableLookups(
@@ -1278,6 +1270,10 @@ object MEExpressionCompletionUtil {
                     val fixedNewArrayExpr = factory.createExpression("new ?[?]") as MENewExpression
                     fixedNewArrayExpr.type!!.replace(type)
                     variants += fixedNewArrayExpr
+
+                    val arrayLitExpr = factory.createExpression("new ?[]{?}") as MENewExpression
+                    arrayLitExpr.type!!.replace(type)
+                    variants += arrayLitExpr
                 }
             }
         }
