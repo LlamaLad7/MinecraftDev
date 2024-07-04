@@ -48,7 +48,7 @@ import com.llamalad7.mixinextras.expression.impl.flow.FlowValue
 import com.llamalad7.mixinextras.expression.impl.flow.expansion.InsnExpander
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import com.llamalad7.mixinextras.expression.impl.pool.IdentifierPool
-import com.llamalad7.mixinextras.expression.impl.pool.MemberDefinition
+import com.llamalad7.mixinextras.expression.impl.pool.SimpleMemberDefinition
 import org.objectweb.asm.Handle
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
@@ -171,9 +171,12 @@ object MEExpressionMatchUtil {
             val fields = annotation.findDeclaredAttributeValue("field")?.computeStringArray() ?: emptyList()
             for (field in fields) {
                 val fieldRef = MemberReference.parse(field) ?: continue
-                pool.addMember(definitionId) {
-                    it is FieldInsnNode && fieldRef.matchField(it.owner, it.name, it.desc)
-                }
+                pool.addMember(
+                    definitionId,
+                    SimpleMemberDefinition {
+                        it is FieldInsnNode && fieldRef.matchField(it.owner, it.name, it.desc)
+                    }
+                )
             }
 
             val methods = annotation.findDeclaredAttributeValue("method")?.computeStringArray() ?: emptyList()
@@ -181,7 +184,7 @@ object MEExpressionMatchUtil {
                 val methodRef = MemberReference.parse(method) ?: continue
                 pool.addMember(
                     definitionId,
-                    object : MemberDefinition {
+                    object : SimpleMemberDefinition {
                         override fun matches(insn: AbstractInsnNode) =
                             insn is MethodInsnNode && methodRef.matchMethod(insn.owner, insn.name, insn.desc)
 
@@ -202,20 +205,22 @@ object MEExpressionMatchUtil {
             for (localAnnotation in locals) {
                 val localType = localAnnotation.findDeclaredAttributeValue("type")?.resolveType()
                 val localInfo = LocalInfo.fromAnnotation(localType, localAnnotation)
-                pool.addMember(definitionId) { insn ->
-                    if (insn !is VarInsnNode) {
+                pool.addMember(definitionId) { node ->
+                    val virtualInsn = node.insn
+                    if (virtualInsn !is VarInsnNode) {
                         return@addMember false
                     }
-                    val actualInsn = if (insn.opcode >= Opcodes.ISTORE && insn.opcode <= Opcodes.ASTORE) {
-                        insn.next ?: return@addMember false
+                    val physicalInsn = InsnExpander.getRepresentative(node)
+                    val actualInsn = if (virtualInsn.opcode >= Opcodes.ISTORE && virtualInsn.opcode <= Opcodes.ASTORE) {
+                        physicalInsn.next ?: return@addMember false
                     } else {
-                        insn
+                        physicalInsn
                     }
 
                     val unfilteredLocals = localInfo.getLocals(module, targetClass, targetMethod, actualInsn)
                         ?: return@addMember false
                     val filteredLocals = localInfo.matchLocals(unfilteredLocals, CollectVisitor.Mode.MATCH_ALL)
-                    filteredLocals.any { it.index == insn.`var` }
+                    filteredLocals.any { it.index == virtualInsn.`var` }
                 }
             }
         }
