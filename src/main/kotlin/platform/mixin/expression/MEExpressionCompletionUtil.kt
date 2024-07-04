@@ -695,7 +695,7 @@ object MEExpressionCompletionUtil {
             is LdcInsnNode -> {
                 when (val cst = insn.insn.cst) {
                     is Type -> {
-                        if (canCompleteTypes && cst.isAccessibleFrom(mixinClass)) {
+                        if (canCompleteExprs && cst.isAccessibleFrom(mixinClass)) {
                             return listOf(
                                 createTypeLookup(cst)
                                     .withTailText(".class")
