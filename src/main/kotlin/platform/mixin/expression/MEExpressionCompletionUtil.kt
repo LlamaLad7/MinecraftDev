@@ -21,6 +21,7 @@
 package com.demonwav.mcdev.platform.mixin.expression
 
 import com.demonwav.mcdev.MinecraftProjectSettings
+import com.demonwav.mcdev.platform.mixin.expression.MEExpressionCompletionUtil.presentableName
 import com.demonwav.mcdev.platform.mixin.expression.MEExpressionMatchUtil.virtualInsn
 import com.demonwav.mcdev.platform.mixin.expression.MEExpressionMatchUtil.virtualInsnOrNull
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEArrayAccessExpression
@@ -746,9 +747,7 @@ object MEExpressionCompletionUtil {
                     var lookup = LookupElementBuilder.create(insn.insn.name.toValidIdentifier())
                         .withIcon(PlatformIcons.METHOD_ICON)
                         .withPresentableText(insn.insn.owner.substringAfterLast('/') + "." + insn.insn.name)
-                        .withTailText(
-                            "(" + Type.getArgumentTypes(insn.insn.desc).joinToString { it.presentableName() } + ")"
-                        )
+                        .withDescTailText(insn.insn.desc)
                         .withTypeText(Type.getReturnType(insn.insn.desc).presentableName())
                         .withDefinitionAndFold(insn.insn.name.toValidIdentifier(), "method", definitionValue)
                     if (insn.insn.opcode == Opcodes.INVOKESTATIC) {
@@ -781,10 +780,13 @@ object MEExpressionCompletionUtil {
                                 ?.getDecoration<InstantiationInfo>(FlowDecorations.INSTANTIATION_INFO)
                                 ?.initCall
                                 ?.virtualInsnOrNull
-                                ?.insn as MethodInsnNode?
+                                ?.insn as? MethodInsnNode
+                                ?: return emptyList()
                             return listOf(
-                                lookup.withTail(ParenthesesTailType(initCall?.desc?.startsWith("()") == false))
-                                    .createEliminable("new ${insn.insn.desc}${initCall?.desc}")
+                                lookup
+                                    .withDescTailText(initCall.desc)
+                                    .withTail(ParenthesesTailType(!initCall.desc.startsWith("()")))
+                                    .createEliminable("new ${insn.insn.desc}${initCall.desc}")
                             )
                         }
                         else -> return listOf(lookup.createEliminable("type ${insn.insn.desc}"))
@@ -1027,6 +1029,11 @@ object MEExpressionCompletionUtil {
                 .createEliminable("local $localName", if (isImplicit) -1 else 0)
         )
     }
+
+    private fun LookupElementBuilder.withDescTailText(desc: String) =
+        withTailText(
+            Type.getArgumentTypes(desc).joinToString(prefix = "(", postfix = ")") { it.presentableName() }
+        )
 
     private fun LookupElement.withTail(tailType: TailType?) = object : TailTypeDecorator<LookupElement>(this) {
         override fun computeTailType(context: InsertionContext?) = tailType
