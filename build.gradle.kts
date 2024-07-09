@@ -102,7 +102,7 @@ dependencies {
     implementation(files(Jvm.current().toolsJar))
 
     // TODO: temporary waiting for a release
-    fun mixinExtras(variant: String) = "com.github.LlamaLad7.MixinExtras:mixinextras-$variant:4d2e01e"
+    fun mixinExtras(variant: String) = "com.github.LlamaLad7.MixinExtras:mixinextras-$variant:2ad48e8"
 
     implementation(mixinExtras("expressions"))
     testLibs(mixinExtras("common"))

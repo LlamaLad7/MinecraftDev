@@ -514,6 +514,7 @@
         <completion.contributor language="MEExpression"
                                 implementationClass="com.demonwav.mcdev.platform.mixin.expression.MEExpressionCompletionContributor"/>
         <multiHostInjector implementation="com.demonwav.mcdev.platform.mixin.expression.MEExpressionInjector"/>
+        <typedHandler implementation="com.demonwav.mcdev.platform.mixin.expression.MEExpressionTypedHandlerDelegate"/>
         <!--endregion-->
 
         <!--endregion-->

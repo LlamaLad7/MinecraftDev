@@ -691,11 +691,12 @@ object MEExpressionCompletionUtil {
         canCompleteExprs: Boolean,
         canCompleteTypes: Boolean
     ): List<EliminableLookup> {
+        val flow = flows[insn]
         when (insn.insn) {
             is LdcInsnNode -> {
                 when (val cst = insn.insn.cst) {
                     is Type -> {
-                        if (canCompleteTypes && cst.isAccessibleFrom(mixinClass)) {
+                        if (canCompleteExprs && cst.isAccessibleFrom(mixinClass)) {
                             return listOf(
                                 createTypeLookup(cst)
                                     .withTailText(".class")
@@ -727,7 +728,7 @@ object MEExpressionCompletionUtil {
             is FieldInsnNode -> {
                 if (canCompleteExprs) {
                     val definitionValue = "field = \"L${insn.insn.owner};${insn.insn.name}:${insn.insn.desc}\""
-                    var lookup = LookupElementBuilder.create(insn.insn.name.toValidIdentifier())
+                    var lookup = createUniqueLookup(insn.insn.name.toValidIdentifier())
                         .withIcon(PlatformIcons.FIELD_ICON)
                         .withPresentableText(insn.insn.owner.substringAfterLast('/') + "." + insn.insn.name)
                         .withTypeText(Type.getType(insn.insn.desc).presentableName())
@@ -743,12 +744,10 @@ object MEExpressionCompletionUtil {
             is MethodInsnNode -> {
                 if (canCompleteExprs) {
                     val definitionValue = "method = \"L${insn.insn.owner};${insn.insn.name}${insn.insn.desc}\""
-                    var lookup = LookupElementBuilder.create(insn.insn.name.toValidIdentifier())
+                    var lookup = createUniqueLookup(insn.insn.name.toValidIdentifier())
                         .withIcon(PlatformIcons.METHOD_ICON)
                         .withPresentableText(insn.insn.owner.substringAfterLast('/') + "." + insn.insn.name)
-                        .withTailText(
-                            "(" + Type.getArgumentTypes(insn.insn.desc).joinToString { it.presentableName() } + ")"
-                        )
+                        .withDescTailText(insn.insn.desc)
                         .withTypeText(Type.getReturnType(insn.insn.desc).presentableName())
                         .withDefinitionAndFold(insn.insn.name.toValidIdentifier(), "method", definitionValue)
                     if (insn.insn.opcode == Opcodes.INVOKESTATIC) {
@@ -766,25 +765,21 @@ object MEExpressionCompletionUtil {
                     val lookup = createTypeLookup(type)
                     when (insn.insn.opcode) {
                         Opcodes.ANEWARRAY -> {
-                            return listOf(
-                                lookup.withTail(
-                                    BracketsTailType(
-                                        1,
-                                        flows[insn]?.hasDecoration(FlowDecorations.ARRAY_CREATION_INFO) == true,
-                                    )
-                                )
-                                    .createEliminable("new [${insn.insn.desc}")
-                            )
+                            val arrayType = Type.getType('[' + Type.getObjectType(insn.insn.desc).descriptor)
+                            return createNewArrayCompletion(flow, arrayType)
                         }
                         Opcodes.NEW -> {
-                            val initCall = flows[insn]
+                            val initCall = flow
                                 ?.getDecoration<InstantiationInfo>(FlowDecorations.INSTANTIATION_INFO)
                                 ?.initCall
                                 ?.virtualInsnOrNull
-                                ?.insn as MethodInsnNode?
+                                ?.insn as? MethodInsnNode
+                                ?: return emptyList()
                             return listOf(
-                                lookup.withTail(ParenthesesTailType(initCall?.desc?.startsWith("()") == false))
-                                    .createEliminable("new ${insn.insn.desc}${initCall?.desc}")
+                                lookup
+                                    .withDescTailText(initCall.desc)
+                                    .withTail(ParenthesesTailType(!initCall.desc.startsWith("()")))
+                                    .createEliminable("new ${insn.insn.desc}${initCall.desc}")
                             )
                         }
                         else -> return listOf(lookup.createEliminable("type ${insn.insn.desc}"))
@@ -794,44 +789,27 @@ object MEExpressionCompletionUtil {
             is IntInsnNode -> {
                 if (insn.insn.opcode == Opcodes.NEWARRAY) {
                     if (canCompleteTypes) {
-                        val type = when (insn.insn.operand) {
-                            Opcodes.T_BOOLEAN -> "boolean"
-                            Opcodes.T_CHAR -> "char"
-                            Opcodes.T_FLOAT -> "float"
-                            Opcodes.T_DOUBLE -> "double"
-                            Opcodes.T_BYTE -> "byte"
-                            Opcodes.T_SHORT -> "short"
-                            Opcodes.T_INT -> "int"
-                            Opcodes.T_LONG -> "long"
-                            else -> "unknown" // wtf?
-                        }
-                        return listOf(
-                            LookupElementBuilder.create(type)
-                                .withIcon(PlatformIcons.CLASS_ICON)
-                                .withTail(
-                                    BracketsTailType(
-                                        1,
-                                        flows[insn]?.hasDecoration(FlowDecorations.ARRAY_CREATION_INFO) == true,
-                                    )
-                                )
-                                .createEliminable("new $type[]")
+                        val arrayType = Type.getType(
+                            when (insn.insn.operand) {
+                                Opcodes.T_BOOLEAN -> "[B"
+                                Opcodes.T_CHAR -> "[C"
+                                Opcodes.T_FLOAT -> "[F"
+                                Opcodes.T_DOUBLE -> "[D"
+                                Opcodes.T_BYTE -> "[B"
+                                Opcodes.T_SHORT -> "[S"
+                                Opcodes.T_INT -> "[I"
+                                Opcodes.T_LONG -> "[J"
+                                else -> "[Lnull;" // wtf?
+                            }
                         )
+                        return createNewArrayCompletion(flow, arrayType)
                     }
                 }
             }
             is MultiANewArrayInsnNode -> {
                 if (canCompleteTypes) {
-                    val type = Type.getType(insn.insn.desc)
-                    return listOf(
-                        createTypeLookup(type.elementType)
-                            .withTail(
-                                BracketsTailType(
-                                    type.dimensions,
-                                    flows[insn]?.hasDecoration(FlowDecorations.ARRAY_CREATION_INFO) == true
-                                )
-                            )
-                            .createEliminable("new ${insn.insn.desc}")
-                    )
+                    val arrayType = Type.getType(insn.insn.desc)
+                    return createNewArrayCompletion(flow, arrayType)
                 }
             }
             is InsnNode -> {
@@ -839,7 +817,7 @@ object MEExpressionCompletionUtil {
                     Opcodes.ARRAYLENGTH -> {
                         if (canCompleteExprs) {
                             return listOf(
-                                LookupElementBuilder.create("length")
+                                createUniqueLookup("length")
                                     .withIcon(PlatformIcons.FIELD_ICON)
                                     .withTypeText("int")
                                     .createEliminable("arraylength")
@@ -868,7 +846,7 @@ object MEExpressionCompletionUtil {
                         )
                     } else {
                         return listOf(
-                            LookupElementBuilder.create(handle.name.toValidIdentifier())
+                            createUniqueLookup(handle.name.toValidIdentifier())
                                 .withIcon(PlatformIcons.METHOD_ICON)
                                 .withPresentableText(handle.owner.substringAfterLast('/') + "." + handle.name)
                                 .withTypeText(Type.getReturnType(handle.desc).presentableName())
@@ -935,7 +913,7 @@ object MEExpressionCompletionUtil {
     private fun createTypeLookup(type: Type): LookupElementBuilder {
         val definitionId = type.typeNameToInsert()
 
-        val lookupElement = LookupElementBuilder.create(definitionId)
+        val lookupElement = createUniqueLookup(definitionId)
             .withIcon(PlatformIcons.CLASS_ICON)
             .withPresentableText(type.presentableName())
 
@@ -944,6 +922,22 @@ object MEExpressionCompletionUtil {
         } else {
             lookupElement.withDefinition(definitionId, "type = ${type.canonicalName}.class")
         }
+    }
+
+    private fun createNewArrayCompletion(flow: FlowValue?, arrayType: Type): List<EliminableLookup> {
+        val hasInitializer = flow?.hasDecoration(FlowDecorations.ARRAY_CREATION_INFO) == true
+        val initializerText = if (hasInitializer) "{}" else ""
+        return listOf(
+            createTypeLookup(arrayType.elementType)
+                .withTailText("[]".repeat(arrayType.dimensions) + initializerText)
+                .withTail(
+                    BracketsTailType(
+                        arrayType.dimensions,
+                        hasInitializer,
+                    )
+                )
+                .createEliminable("new ${arrayType.descriptor}$initializerText")
+        )
     }
 
     private fun createLocalVariableLookups(
@@ -997,7 +991,7 @@ object MEExpressionCompletionUtil {
                 val ordinal = localsOfMyType.indexOf(localVariable)
                 val isImplicit = localsOfMyType.size == 1
                 val localName = localVariable.name.toValidIdentifier()
-                LookupElementBuilder.create(localName)
+                createUniqueLookup(localName)
                     .withIcon(PlatformIcons.VARIABLE_ICON)
                     .withTypeText(localPsiType.presentableText)
                     .withLocalDefinition(
@@ -1020,13 +1014,18 @@ object MEExpressionCompletionUtil {
         val localName = localType.typeNameToInsert().replace("[]", "Array") + (ordinal + 1)
         val isImplicit = localTypes.count { it == localType } == 1
         return listOf(
-            LookupElementBuilder.create(localName)
+            createUniqueLookup(localName)
                 .withIcon(PlatformIcons.VARIABLE_ICON)
                 .withTypeText(localType.presentableName())
                 .withLocalDefinition(localName, localType, ordinal, isArgsOnly, isImplicit, mixinClass)
                 .createEliminable("local $localName", if (isImplicit) -1 else 0)
         )
     }
+
+    private fun LookupElementBuilder.withDescTailText(desc: String) =
+        withTailText(
+            Type.getArgumentTypes(desc).joinToString(prefix = "(", postfix = ")") { it.presentableName() }
+        )
 
     private fun LookupElement.withTail(tailType: TailType?) = object : TailTypeDecorator<LookupElement>(this) {
         override fun computeTailType(context: InsertionContext?) = tailType
@@ -1179,6 +1178,15 @@ object MEExpressionCompletionUtil {
 
     private fun addDefinition(context: InsertionContext, id: String, definitionValue: String): PsiAnnotation? {
         val contextElement = context.file.findElementAt(context.startOffset) ?: return null
+        return addDefinition(context.project, contextElement, id, definitionValue)
+    }
+
+    fun addDefinition(
+        project: Project,
+        contextElement: PsiElement,
+        id: String,
+        definitionValue: String
+    ): PsiAnnotation? {
         val injectionHost = contextElement.findMultiInjectionHost() ?: return null
         val expressionAnnotation = injectionHost.parentOfType<PsiAnnotation>() ?: return null
         if (!expressionAnnotation.hasQualifiedName(MixinConstants.MixinExtras.EXPRESSION)) {
@@ -1196,14 +1204,14 @@ object MEExpressionCompletionUtil {
         }
 
         // create and add the new @Definition annotation
-        var newAnnotation = JavaPsiFacade.getElementFactory(context.project).createAnnotationFromText(
+        var newAnnotation = JavaPsiFacade.getElementFactory(project).createAnnotationFromText(
             "@${MixinConstants.MixinExtras.DEFINITION}(id = \"$id\", $definitionValue)",
             modifierList,
         )
         var anchor = modifierList.annotations.lastOrNull { it.hasQualifiedName(MixinConstants.MixinExtras.DEFINITION) }
         if (anchor == null) {
             val definitionPosRelativeToExpression =
-                MinecraftProjectSettings.getInstance(context.project).definitionPosRelativeToExpression
+                MinecraftProjectSettings.getInstance(project).definitionPosRelativeToExpression
             if (definitionPosRelativeToExpression == BeforeOrAfter.AFTER) {
                 anchor = expressionAnnotation
             }
@@ -1212,11 +1220,11 @@ object MEExpressionCompletionUtil {
 
         // add imports and reformat
         newAnnotation =
-            JavaCodeStyleManager.getInstance(context.project).shortenClassReferences(newAnnotation) as PsiAnnotation
-        JavaCodeStyleManager.getInstance(context.project).optimizeImports(modifierList.containingFile)
+            JavaCodeStyleManager.getInstance(project).shortenClassReferences(newAnnotation) as PsiAnnotation
+        JavaCodeStyleManager.getInstance(project).optimizeImports(modifierList.containingFile)
         val annotationIndex = modifierList.annotations.indexOf(newAnnotation)
         val formattedModifierList =
-            CodeStyleManager.getInstance(context.project).reformat(modifierList) as PsiModifierList
+            CodeStyleManager.getInstance(project).reformat(modifierList) as PsiModifierList
         return formattedModifierList.annotations.getOrNull(annotationIndex)
     }
 
@@ -1271,12 +1279,24 @@ object MEExpressionCompletionUtil {
                     val fixedNewArrayExpr = factory.createExpression("new ?[?]") as MENewExpression
                     fixedNewArrayExpr.type!!.replace(type)
                     variants += fixedNewArrayExpr
+
+                    val arrayLitExpr = factory.createExpression("new ?[]{?}") as MENewExpression
+                    arrayLitExpr.type!!.replace(type)
+                    variants += arrayLitExpr
                 }
+            }
+            is MESuperCallExpression -> {
+                // Might be missing its parentheses
+                val callExpr = factory.createExpression("super.?()") as MESuperCallExpression
+                expression.memberName?.let { callExpr.memberName!!.replace(it) }
+                variants += callExpr
             }
         }
 
         return variants
     }
+
+    private fun createUniqueLookup(text: String) = LookupElementBuilder.create(Any(), text)
 
     private fun LookupElement.createEliminable(uniquenessKey: String, priority: Int = 0) =
         EliminableLookup(uniquenessKey, this, priority)

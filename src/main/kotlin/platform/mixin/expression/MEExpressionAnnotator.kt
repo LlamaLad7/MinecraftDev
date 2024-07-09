@@ -40,16 +40,24 @@ import com.demonwav.mcdev.platform.mixin.expression.gen.psi.METype
 import com.demonwav.mcdev.platform.mixin.expression.psi.METypeUtil
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.util.findMultiInjectionHost
+import com.intellij.codeInsight.AutoPopupController
 import com.intellij.codeInspection.InspectionManager
+import com.intellij.codeInspection.LocalQuickFixAndIntentionActionOnPsiElement
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.RemoveAnnotationQuickFix
+import com.intellij.lang.annotation.AnnotationBuilder
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.Annotator
 import com.intellij.lang.annotation.HighlightSeverity
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.colors.TextAttributesKey
+import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiAnnotation
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiModifierListOwner
+import com.intellij.psi.impl.source.tree.injected.InjectedLanguageEditorUtil
 import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.TypeConversionUtil
 import com.intellij.psi.util.parentOfType
@@ -275,6 +283,7 @@ class MEExpressionAnnotator : Annotator {
             )
                 .range(type)
                 .highlightType(ProblemHighlightType.LIKE_UNKNOWN_SYMBOL)
+                .withDefinitionFix(type)
                 .create()
         } else {
             holder.newSilentAnnotation(HighlightSeverity.TEXT_ATTRIBUTES)
@@ -306,12 +315,54 @@ class MEExpressionAnnotator : Annotator {
             )
                 .range(variable)
                 .highlightType(ProblemHighlightType.LIKE_UNKNOWN_SYMBOL)
+                .withDefinitionFix(variable)
                 .create()
         } else {
             holder.newSilentAnnotation(HighlightSeverity.TEXT_ATTRIBUTES)
                 .range(variable)
                 .textAttributes(defaultColor)
                 .create()
+        }
+    }
+
+    private fun AnnotationBuilder.withDefinitionFix(name: MEName) =
+        withFix(AddDefinitionInspection(name))
+
+    private class AddDefinitionInspection(name: MEName) : LocalQuickFixAndIntentionActionOnPsiElement(name) {
+        private val id = name.text
+
+        override fun getFamilyName(): String = "Add @Definition"
+
+        override fun getText(): String = "$familyName(id = \"$id\")"
+
+        override fun invoke(
+            project: Project,
+            file: PsiFile,
+            editor: Editor?,
+            startElement: PsiElement,
+            endElement: PsiElement
+        ) {
+            if (editor == null) {
+                MEExpressionCompletionUtil.addDefinition(
+                    project,
+                    startElement,
+                    id,
+                    ""
+                )
+                return
+            }
+            val annotation = MEExpressionCompletionUtil.addDefinition(
+                project,
+                startElement,
+                id,
+                "dummy"
+            ) ?: return
+            val dummy = annotation.findAttribute("dummy") as? PsiElement ?: return
+            val hostEditor = InjectedLanguageEditorUtil.getTopLevelEditor(editor)
+            hostEditor.caretModel.moveToOffset(dummy.textOffset)
+            PsiDocumentManager.getInstance(project).doPostponedOperationsAndUnblockDocument(hostEditor.document)
+            hostEditor.document.replaceString(dummy.textRange.startOffset, dummy.textRange.endOffset, "")
+            AutoPopupController.getInstance(project).autoPopupMemberLookup(hostEditor, null)
         }
     }
 }
