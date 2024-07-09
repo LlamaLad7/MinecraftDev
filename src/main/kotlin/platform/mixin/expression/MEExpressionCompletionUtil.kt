@@ -1178,11 +1178,10 @@ object MEExpressionCompletionUtil {
 
     private fun addDefinition(context: InsertionContext, id: String, definitionValue: String): PsiAnnotation? {
         val contextElement = context.file.findElementAt(context.startOffset) ?: return null
-        return addDefinition(contextElement, id, definitionValue)
+        return addDefinition(context.project, contextElement, id, definitionValue)
     }
 
-    fun addDefinition(contextElement: PsiElement, id: String, definitionValue: String): PsiAnnotation? {
-        val project = contextElement.project
+    fun addDefinition(project: Project, contextElement: PsiElement, id: String, definitionValue: String): PsiAnnotation? {
         val injectionHost = contextElement.findMultiInjectionHost() ?: return null
         val expressionAnnotation = injectionHost.parentOfType<PsiAnnotation>() ?: return null
         if (!expressionAnnotation.hasQualifiedName(MixinConstants.MixinExtras.EXPRESSION)) {

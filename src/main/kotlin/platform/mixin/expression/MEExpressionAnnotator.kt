@@ -344,6 +344,7 @@ class MEExpressionAnnotator : Annotator {
         ) {
             if (editor == null) {
                 MEExpressionCompletionUtil.addDefinition(
+                    project,
                     startElement,
                     id,
                     ""
@@ -351,6 +352,7 @@ class MEExpressionAnnotator : Annotator {
                 return
             }
             val annotation = MEExpressionCompletionUtil.addDefinition(
+                project,
                 startElement,
                 id,
                 "dummy"
