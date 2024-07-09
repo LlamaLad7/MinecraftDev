@@ -1181,7 +1181,12 @@ object MEExpressionCompletionUtil {
         return addDefinition(context.project, contextElement, id, definitionValue)
     }
 
-    fun addDefinition(project: Project, contextElement: PsiElement, id: String, definitionValue: String): PsiAnnotation? {
+    fun addDefinition(
+        project: Project,
+        contextElement: PsiElement,
+        id: String,
+        definitionValue: String
+    ): PsiAnnotation? {
         val injectionHost = contextElement.findMultiInjectionHost() ?: return null
         val expressionAnnotation = injectionHost.parentOfType<PsiAnnotation>() ?: return null
         if (!expressionAnnotation.hasQualifiedName(MixinConstants.MixinExtras.EXPRESSION)) {
