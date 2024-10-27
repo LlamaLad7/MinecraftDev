@@ -29,7 +29,6 @@ import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.EnumComboBoxModel
-import com.intellij.ui.components.Label
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.BottomGap
 import com.intellij.ui.dsl.builder.MutableProperty
@@ -37,7 +36,10 @@ import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.util.IconUtil
+import java.awt.Font
 import javax.swing.JComponent
+import javax.swing.JLabel
+import javax.swing.SwingConstants
 import org.jetbrains.annotations.Nls
 
 class MinecraftConfigurable : Configurable {
@@ -49,9 +51,12 @@ class MinecraftConfigurable : Configurable {
 
     override fun createComponent(): JComponent = panel {
         row(
-            Label(MCDevBundle("minecraft.settings.title"), bold = true).apply {
-                font = font.deriveFont(font.size * 1.5f)
-                icon = IconUtil.scale(PlatformAssets.MINECRAFT_ICON_2X, null, 1.5f)
+            JLabel(
+                MCDevBundle("minecraft.settings.title"),
+                IconUtil.scale(PlatformAssets.MINECRAFT_ICON_2X, null, 1.5f),
+                SwingConstants.LEADING
+            ).apply {
+                font = font.deriveFont(Font.BOLD, font.size * 1.5f)
             }
         ) {
             button(MCDevBundle("minecraft.settings.change_update_channel")) {
