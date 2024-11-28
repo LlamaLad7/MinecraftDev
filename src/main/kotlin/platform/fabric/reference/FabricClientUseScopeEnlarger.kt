@@ -49,7 +49,7 @@ class FabricClientUseScopeEnlarger : UseScopeEnlarger() {
                         val moduleWithDeps = GlobalSearchScope.moduleWithDependenciesScope(module)
                         FilenameIndex.getVirtualFilesByName(FabricConstants.FABRIC_MOD_JSON, moduleWithDeps)
                     }
-                ).inSmartMode(element.project).executeSynchronously()
+                ).executeSynchronously()
             }
         }
 
