@@ -20,6 +20,7 @@
 
 package com.demonwav.mcdev.platform.mcp
 
+import com.demonwav.mcdev.MinecraftSettings
 import com.demonwav.mcdev.facet.MinecraftFacet
 import com.demonwav.mcdev.platform.AbstractModule
 import com.demonwav.mcdev.platform.PlatformType
@@ -28,6 +29,8 @@ import com.demonwav.mcdev.platform.mcp.util.McpConstants
 import com.demonwav.mcdev.translations.TranslationFileListener
 import com.demonwav.mcdev.util.runWriteTaskLater
 import com.intellij.json.JsonFileType
+import com.intellij.openapi.externalSystem.importing.ImportSpecBuilder
+import com.intellij.openapi.externalSystem.util.ExternalSystemUtil
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
@@ -35,6 +38,8 @@ import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiMethod
 import com.intellij.util.messages.MessageBusConnection
 import javax.swing.Icon
+import org.jetbrains.plugins.gradle.settings.GradleSettings
+import org.jetbrains.plugins.gradle.util.GradleConstants
 
 class McpModule(facet: MinecraftFacet) : AbstractModule(facet) {
 
@@ -53,6 +58,21 @@ class McpModule(facet: MinecraftFacet) : AbstractModule(facet) {
 
         runWriteTaskLater {
             FileTypeManager.getInstance().associatePattern(JsonFileType.INSTANCE, McpConstants.PNG_MCMETA)
+        }
+
+        if (MinecraftSettings.instance.forceExternalAnnotations) {
+            // Force enable external annotations so that ours are provided
+            var requiresRefresh = false
+            for (settings in GradleSettings.getInstance(project).linkedProjectsSettings) {
+                if (!settings.isResolveExternalAnnotations) {
+                    settings.isResolveExternalAnnotations = true
+                    requiresRefresh = true
+                }
+            }
+
+            if (requiresRefresh) {
+                ExternalSystemUtil.refreshProjects(ImportSpecBuilder(project, GradleConstants.SYSTEM_ID))
+            }
         }
     }
 

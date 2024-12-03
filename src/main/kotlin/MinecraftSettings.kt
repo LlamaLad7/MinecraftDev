@@ -39,6 +39,7 @@ class MinecraftSettings : PersistentStateComponent<MinecraftSettings.State> {
         var isShowChatColorGutterIcons: Boolean = true,
         var isShowChatColorUnderlines: Boolean = false,
         var underlineType: UnderlineType = UnderlineType.DOTTED,
+        var forceExternalAnnotations: Boolean = true,
 
         var mixinClassIcon: Boolean = true,
 
@@ -106,6 +107,12 @@ class MinecraftSettings : PersistentStateComponent<MinecraftSettings.State> {
         get() = state.underlineType
         set(underlineType) {
             state.underlineType = underlineType
+        }
+
+    var forceExternalAnnotations: Boolean
+        get() = state.forceExternalAnnotations
+        set(forceExternalAnnotations) {
+            state.forceExternalAnnotations = forceExternalAnnotations
         }
 
     var mixinClassIcon: Boolean

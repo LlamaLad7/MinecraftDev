@@ -81,6 +81,11 @@ class MinecraftConfigurable : Configurable {
         row {
             checkBox(MCDevBundle("minecraft.settings.show_chat_color_underlines"))
                 .bindSelected(settings::isShowChatColorUnderlines)
+        }
+        row {
+            checkBox(MCDevBundle("minecraft.settings.force_external_annotations"))
+                .bindSelected(settings::forceExternalAnnotations)
+                .comment(MCDevBundle("minecraft.settings.force_external_annotations.comment"))
         }.bottomGap(BottomGap.SMALL)
 
         group(indent = false) {
