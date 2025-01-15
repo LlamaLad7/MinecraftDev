@@ -113,6 +113,7 @@ dependencies {
         bundledPlugin("org.jetbrains.plugins.yaml")
 
         testFramework(TestFrameworkType.JUnit5)
+        testFramework(TestFrameworkType.Platform)
         testFramework(TestFrameworkType.Plugin.Java)
 
         pluginVerifier()
