@@ -252,14 +252,21 @@ object MEExpressionCompletionUtil {
             handler to annotation
         } ?: return emptyList()
 
-        return handler.resolveTarget(handlerAnnotation).flatMap {
-            (it as? MethodTargetMember)?.classAndMethod?.method?.instructions?.mapNotNull { insn ->
-                if (insn is LdcInsnNode && insn.cst is String) {
-                    LookupElementBuilder.create(insn.cst)
-                } else {
-                    null
+        return handler.resolveTarget(handlerAnnotation).flatMap { member ->
+            (member as? MethodTargetMember)?.classAndMethod
+                ?.let { (clazz, method) -> MEExpressionMatchUtil.getFlowMap(project, clazz, method) }
+                ?.values
+                ?.asSequence()
+                ?.filterNot { it.isComplex }
+                ?.map { it.insn }
+                ?.mapNotNull { insn ->
+                    if (insn is LdcInsnNode && insn.cst is String) {
+                        LookupElementBuilder.create(insn.cst)
+                    } else {
+                        null
+                    }
                 }
-            } ?: emptyList()
+                .orEmpty()
         }
     }
 
