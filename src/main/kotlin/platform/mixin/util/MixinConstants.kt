@@ -93,6 +93,9 @@ object MixinConstants {
         const val LOCAL_REF_PACKAGE = "com.llamalad7.mixinextras.sugar.ref."
         const val EXPRESSION = "com.llamalad7.mixinextras.expression.Expression"
         const val DEFINITION = "com.llamalad7.mixinextras.expression.Definition"
+        const val MIXIN_EXTRAS_CONFIG = "com.llamalad7.mixinextras.config.MixinExtrasConfig"
+        const val MIXIN_EXTRAS_CONFIG_KEY = "mixinextras"
+        const val MIXIN_EXTRAS_SERIALIZED_NAME = "com.llamalad7.mixinextras.lib.gson.annotations.SerializedName"
 
         fun PsiType.unwrapLocalRef(): PsiType {
             if (this !is PsiClassType) {
