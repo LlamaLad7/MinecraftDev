@@ -36,6 +36,8 @@ import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
 
 class WrapMethodHandler : InjectorAnnotationHandler() {
+    override val allowCoerce get() = true
+
     override fun expectedMethodSignature(
         annotation: PsiAnnotation,
         targetClass: ClassNode,
