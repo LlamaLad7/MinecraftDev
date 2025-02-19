@@ -146,6 +146,9 @@ object AsmDfaUtil {
             if (type == currentClass) {
                 return currentSuperClass
             }
+            if (type.sort == Type.ARRAY) {
+                return Type.getType(Any::class.java)
+            }
             val elementFactory = JavaPsiFacade.getElementFactory(project)
             val psiType = type.toPsiType(elementFactory) as? PsiClassType ?: return null
             val clazz = psiType.resolve() ?: return null
