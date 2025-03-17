@@ -86,7 +86,9 @@ dependencies {
 
     implementation(files(gradleToolingExtensionJar))
 
-    implementation(libs.mixinExtras.expressions)
+    implementation(libs.mixinExtras.expressions) {
+        exclude(group = "org.ow2.asm", module = "asm-debug-all")
+    }
     testLibs(libs.mixinExtras.common)
 
     implementation(libs.mappingIo)
