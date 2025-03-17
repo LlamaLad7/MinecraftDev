@@ -181,7 +181,7 @@ val ClassNode.shortName
     get() = internalNameToShortName(name)
 
 private val LOAD_CLASS_FILE_BYTES: Method? = runCatching {
-    com.intellij.byteCodeViewer.BytecodeViewerManager::class.java
+    com.intellij.byteCodeViewer.ByteCodeViewerManager::class.java
         .getDeclaredMethod("loadClassFileBytes", PsiClass::class.java)
         .let { it.isAccessible = true; it }
 }.getOrNull()
