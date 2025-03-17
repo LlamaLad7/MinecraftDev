@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -51,8 +51,7 @@ class ModifyVariableArgsOnlyInspection : MixinInspection() {
                 val wantedType = method.parameterList.getParameter(0)?.type ?: return
                 val problemElement = modifyVariable.nameReferenceElement ?: return
 
-                val handler = MixinAnnotationHandler.forMixinAnnotation(MODIFY_VARIABLE) ?: return
-                val targets = handler.resolveTarget(modifyVariable).ifEmpty { return }
+                val targets = MixinAnnotationHandler.resolveTarget(modifyVariable).ifEmpty { return }
                 val methodTargets = targets.asSequence()
                     .filterIsInstance<MethodTargetMember>()
                     .map { it.classAndMethod }

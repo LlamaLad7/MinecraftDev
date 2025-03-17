@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -26,6 +26,7 @@ import com.demonwav.mcdev.platform.mixin.reference.parseMixinSelector
 import com.demonwav.mcdev.platform.mixin.reference.target.TargetReference
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.SLICE
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Classes.SHIFT
+import com.demonwav.mcdev.platform.mixin.util.findBodyElements
 import com.demonwav.mcdev.platform.mixin.util.findSourceElement
 import com.demonwav.mcdev.util.computeStringArray
 import com.demonwav.mcdev.util.constantStringValue
@@ -221,20 +222,35 @@ class AtResolver(
         val bytecodeResults = resolveInstructions()
 
         // Then attempt to find the corresponding source elements using the navigation visitor
-        val targetElement = targetMethod.findSourceElement(
+        val mainTargetElement = targetMethod.findSourceElement(
             getTargetClass(target),
             at.project,
             GlobalSearchScope.allScope(at.project),
             canDecompile = true,
-        ) ?: return emptyList()
-        val targetPsiClass = targetElement.parentOfType<PsiClass>() ?: return emptyList()
+        )
+        val targetElements = targetMethod.findBodyElements(
+            getTargetClass(target),
+            at.project,
+            GlobalSearchScope.allScope(at.project),
+        )
+        if (mainTargetElement == null && targetElements.isEmpty()) {
+            return emptyList()
+        }
+
+        val targetPsiClass = (mainTargetElement ?: targetElements.first()).parentOfType<PsiClass>()
+            ?: return emptyList()
+        val targetPsiFile = targetPsiClass.containingFile ?: return emptyList()
 
         val navigationVisitor = injectionPoint.createNavigationVisitor(at, target, targetPsiClass) ?: return emptyList()
         navigationVisitor.configureBytecodeTarget(targetClass, targetMethod)
-        targetElement.accept(navigationVisitor)
+        navigationVisitor.visitStart(mainTargetElement ?: targetElements.first())
+        targetElements.forEach { it.accept(navigationVisitor) }
+        navigationVisitor.visitEnd(mainTargetElement ?: targetElements.last())
 
         return bytecodeResults.mapNotNull { bytecodeResult ->
-            navigationVisitor.result.getOrNull(bytecodeResult.index)
+            val matcher = bytecodeResult.sourceLocationInfo.createMatcher<PsiElement>(targetPsiFile)
+            navigationVisitor.result.forEach(matcher::accept)
+            matcher.result
         }
     }
 

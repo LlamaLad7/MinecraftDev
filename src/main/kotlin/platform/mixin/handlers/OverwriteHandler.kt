@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -21,7 +21,6 @@
 package com.demonwav.mcdev.platform.mixin.handlers
 
 import com.demonwav.mcdev.platform.mixin.util.MethodTargetMember
-import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.OVERWRITE
 import com.demonwav.mcdev.platform.mixin.util.MixinTargetMember
 import com.demonwav.mcdev.platform.mixin.util.findMethod
 import com.demonwav.mcdev.util.memberReference
@@ -43,10 +42,4 @@ class OverwriteHandler : MixinMemberAnnotationHandler {
     }
 
     override val isEntryPoint = true
-
-    companion object {
-        fun getInstance(): OverwriteHandler? {
-            return MixinAnnotationHandler.forMixinAnnotation(OVERWRITE) as? OverwriteHandler
-        }
-    }
 }

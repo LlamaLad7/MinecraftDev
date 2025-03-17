@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -57,10 +57,8 @@ class CtorHeadPostInitInspection : MixinInspection() {
             }
 
             val injectorAnnotation = AtResolver.findInjectorAnnotation(annotation) ?: return
-            val handler = injectorAnnotation.qualifiedName
-                ?.let { MixinAnnotationHandler.forMixinAnnotation(it, holder.project) }
-                ?: return
-            val targets = handler.resolveTarget(injectorAnnotation).filterIsInstance<MethodTargetMember>()
+            val targets = MixinAnnotationHandler.resolveTarget(injectorAnnotation)
+                .filterIsInstance<MethodTargetMember>()
 
             if (targets.any {
                 it.classAndMethod.method.isConstructor &&

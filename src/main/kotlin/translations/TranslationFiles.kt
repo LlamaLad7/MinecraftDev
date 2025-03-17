@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -62,9 +62,10 @@ import java.util.Locale
 object TranslationFiles {
     private val MC_1_12_2 = SemanticVersion.release(1, 12, 2)
 
-    fun isTranslationFile(file: VirtualFile?) =
-        file?.mcDomain != null && file.mcPath?.startsWith("lang/") == true &&
-            file.fileType in listOf(LangFileType, JsonFileType.INSTANCE)
+    fun isTranslationFile(file: VirtualFile?): Boolean {
+        val mcPath = file?.mcPath ?: return false
+        return mcPath.startsWith("lang/") && file.fileType in listOf(LangFileType, JsonFileType.INSTANCE)
+    }
 
     fun getLocale(file: VirtualFile?) =
         file?.nameWithoutExtension?.lowercase(Locale.ENGLISH)

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -49,9 +49,8 @@ class UnresolvedLocalCaptureInspection : MixinInspection() {
             val parameter = localAnnotation.parentOfType<PsiParameter>() ?: return
             val method = parameter.findContainingMethod() ?: return
             val targets = method.annotations.mapFirstNotNull { annotation ->
-                val qName = annotation.qualifiedName ?: return@mapFirstNotNull null
                 val handler =
-                    MixinAnnotationHandler.forMixinAnnotation(qName, holder.project) as? InjectorAnnotationHandler
+                    MixinAnnotationHandler.forMixinAnnotation(annotation, holder.project) as? InjectorAnnotationHandler
                         ?: return@mapFirstNotNull null
                 handler.resolveInstructions(annotation)
             } ?: return

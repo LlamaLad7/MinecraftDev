@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -246,20 +246,25 @@ object MEExpressionCompletionUtil {
 
         val modifierList = expressionAnnotation.findContainingModifierList() ?: return emptyList()
 
-        val (handler, handlerAnnotation) = modifierList.annotations.mapFirstNotNull { annotation ->
-            val qName = annotation.qualifiedName ?: return@mapFirstNotNull null
-            val handler = MixinAnnotationHandler.forMixinAnnotation(qName, project) ?: return@mapFirstNotNull null
-            handler to annotation
+        val handlerAnnotation = modifierList.annotations.firstOrNull {
+            MixinAnnotationHandler.forMixinAnnotation(it, project) != null
         } ?: return emptyList()
 
-        return handler.resolveTarget(handlerAnnotation).flatMap {
-            (it as? MethodTargetMember)?.classAndMethod?.method?.instructions?.mapNotNull { insn ->
-                if (insn is LdcInsnNode && insn.cst is String) {
-                    LookupElementBuilder.create(insn.cst)
-                } else {
-                    null
+        return MixinAnnotationHandler.resolveTarget(handlerAnnotation).flatMap { member ->
+            (member as? MethodTargetMember)?.classAndMethod
+                ?.let { (clazz, method) -> MEExpressionMatchUtil.getFlowMap(project, clazz, method) }
+                ?.values
+                ?.asSequence()
+                ?.filterNot { it.isComplex }
+                ?.map { it.insn }
+                ?.mapNotNull { insn ->
+                    if (insn is LdcInsnNode && insn.cst is String) {
+                        LookupElementBuilder.create(insn.cst)
+                    } else {
+                        null
+                    }
                 }
-            } ?: emptyList()
+                .orEmpty()
         }
     }
 
@@ -278,8 +283,7 @@ object MEExpressionCompletionUtil {
         val mixinClass = modifierList.findContainingClass() ?: return emptyList()
 
         val (handler, handlerAnnotation) = modifierList.annotations.mapFirstNotNull { annotation ->
-            val qName = annotation.qualifiedName ?: return@mapFirstNotNull null
-            val handler = MixinAnnotationHandler.forMixinAnnotation(qName, project) ?: return@mapFirstNotNull null
+            val handler = MixinAnnotationHandler.forMixinAnnotation(annotation, project) ?: return@mapFirstNotNull null
             handler to annotation
         } ?: return emptyList()
 

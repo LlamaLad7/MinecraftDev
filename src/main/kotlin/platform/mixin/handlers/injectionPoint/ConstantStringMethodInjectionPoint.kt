@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -99,11 +99,8 @@ class ConstantStringMethodInjectionPoint : AbstractMethodInjectionPoint() {
         }
 
         val injectorAnnotation = AtResolver.findInjectorAnnotation(at) ?: return ArrayUtilRt.EMPTY_OBJECT_ARRAY
-        val handler = injectorAnnotation.qualifiedName
-            ?.let { MixinAnnotationHandler.forMixinAnnotation(it, at.project) }
-            ?: return ArrayUtilRt.EMPTY_OBJECT_ARRAY
 
-        return handler.resolveTarget(injectorAnnotation).asSequence()
+        return MixinAnnotationHandler.resolveTarget(injectorAnnotation).asSequence()
             .filterIsInstance<MethodTargetMember>()
             .flatMap { target ->
                 val insns = target.classAndMethod.method.instructions ?: return@flatMap emptySequence()

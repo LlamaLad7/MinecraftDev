@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -125,12 +125,12 @@ class ParchmentCreatorProperty(
         val platformMcVersionPropertyName = descriptor.parameters?.get("minecraftVersionProperty") as? String
         val platformMcVersionProperty = properties[platformMcVersionPropertyName]
         if (platformMcVersionProperty != null) {
-            graphProperty.dependsOn(platformMcVersionProperty.graphProperty, true) {
+            platformMcVersionProperty.graphProperty.afterChange {
                 val minecraftVersion = getPlatformMinecraftVersion()
-                if (minecraftVersion != null) {
-                    graphProperty.get().copy(minecraftVersion = minecraftVersion)
-                } else {
-                    graphProperty.get()
+                if (mcVersionsModel.getIndexOf(minecraftVersion) == -1) {
+                    refreshVersionsLists(forceLatestVersions = true)
+                } else if (minecraftVersion != null) {
+                    graphProperty.set(graphProperty.get().copy(minecraftVersion = minecraftVersion))
                 }
             }
         }
@@ -167,17 +167,12 @@ class ParchmentCreatorProperty(
 
         downloadVersions(context) {
             refreshVersionsLists()
-
-            val minecraftVersion = getPlatformMinecraftVersion()
-            if (minecraftVersion != null) {
-                mcVersionProperty.set(minecraftVersion)
-            }
         }
     }
 
-    private fun refreshVersionsLists(updateMcVersions: Boolean = true) {
-        val includeOlderMcVersions = includeOlderMcVersionsProperty.get()
-        val includeSnapshots = includeSnapshotsProperty.get()
+    private fun refreshVersionsLists(updateMcVersions: Boolean = true, forceLatestVersions: Boolean = false) {
+        val includeOlderMcVersions = includeOlderMcVersionsProperty.get() || forceLatestVersions
+        val includeSnapshots = includeSnapshotsProperty.get() || forceLatestVersions
 
         if (updateMcVersions) {
             val platformMcVersion = getPlatformMinecraftVersion()
@@ -199,14 +194,22 @@ class ParchmentCreatorProperty(
             mcVersionsModel.removeAllElements()
             mcVersionsModel.addAll(mcVersions)
 
-            val selectedMcVersion = when {
-                mcVersionProperty.get() in mcVersions -> mcVersionProperty.get()
-                defaultValue.minecraftVersion in mcVersions -> defaultValue.minecraftVersion
-                else -> getPlatformMinecraftVersion() ?: mcVersions.first()
-            }
+            if (forceLatestVersions) {
+                mcVersionProperty.set(mcVersions.maxOrNull() ?: emptyVersion)
+            } else {
+                val selectedMcVersion = when {
+                    mcVersionProperty.get() in mcVersions -> mcVersionProperty.get()
+                    defaultValue.minecraftVersion in mcVersions -> defaultValue.minecraftVersion
+                    else -> {
+                        refreshVersionsLists(forceLatestVersions = true)
+                        return
+                        // getPlatformMinecraftVersion() ?: mcVersions.first()
+                    }
+                }
 
-            if (mcVersionProperty.get() != selectedMcVersion) {
-                mcVersionProperty.set(selectedMcVersion)
+                if (mcVersionProperty.get() != selectedMcVersion) {
+                    mcVersionProperty.set(selectedMcVersion)
+                }
             }
         }
 
@@ -218,7 +221,11 @@ class ParchmentCreatorProperty(
             .toList()
         versionsModel.removeAllElements()
         versionsModel.addAll(parchmentVersions)
-        versionProperty.set(parchmentVersions.firstOrNull() ?: emptyVersion)
+        if (forceLatestVersions) {
+            versionProperty.set(parchmentVersions.maxOrNull() ?: emptyVersion)
+        } else {
+            versionProperty.set(parchmentVersions.firstOrNull() ?: emptyVersion)
+        }
     }
 
     private fun getPlatformMinecraftVersion(): SemanticVersion? {

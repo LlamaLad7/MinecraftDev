@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -29,6 +29,7 @@ import com.intellij.openapi.editor.markup.EffectType
 import com.intellij.util.xmlb.annotations.Attribute
 import com.intellij.util.xmlb.annotations.Tag
 import com.intellij.util.xmlb.annotations.Text
+import com.intellij.util.xmlb.annotations.Transient
 
 @State(name = "MinecraftSettings", storages = [Storage("minecraft_dev.xml")])
 class MinecraftSettings : PersistentStateComponent<MinecraftSettings.State> {
@@ -44,6 +45,7 @@ class MinecraftSettings : PersistentStateComponent<MinecraftSettings.State> {
         var mixinClassIcon: Boolean = true,
 
         var creatorTemplateRepos: List<TemplateRepo> = listOf(TemplateRepo.makeBuiltinRepo()),
+        var creatorMavenRepos: List<MavenRepo> = listOf(),
     )
 
     @Tag("repo")
@@ -63,6 +65,20 @@ class MinecraftSettings : PersistentStateComponent<MinecraftSettings.State> {
                 return TemplateRepo(MCDevBundle("minecraft.settings.creator.repo.builtin_name"), "builtin", "true")
             }
         }
+    }
+
+    @Tag("maven")
+    data class MavenRepo(
+        @get:Attribute("id")
+        var id: String,
+        @get:Attribute("url")
+        var url: String,
+        @get:Attribute("username")
+        var username: String,
+        @get:Transient // Saved in PasswordSafe
+        var password: String?
+    ) {
+        constructor() : this("", "", "", "")
     }
 
     private var state = State()
@@ -125,6 +141,12 @@ class MinecraftSettings : PersistentStateComponent<MinecraftSettings.State> {
         get() = state.creatorTemplateRepos.map { it.copy() }
         set(creatorTemplateRepos) {
             state.creatorTemplateRepos = creatorTemplateRepos.map { it.copy() }
+        }
+
+    var creatorMavenRepos: List<MavenRepo>
+        get() = state.creatorMavenRepos.map { it.copy() }
+        set(creatorMavenRepos) {
+            state.creatorMavenRepos = creatorMavenRepos.map { it.copy() }
         }
 
     enum class UnderlineType(private val regular: String, val effectType: EffectType) {
