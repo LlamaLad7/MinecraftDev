@@ -44,6 +44,7 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.PsiUtil
+import com.intellij.util.Processor
 
 class MixinCancellableInspection : MixinInspection() {
 
@@ -71,18 +72,20 @@ class MixinCancellableInspection : MixinInspection() {
 
             var mayUseCancel = false
             var definitelyUsesCancel = false
-            for (ref in ReferencesSearch.search(ciParam)) {
+            ReferencesSearch.search(ciParam).forEach(Processor { ref ->
                 val parent = PsiUtil.skipParenthesizedExprUp(ref.element.parent)
                 if (parent is PsiExpressionList) {
                     // method argument, we can't tell whether it uses cancel
                     mayUseCancel = true
                 }
-                val methodCall = parent as? PsiReferenceExpression ?: continue
+                val methodCall = parent as? PsiReferenceExpression ?: return@Processor true
                 if (methodCall.references.any { it.isReferenceTo(searchingFor) }) {
                     definitelyUsesCancel = true
-                    break
+                    return@Processor false
                 }
-            }
+
+                return@Processor true
+            })
 
             if (definitelyUsesCancel && !isCancellable) {
                 val fixes = mutableListOf<LocalQuickFix>()
