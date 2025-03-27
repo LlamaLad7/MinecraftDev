@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -24,7 +24,10 @@ import com.demonwav.mcdev.facet.MinecraftFacet
 import com.demonwav.mcdev.platform.mcp.McpModule
 import com.demonwav.mcdev.platform.mcp.McpModuleType
 import com.intellij.codeInsight.lookup.LookupElementBuilder
+import com.intellij.debugger.impl.DebuggerUtilsEx
+import com.intellij.ide.highlighter.JavaClassFileType
 import com.intellij.lang.injection.InjectedLanguageManager
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.module.ModuleUtilCore
@@ -41,6 +44,7 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiDirectory
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementFactory
 import com.intellij.psi.PsiElementResolveResult
@@ -220,6 +224,41 @@ private val ACCESS_MODIFIERS =
 
 fun isAccessModifier(@ModifierConstant modifier: String): Boolean {
     return modifier in ACCESS_MODIFIERS
+}
+
+fun PsiElement.findDocument(containingFile: PsiFile = this.containingFile): Document? {
+    return containingFile.viewProvider.document ?: PsiDocumentManager.getInstance(project).getDocument(containingFile)
+}
+
+/**
+ * Remaps line numbers if the file is decompiled. Line numbers are 1-indexed
+ */
+fun PsiFile.remapLineNumber(lineNumber: Int): Int {
+    val originalFile = this.originalFile
+    if (originalFile.virtualFile?.fileType != JavaClassFileType.INSTANCE) {
+        // not decompiled
+        return lineNumber
+    }
+
+    val mappedLineNumber = DebuggerUtilsEx.bytecodeToSourceLine(originalFile, lineNumber - 1)
+    if (mappedLineNumber < 0) {
+        return lineNumber
+    }
+
+    return mappedLineNumber + 1
+}
+
+/**
+ * Returns the line number of the start of this `PsiElement`'s text range, with line numbers starting at 1
+ */
+fun PsiElement.lineNumber(): Int? = findDocument()?.let(this::lineNumber)
+
+fun PsiElement.lineNumber(document: Document): Int? {
+    val index = this.textRange.startOffset
+    if (index > document.textLength) {
+        return null
+    }
+    return document.getLineNumber(index) + 1
 }
 
 infix fun PsiElement.equivalentTo(other: PsiElement?): Boolean {

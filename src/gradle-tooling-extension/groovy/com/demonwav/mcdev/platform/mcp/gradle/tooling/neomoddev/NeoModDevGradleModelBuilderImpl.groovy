@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -21,8 +21,10 @@
 package com.demonwav.mcdev.platform.mcp.gradle.tooling.neomoddev
 
 import com.demonwav.mcdev.platform.mcp.gradle.tooling.McpModelNMD
+import org.gradle.api.InvalidUserCodeException
 import org.gradle.api.Project
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Provider
 import org.jetbrains.annotations.NotNull
 import org.jetbrains.plugins.gradle.tooling.ErrorMessageBuilder
 import org.jetbrains.plugins.gradle.tooling.ModelBuilderService
@@ -47,8 +49,23 @@ final class NeoModDevGradleModelBuilderImpl implements ModelBuilderService {
             return null
         }
 
-        def neoforgeVersion = extension.version.getOrNull()
-        def neoFormVersion = extension.neoFormVersion.getOrNull()
+        def neoforgeVersionProp = extension.version
+        def neoforgeVersion
+        if (neoforgeVersionProp instanceof String) {
+            neoforgeVersion = neoforgeVersionProp
+        } else if (neoforgeVersionProp instanceof Provider) {
+            neoforgeVersion = neoforgeVersionProp.getOrNull()
+        } else {
+            return null
+        }
+
+        def neoFormVersion
+        try {
+            neoFormVersion = extension.neoFormVersion.getOrNull()
+        } catch (InvalidUserCodeException ignore) {
+            // Happens when the NeoForm version is not set
+            neoFormVersion = null
+        }
 
         def accessTransformersRaw = extension.accessTransformers
         List<File> accessTransformers

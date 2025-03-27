@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -43,10 +43,10 @@ import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.PsiNavigateUtil
 import java.awt.event.MouseEvent
 
-class MixinTargetLineMarkerProvider : LineMarkerProviderDescriptor() {
+class MixinElementLineMarkerProvider : LineMarkerProviderDescriptor() {
 
-    override fun getName() = "Mixin target line marker"
-    override fun getIcon() = MixinAssets.SHADOW
+    override fun getName() = "Mixin element line marker"
+    override fun getIcon() = MixinAssets.MIXIN_ELEMENT_ICON
 
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<PsiIdentifier>? {
         if (element !is PsiMember) {
@@ -64,9 +64,7 @@ class MixinTargetLineMarkerProvider : LineMarkerProviderDescriptor() {
         } ?: return null
 
         val (handler, annotation) = element.annotations.mapFirstNotNull { annotation ->
-            annotation.qualifiedName?.let { qName ->
-                MixinAnnotationHandler.forMixinAnnotation(qName, annotation.project)?.let { it to annotation }
-            }
+            MixinAnnotationHandler.forMixinAnnotation(annotation)?.let { it to annotation }
         } ?: return null
         if (handler.isUnresolved(annotation) != null) {
             return null
@@ -76,7 +74,7 @@ class MixinTargetLineMarkerProvider : LineMarkerProviderDescriptor() {
         return LineMarkerInfo(
             identifier,
             identifier.textRange,
-            icon,
+            handler.icon,
             { "Go to the $simpleName target" },
             MixinGutterIconNavigationHandler(identifier.createSmartPointer(), annotation.createSmartPointer(), handler),
             GutterIconRenderer.Alignment.LEFT,

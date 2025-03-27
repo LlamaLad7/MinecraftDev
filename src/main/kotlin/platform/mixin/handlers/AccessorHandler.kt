@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -20,6 +20,7 @@
 
 package com.demonwav.mcdev.platform.mixin.handlers
 
+import com.demonwav.mcdev.asset.MixinAssets
 import com.demonwav.mcdev.platform.mixin.util.FieldTargetMember
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.ACCESSOR
 import com.demonwav.mcdev.platform.mixin.util.MixinTargetMember
@@ -97,7 +98,8 @@ class AccessorHandler : MixinMemberAnnotationHandler {
 
     fun findAccessorTargetForReference(method: PsiMethod): SmartPsiElementPointer<PsiField>? {
         val accessor = method.findAnnotation(ACCESSOR) ?: return null
-        val targetMember = resolveTarget(accessor).firstOrNull() as? FieldTargetMember ?: return null
+        val targetMember = MixinAnnotationHandler.resolveTarget(accessor).firstOrNull() as? FieldTargetMember
+            ?: return null
         return targetMember.classAndField.field.findOrConstructSourceField(
             targetMember.classAndField.clazz,
             method.project,
@@ -107,6 +109,8 @@ class AccessorHandler : MixinMemberAnnotationHandler {
     }
 
     override val isEntryPoint = false
+
+    override val icon = MixinAssets.MIXIN_ACCESSOR_ICON
 
     data class AccessorInfo(val name: String, val type: AccessorType)
 

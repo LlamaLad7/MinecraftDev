@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -20,6 +20,7 @@
 
 package com.demonwav.mcdev.platform.mixin.handlers
 
+import com.demonwav.mcdev.asset.MixinAssets
 import com.demonwav.mcdev.platform.mixin.util.MethodTargetMember
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.INVOKER
 import com.demonwav.mcdev.platform.mixin.util.MixinTargetMember
@@ -98,7 +99,8 @@ class InvokerHandler : MixinMemberAnnotationHandler {
 
     fun findInvokerTargetForReference(member: PsiMember): SmartPsiElementPointer<PsiMethod>? {
         val accessor = member.findAnnotation(INVOKER) ?: return null
-        val invokerTarget = resolveTarget(accessor).firstOrNull() as? MethodTargetMember ?: return null
+        val invokerTarget = MixinAnnotationHandler.resolveTarget(accessor).firstOrNull() as? MethodTargetMember
+            ?: return null
         return invokerTarget.classAndMethod.method.findOrConstructSourceMethod(
             invokerTarget.classAndMethod.clazz,
             member.project,
@@ -108,4 +110,6 @@ class InvokerHandler : MixinMemberAnnotationHandler {
     }
 
     override val isEntryPoint = false
+
+    override val icon = MixinAssets.MIXIN_ACCESSOR_ICON
 }

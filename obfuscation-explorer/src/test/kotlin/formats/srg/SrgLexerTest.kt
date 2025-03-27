@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -23,7 +23,7 @@ package io.mcdev.obfex.formats.srg
 import com.intellij.lexer.FlexAdapter
 import com.intellij.testFramework.LexerTestCase
 import io.mcdev.obfex.filterCrlf
-import io.mcdev.obfex.formats.srg.gen.SrgLexer
+import io.mcdev.obfex.formats.srg.gen.lexer.SrgLexer
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -45,4 +45,3 @@ class SrgLexerTest {
             Assertions.assertEquals(expected.filterCrlf(), actual.filterCrlf())
         }
     }
-    

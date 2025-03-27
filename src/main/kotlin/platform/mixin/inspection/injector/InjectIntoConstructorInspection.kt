@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -20,14 +20,13 @@
 
 package com.demonwav.mcdev.platform.mixin.inspection.injector
 
-import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.AtResolver
 import com.demonwav.mcdev.platform.mixin.inspection.MixinInspection
 import com.demonwav.mcdev.platform.mixin.inspection.fix.AnnotationAttributeFix
 import com.demonwav.mcdev.platform.mixin.util.MethodTargetMember
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.INJECT
-import com.demonwav.mcdev.platform.mixin.util.findSuperConstructorCall
+import com.demonwav.mcdev.platform.mixin.util.findDelegateConstructorCall
 import com.demonwav.mcdev.platform.mixin.util.isConstructor
 import com.demonwav.mcdev.platform.mixin.util.isFabricMixin
 import com.demonwav.mcdev.util.constantValue
@@ -64,8 +63,7 @@ class InjectIntoConstructorInspection : MixinInspection() {
             override fun visitMethod(method: PsiMethod) {
                 val injectAnnotation = method.findAnnotation(INJECT) ?: return
                 val problemElement = injectAnnotation.nameReferenceElement ?: return
-                val handler = MixinAnnotationHandler.forMixinAnnotation(INJECT) as? InjectorAnnotationHandler ?: return
-                val targets = handler.resolveTarget(injectAnnotation)
+                val targets = MixinAnnotationHandler.resolveTarget(injectAnnotation)
 
                 val ats = injectAnnotation.findDeclaredAttributeValue("at")
                     ?.findAnnotations()
@@ -100,12 +98,12 @@ class InjectIntoConstructorInspection : MixinInspection() {
                             return
                         }
 
-                        val superCtorCall = targetMethod.findSuperConstructorCall()
-                        if (superCtorCall != null &&
+                        val delegateCtorCall = targetMethod.findDelegateConstructorCall()
+                        if (delegateCtorCall != null &&
                             instructions.any {
                                 val insnIndex = targetMethod.instructions.indexOf(it.insn)
-                                val superCtorIndex = targetMethod.instructions.indexOf(superCtorCall)
-                                insnIndex <= superCtorIndex
+                                val delegateCtorIndex = targetMethod.instructions.indexOf(delegateCtorCall)
+                                insnIndex <= delegateCtorIndex
                             }
                         ) {
                             holder.registerProblem(

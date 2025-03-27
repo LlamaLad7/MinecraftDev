@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -48,13 +48,31 @@ val VirtualFile.manifest: Manifest?
         null
     }
 
-// Technically resource domains are much more restricted ([a-z0-9_-]+) in modern versions, but we want to support as much as possible
-private val RESOURCE_LOCATION_PATTERN = Regex("^.*?/(assets|data)/([^/]+)/(.*?)$")
-
 val VirtualFile.mcDomain: String?
-    get() = RESOURCE_LOCATION_PATTERN.matchEntire(this.path)?.groupValues?.get(2)
+    get() = mcDomainAndPath?.first
 val VirtualFile.mcPath: String?
-    get() = RESOURCE_LOCATION_PATTERN.matchEntire(this.path)?.groupValues?.get(3)
+    get() = mcDomainAndPath?.second
+val VirtualFile.mcDomainAndPath: Pair<String, String>?
+    get() {
+        var domain: String? = null
+        val path = mutableListOf<String>()
+        var vf: VirtualFile? = this
+        while (vf != null) {
+            val name = vf.name
+            if (name == "assets" || name == "data") {
+                break
+            }
+            domain?.let(path::add)
+            domain = name
+            vf = vf.parent
+        }
+        if (vf == null || domain == null) {
+            // if vf is null, we never found "assets" or "data", if domain is null our file path was too short.
+            return null
+        }
+        path.reverse()
+        return domain to path.joinToString("/")
+    }
 
 operator fun Manifest.get(attribute: String): String? = mainAttributes.getValue(attribute)
 operator fun Manifest.get(attribute: Attributes.Name): String? = mainAttributes.getValue(attribute)

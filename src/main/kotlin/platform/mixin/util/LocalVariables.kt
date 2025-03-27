@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -392,7 +392,8 @@ object LocalVariables {
         method: MethodNode,
         node: AbstractInsnNode,
     ): Array<LocalVariable?>? {
-        return getLocals(module.project, classNode, method, node, detectCurrentSettings(module))
+        val settings = detectCurrentSettings(module) ?: return null
+        return getLocals(module.project, classNode, method, node, settings)
     }
 
     private fun getLocals(
@@ -410,9 +411,8 @@ object LocalVariables {
     }
 
     private val resurrectLocalsChange = SemanticVersion.release(0, 8, 3)
-    private fun detectCurrentSettings(module: Module): Settings {
-        val mixinVersion = MinecraftFacet.getInstance(module, MixinModuleType)?.mixinVersion
-            ?: throw LocalAnalysisFailedException()
+    private fun detectCurrentSettings(module: Module): Settings? {
+        val mixinVersion = MinecraftFacet.getInstance(module, MixinModuleType)?.mixinVersion ?: return null
         return if (mixinVersion < resurrectLocalsChange) {
             Settings.NO_RESURRECT
         } else {

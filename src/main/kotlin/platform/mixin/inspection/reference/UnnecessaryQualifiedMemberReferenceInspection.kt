@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -44,8 +44,7 @@ class UnnecessaryQualifiedMemberReferenceInspection : MixinAnnotationAttributeIn
         value: PsiAnnotationMemberValue,
         holder: ProblemsHolder,
     ) {
-        val qName = annotation.qualifiedName ?: return
-        if (MixinAnnotationHandler.forMixinAnnotation(qName, annotation.project) !is InjectorAnnotationHandler) {
+        if (MixinAnnotationHandler.forMixinAnnotation(annotation) !is InjectorAnnotationHandler) {
             return
         }
 

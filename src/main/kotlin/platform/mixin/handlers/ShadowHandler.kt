@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -20,6 +20,7 @@
 
 package com.demonwav.mcdev.platform.mixin.handlers
 
+import com.demonwav.mcdev.asset.MixinAssets
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InsnResolutionInfo
 import com.demonwav.mcdev.platform.mixin.util.FieldTargetMember
 import com.demonwav.mcdev.platform.mixin.util.MethodTargetMember
@@ -79,14 +80,14 @@ class ShadowHandler : MixinMemberAnnotationHandler {
 
     fun findFirstShadowTargetForNavigation(member: PsiMember): SmartPsiElementPointer<PsiElement>? {
         val shadow = member.findAnnotation(SHADOW) ?: return null
-        val shadowTarget = resolveTarget(shadow).firstOrNull() ?: return null
+        val shadowTarget = MixinAnnotationHandler.resolveTarget(shadow).firstOrNull() ?: return null
         return shadowTarget.findSourceElement(member.project, member.resolveScope, canDecompile = false)
             ?.createSmartPointer()
     }
 
     fun findFirstShadowTargetForReference(member: PsiMember): SmartPsiElementPointer<PsiMember>? {
         val shadow = member.findAnnotation(SHADOW) ?: return null
-        val shadowTarget = resolveTarget(shadow).firstOrNull() ?: return null
+        val shadowTarget = MixinAnnotationHandler.resolveTarget(shadow).firstOrNull() ?: return null
         return shadowTarget.findOrConstructSourceMember(member.project, member.resolveScope, canDecompile = false)
             .createSmartPointer()
     }
@@ -101,6 +102,8 @@ class ShadowHandler : MixinMemberAnnotationHandler {
     }
 
     override val isEntryPoint = false
+
+    override val icon = MixinAssets.MIXIN_SHADOW_ICON
 
     companion object {
         fun getInstance(): ShadowHandler? {

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -25,6 +25,7 @@ import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.INVOKER
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.OVERWRITE
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.SHADOW
 import com.demonwav.mcdev.platform.mixin.util.isMixin
+import com.demonwav.mcdev.util.findKeyword
 import com.intellij.codeInsight.intention.QuickFixFactory
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.JavaElementVisitor
@@ -54,8 +55,14 @@ class StaticMemberInspection : MixinInspection() {
 
         private fun visitMember(member: PsiMember) {
             if (isProblematic(member)) {
+                val accessModifier = when {
+                    member.hasModifierProperty(PsiModifier.PUBLIC) -> PsiModifier.PUBLIC
+                    member.hasModifierProperty(PsiModifier.PROTECTED) -> PsiModifier.PROTECTED
+                    member.hasModifierProperty(PsiModifier.PRIVATE) -> PsiModifier.PRIVATE
+                    else -> PsiModifier.PACKAGE_LOCAL
+                }
                 holder.registerProblem(
-                    member,
+                    member.modifierList?.findKeyword(accessModifier) ?: member,
                     "Non-private static members are not allowed in Mixin classes",
                     QuickFixFactory.getInstance().createModifierListFix(member, PsiModifier.PRIVATE, true, false),
                 )

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -145,6 +145,9 @@ object AsmDfaUtil {
         override fun getSuperClass(type: Type): Type? {
             if (type == currentClass) {
                 return currentSuperClass
+            }
+            if (type.sort == Type.ARRAY) {
+                return Type.getType(Any::class.java)
             }
             val elementFactory = JavaPsiFacade.getElementFactory(project)
             val psiType = type.toPsiType(elementFactory) as? PsiClassType ?: return null

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -20,7 +20,7 @@
 
 package com.demonwav.mcdev.platform.mixin.inspection.shadow
 
-import com.demonwav.mcdev.platform.mixin.handlers.ShadowHandler
+import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.inspection.MixinInspection
 import com.demonwav.mcdev.platform.mixin.util.FieldTargetMember
 import com.demonwav.mcdev.platform.mixin.util.MethodTargetMember
@@ -61,7 +61,7 @@ class ShadowModifiersInspection : MixinInspection() {
 
             val shadowModifierList = annotation.owner as? PsiModifierList ?: return
             val member = shadowModifierList.parent as? PsiMember ?: return
-            val target = ShadowHandler.getInstance()?.resolveTarget(annotation)?.firstOrNull() ?: return
+            val target = MixinAnnotationHandler.resolveTarget(annotation).firstOrNull() ?: return
 
             // Check static modifier
             val targetStatic = (target.access and Opcodes.ACC_STATIC) != 0

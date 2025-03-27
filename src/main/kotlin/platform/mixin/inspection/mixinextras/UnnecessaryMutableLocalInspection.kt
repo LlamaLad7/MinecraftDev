@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -54,7 +54,7 @@ class UnnecessaryMutableLocalInspection : MixinInspection() {
         override fun visitMethod(method: PsiMethod) {
             val project = method.project
             val hasValidMixinAnnotation = method.annotations.any { ann ->
-                ann.qualifiedName?.let { MixinAnnotationHandler.forMixinAnnotation(it, project) }
+                MixinAnnotationHandler.forMixinAnnotation(ann, project)
                     // Mutable Local references do have different semantics inside a WrapOperation.
                     ?.let { it is InjectorAnnotationHandler && it !is WrapOperationHandler } == true
             }

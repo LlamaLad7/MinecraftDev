@@ -3,7 +3,7 @@
 
     https://mcdev.io/
 
-    Copyright (C) 2024 minecraft-dev
+    Copyright (C) 2025 minecraft-dev
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -715,11 +715,6 @@
                  implementationClass="com.demonwav.mcdev.platform.mixin.completion.MixinCompletionWeigher"
                  id="mcdev.mixin" order="first"/>
 
-        <facet.toolWindow anchor="bottom" icon="/assets/icons/mixin/mixin_class_gutter.png" canCloseContents="true"
-                          doNotActivateOnStart="true" facetIdList="minecraft" showOnStripeByDefault="false"
-                          factoryClass="com.demonwav.mcdev.platform.mixin.action.FindMixinsAction$TWFactory"
-                          id="Find Mixins"/>
-
         <!-- Mixin configuration -->
         <fileType name="Mixin Json Configuration" language="JSON"
                   implementationClass="com.demonwav.mcdev.platform.mixin.config.MixinConfigFileType$Json"
@@ -741,7 +736,15 @@
         <codeInsight.lineMarkerProvider language="JAVA"
                                         implementationClass="com.demonwav.mcdev.platform.mixin.insight.MixinLineMarkerProvider"/>
         <codeInsight.lineMarkerProvider language="JAVA"
-                                        implementationClass="com.demonwav.mcdev.platform.mixin.insight.MixinTargetLineMarkerProvider"/>
+                                        implementationClass="com.demonwav.mcdev.platform.mixin.insight.MixinElementLineMarkerProvider"/>
+        <codeInsight.lineMarkerProvider language="JAVA"
+                                        implementationClass="com.demonwav.mcdev.platform.mixin.insight.target.MixinTargetLineMarkerProvider"/>
+        <codeInsight.lineMarkerProvider language="JAVA"
+                                        implementationClass="com.demonwav.mcdev.platform.mixin.insight.target.MixinAccessorTargetLineMarkerProvider"/>
+
+        <!-- Mixin Code Vision Providers -->
+        <codeInsight.daemonBoundCodeVisionProvider implementation="com.demonwav.mcdev.platform.mixin.insight.target.MixinTargetCodeVisionProvider"/>
+        <codeInsight.daemonBoundCodeVisionProvider implementation="com.demonwav.mcdev.platform.mixin.insight.target.AccessorTargetCodeVisionProvider"/>
 
 
         <customJavadocTagProvider implementation="com.demonwav.mcdev.platform.mixin.MixinCustomJavaDocTagProvider"/>

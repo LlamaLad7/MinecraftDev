@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -20,6 +20,7 @@
 
 package com.demonwav.mcdev.platform.mixin.handlers
 
+import com.demonwav.mcdev.asset.MixinAssets
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InsnResolutionInfo
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.platform.mixin.util.MixinTargetMember
@@ -43,13 +44,10 @@ import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.serviceContainer.BaseKeyedLazyInstance
 import com.intellij.util.KeyedLazyInstance
 import com.intellij.util.xmlb.annotations.Attribute
+import javax.swing.Icon
 import org.objectweb.asm.tree.ClassNode
 
 interface MixinAnnotationHandler {
-    fun resolveTarget(annotation: PsiAnnotation) = annotation.cached(PsiModificationTracker.MODIFICATION_COUNT) {
-        val containingClass = annotation.findContainingClass() ?: return@cached emptyList()
-        containingClass.mixinTargets.flatMap { resolveTarget(annotation, it) }
-    }
 
     fun resolveTarget(annotation: PsiAnnotation, targetClass: ClassNode): List<MixinTargetMember>
 
@@ -83,6 +81,8 @@ interface MixinAnnotationHandler {
      */
     val isEntryPoint: Boolean
 
+    val icon: Icon get() = MixinAssets.MIXIN_ELEMENT_ICON
+
     companion object {
         private val EP_NAME = ExtensionPointName<KeyedLazyInstance<MixinAnnotationHandler>>(
             "com.demonwav.minecraft-dev.mixinAnnotationHandler",
@@ -91,6 +91,11 @@ interface MixinAnnotationHandler {
 
         fun getBuiltinHandlers(): Sequence<Pair<String, MixinAnnotationHandler>> =
             EP_NAME.extensions.asSequence().map { it.key to it.instance }
+
+        fun forMixinAnnotation(annotation: PsiAnnotation, project: Project = annotation.project): MixinAnnotationHandler? {
+            val qName = annotation.qualifiedName ?: return null
+            return forMixinAnnotation(qName, project)
+        }
 
         fun forMixinAnnotation(qualifiedName: String, project: Project? = null): MixinAnnotationHandler? {
             val extension = COLLECTOR.findSingle(qualifiedName)
@@ -121,6 +126,14 @@ interface MixinAnnotationHandler {
             }
 
             return null
+        }
+
+        fun resolveTarget(annotation: PsiAnnotation): List<MixinTargetMember> {
+            return annotation.cached(PsiModificationTracker.MODIFICATION_COUNT) {
+                val handler = forMixinAnnotation(annotation) ?: return@cached emptyList()
+                val containingClass = annotation.findContainingClass() ?: return@cached emptyList()
+                containingClass.mixinTargets.flatMap { handler.resolveTarget(annotation, it) }
+            }
         }
     }
 }

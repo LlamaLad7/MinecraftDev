@@ -7,8 +7,8 @@ asm = "9.6"
 fuel = "2.3.1"
 licenser = "0.6.1"
 changelog = "2.2.0"
-intellij-plugin = "2.1.0"
-intellij-ide = "243.21155.17-EAP-SNAPSHOT"
+intellij-plugin = "2.4.0"
+intellij-ide = "2024.3.5"
 idea-ext = "1.1.8"
 psiPlugin = "243.7768"
 
@@ -31,7 +31,7 @@ changelog-plugin = { module = "org.jetbrains.changelog:org.jetbrains.changelog.g
 coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines" }
 
 mappingIo = "net.fabricmc:mapping-io:0.2.1"
-mixinExtras-expressions = "io.github.llamalad7:mixinextras-expressions:0.0.1"
+mixinExtras-expressions = "io.github.llamalad7:mixinextras-expressions:0.0.4"
 
 # GrammarKit
 jflex-lib = "org.jetbrains.idea:jflex:1.7.0-b7f882a"

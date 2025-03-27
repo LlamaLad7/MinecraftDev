@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -18,7 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.mcdev.obfex.formats.csrg.gen;
+package io.mcdev.obfex.formats.csrg.gen.lexer;
 
 import com.intellij.lexer.*;
 import com.intellij.psi.tree.IElementType;

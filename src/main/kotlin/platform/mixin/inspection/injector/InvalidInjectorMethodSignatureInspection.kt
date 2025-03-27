@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -26,7 +26,7 @@ import com.demonwav.mcdev.platform.mixin.inspection.MixinInspection
 import com.demonwav.mcdev.platform.mixin.reference.MethodReference
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.COERCE
-import com.demonwav.mcdev.platform.mixin.util.findSuperConstructorCall
+import com.demonwav.mcdev.platform.mixin.util.findDelegateConstructorCall
 import com.demonwav.mcdev.platform.mixin.util.hasAccess
 import com.demonwav.mcdev.platform.mixin.util.isAssignable
 import com.demonwav.mcdev.platform.mixin.util.isConstructor
@@ -95,8 +95,7 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
             var reportedSignature = false
 
             for (annotation in modifiers.annotations) {
-                val qName = annotation.qualifiedName ?: continue
-                val handler = MixinAnnotationHandler.forMixinAnnotation(qName, annotation.project)
+                val handler = MixinAnnotationHandler.forMixinAnnotation(annotation, annotation.project)
                     as? InjectorAnnotationHandler ?: continue
                 val methodAttribute = annotation.findDeclaredAttributeValue("method") ?: continue
                 val targetMethods = MethodReference.resolveAllIfNotAmbiguous(methodAttribute) ?: continue
@@ -108,15 +107,15 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
                         if (!shouldBeStatic && targetMethod.method.isConstructor) {
                             // before the superclass constructor call, everything must be static
                             val methodInsns = targetMethod.method.instructions
-                            val superCtorCall = targetMethod.method.findSuperConstructorCall()
-                            if (methodInsns != null && superCtorCall != null) {
+                            val delegateCtorCall = targetMethod.method.findDelegateConstructorCall()
+                            if (methodInsns != null && delegateCtorCall != null) {
                                 val insns = handler.resolveInstructions(
                                     annotation,
                                     targetMethod.clazz,
                                     targetMethod.method,
                                 )
                                 shouldBeStatic = insns.any {
-                                    methodInsns.indexOf(it.insn) <= methodInsns.indexOf(superCtorCall)
+                                    methodInsns.indexOf(it.insn) <= methodInsns.indexOf(delegateCtorCall)
                                 }
                             }
                         }

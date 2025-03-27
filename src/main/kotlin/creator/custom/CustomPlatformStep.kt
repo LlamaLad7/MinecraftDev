@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -33,6 +33,7 @@ import com.intellij.ide.wizard.NewProjectWizardBaseData
 import com.intellij.ide.wizard.NewProjectWizardStep
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.asContextElement
+import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.observable.properties.GraphProperty
 import com.intellij.openapi.observable.util.transform
@@ -54,7 +55,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * The step to select a custom template repo.
@@ -219,13 +219,15 @@ class CustomPlatformStep(
         templateProvidersTextProperty.set(MCDevBundle("creator.step.generic.init_template_providers.message"))
         templateProvidersLoadingProperty.set(true)
 
+        // For some reason syncRefresh doesn't play nice with writeAction() coroutines so we do it beforehand
+        application.invokeAndWait(
+            { runWriteAction { VirtualFileManager.getInstance().syncRefresh() } },
+            context.modalityState
+        )
+
         val dialogCoroutineContext = context.modalityState.asContextElement()
         val uiContext = dialogCoroutineContext + Dispatchers.EDT
-        creatorUiScope.launch(dialogCoroutineContext) {
-            withContext(uiContext) {
-                application.runWriteAction { VirtualFileManager.getInstance().syncRefresh() }
-            }
-
+        creatorUiScope.launch(uiContext) {
             for ((providerKey, repos) in templateRepos.groupBy { it.provider }) {
                 val provider = TemplateProvider.get(providerKey)
                     ?: continue
@@ -234,11 +236,9 @@ class CustomPlatformStep(
                     .getOrLogException(logger<CustomPlatformStep>())
             }
 
-            withContext(uiContext) {
-                templateProvidersLoadingProperty.set(false)
-                // Force refresh to trigger template loading
-                templateRepoProperty.set(templateRepo)
-            }
+            templateProvidersLoadingProperty.set(false)
+            // Force refresh to trigger template loading
+            templateRepoProperty.set(templateRepo)
         }
     }
 
@@ -248,23 +248,23 @@ class CustomPlatformStep(
         templateLoadingTextProperty.set(MCDevBundle("creator.step.generic.load_template.message"))
         templateLoadingProperty.set(true)
 
+        // For some reason syncRefresh doesn't play nice with writeAction() coroutines so we do it beforehand
+        application.invokeAndWait(
+            { runWriteAction { VirtualFileManager.getInstance().syncRefresh() } },
+            context.modalityState
+        )
+
         val dialogCoroutineContext = context.modalityState.asContextElement()
         val uiContext = dialogCoroutineContext + Dispatchers.EDT
         templateLoadingJob?.cancel("Another template has been selected")
-        templateLoadingJob = creatorUiScope.launch(dialogCoroutineContext) {
-            withContext(uiContext) {
-                application.runWriteAction { VirtualFileManager.getInstance().syncRefresh() }
-            }
-
+        templateLoadingJob = creatorUiScope.launch(uiContext) {
             val newTemplates = runCatching { provider() }
                 .getOrLogException(logger<CustomPlatformStep>())
                 ?: emptyList()
 
-            withContext(uiContext) {
-                templateLoadingProperty.set(false)
-                noTemplatesAvailable.visible(newTemplates.isEmpty())
-                availableTemplates = newTemplates
-            }
+            templateLoadingProperty.set(false)
+            noTemplatesAvailable.visible(newTemplates.isEmpty())
+            availableTemplates = newTemplates
         }
     }
 

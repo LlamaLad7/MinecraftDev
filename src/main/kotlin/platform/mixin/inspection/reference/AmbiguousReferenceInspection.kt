@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -45,8 +45,7 @@ class AmbiguousReferenceInspection : MixinAnnotationAttributeInspection("method"
         value: PsiAnnotationMemberValue,
         holder: ProblemsHolder,
     ) {
-        val qName = annotation.qualifiedName ?: return
-        val handler = MixinAnnotationHandler.forMixinAnnotation(qName, annotation.project)
+        val handler = MixinAnnotationHandler.forMixinAnnotation(annotation)
         if (handler !is InjectorAnnotationHandler || handler.isSoft) {
             return
         }

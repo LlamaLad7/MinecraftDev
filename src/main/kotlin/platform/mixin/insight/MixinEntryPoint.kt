@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -60,8 +60,7 @@ class MixinEntryPoint : EntryPointWithVisibilityLevel() {
         }
         val project = member.project
         for (annotation in member.annotations) {
-            val qName = annotation.qualifiedName ?: continue
-            val handler = MixinAnnotationHandler.forMixinAnnotation(qName, project)
+            val handler = MixinAnnotationHandler.forMixinAnnotation(annotation, project)
             if (handler is InjectorAnnotationHandler) {
                 return PsiUtil.ACCESS_LEVEL_PRIVATE
             }

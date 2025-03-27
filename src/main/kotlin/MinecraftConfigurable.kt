@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -22,6 +22,7 @@ package com.demonwav.mcdev
 
 import com.demonwav.mcdev.asset.MCDevBundle
 import com.demonwav.mcdev.asset.PlatformAssets
+import com.demonwav.mcdev.creator.custom.mavenRepoTable
 import com.demonwav.mcdev.creator.custom.templateRepoTable
 import com.demonwav.mcdev.update.ConfigurePluginUpdatesDialog
 import com.intellij.ide.projectView.ProjectView
@@ -104,16 +105,26 @@ class MinecraftConfigurable : Configurable {
         }
 
         group(MCDevBundle("minecraft.settings.creator")) {
-            row(MCDevBundle("minecraft.settings.creator.repos")) {}
+            twoColumnsRow(
+                { label(MCDevBundle("minecraft.settings.creator.repos")) },
+                { label(MCDevBundle("minecraft.settings.creator.maven")) },
+            )
 
-            row {
+            twoColumnsRow({
                 templateRepoTable(
                     MutableProperty(
                         { settings.creatorTemplateRepos.toMutableList() },
                         { settings.creatorTemplateRepos = it }
                     )
                 )
-            }.resizableRow()
+            }, {
+                mavenRepoTable(
+                    MutableProperty(
+                        { settings.creatorMavenRepos.toMutableList() },
+                        { settings.creatorMavenRepos = it }
+                    )
+                )
+            }).resizableRow()
         }
 
         onApply {

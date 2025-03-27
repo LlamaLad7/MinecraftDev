@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -21,6 +21,6 @@
 package io.mcdev.obfex.formats.srg.lang.psi
 
 import com.intellij.lexer.FlexAdapter
-import io.mcdev.obfex.formats.srg.gen.SrgLexer
+import io.mcdev.obfex.formats.srg.gen.lexer.SrgLexer
 
 class SrgLexerAdapter : FlexAdapter(SrgLexer())

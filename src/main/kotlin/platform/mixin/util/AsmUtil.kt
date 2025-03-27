@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -57,12 +57,15 @@ import com.intellij.psi.PsiCompiledFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementFactory
 import com.intellij.psi.PsiEllipsisType
+import com.intellij.psi.PsiEnumConstant
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.PsiJavaFile
+import com.intellij.psi.PsiKeyword
 import com.intellij.psi.PsiLambdaExpression
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiMethodReferenceExpression
 import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiModifierList
@@ -96,6 +99,7 @@ import org.objectweb.asm.tree.FieldNode
 import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.InsnNode
 import org.objectweb.asm.tree.InvokeDynamicInsnNode
+import org.objectweb.asm.tree.LineNumberNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
 import org.objectweb.asm.tree.VarInsnNode
@@ -232,11 +236,11 @@ fun findClassNodeByPsiClass(psiClass: PsiClass, module: Module? = psiClass.findM
                 }
                 val classFile = parentDir.findChild("${fqn.substringAfterLast('.')}.class")
                     ?: return@lockedCached null
-                val node = ClassNode()
+                val node = ClassNode(Opcodes.ASM7)
                 classFile.inputStream.use { ClassReader(it).accept(node, 0) }
                 node
             } else {
-                val node = ClassNode()
+                val node = ClassNode(Opcodes.ASM7)
                 ClassReader(bytes).accept(node, 0)
                 node
             }
@@ -636,9 +640,9 @@ val MethodNode.isClinit
     get() = this.name == "<clinit>"
 
 /**
- * Finds the super() call in this method node, assuming it is a constructor
+ * Finds the `this()` or `super()` call in this method node, assuming it is a constructor
  */
-fun MethodNode.findSuperConstructorCall(): AbstractInsnNode? {
+fun MethodNode.findDelegateConstructorCall(): MethodInsnNode? {
     val insns = instructions ?: return null
     var superCtorCall = insns.first
     var newCount = 0
@@ -646,8 +650,8 @@ fun MethodNode.findSuperConstructorCall(): AbstractInsnNode? {
         if (superCtorCall.opcode == Opcodes.NEW) {
             newCount++
         } else if (superCtorCall.opcode == Opcodes.INVOKESPECIAL) {
-            val methodCall = superCtorCall as MethodInsnNode
-            if (methodCall.name == "<init>") {
+            superCtorCall as MethodInsnNode
+            if (superCtorCall.name == "<init>") {
                 if (newCount == 0) {
                     return superCtorCall
                 } else {
@@ -660,13 +664,18 @@ fun MethodNode.findSuperConstructorCall(): AbstractInsnNode? {
     return null
 }
 
-private fun findContainingMethod(clazz: ClassNode, lambdaMethod: MethodNode): Pair<MethodNode, Int>? {
+private fun findContainingMethod(clazz: ClassNode, lambdaMethod: MethodNode): Pair<MethodNode, SourceCodeLocationInfo>? {
     if (!lambdaMethod.hasAccess(Opcodes.ACC_SYNTHETIC)) {
         return null
     }
     clazz.methods?.forEach { method ->
         var lambdaCount = 0
+        var lineNumber: Int? = null
+        val lambdaCountPerLine = mutableMapOf<Int, Int>()
         method.instructions?.iterator()?.forEach nextInsn@{ insn ->
+            if (insn is LineNumberNode) {
+                lineNumber = insn.line
+            }
             if (insn !is InvokeDynamicInsnNode) return@nextInsn
             if (insn.bsm.owner != "java/lang/invoke/LambdaMetafactory") return@nextInsn
             val invokedMethod = when (insn.bsm.name) {
@@ -691,9 +700,13 @@ private fun findContainingMethod(clazz: ClassNode, lambdaMethod: MethodNode): Pa
             }
 
             lambdaCount++
+            val lambdaCountThisLine =
+                lineNumber?.let { lambdaCountPerLine.merge(it, 1, Int::plus) } ?: lambdaCount
 
             if (invokedMethod.name == lambdaMethod.name && invokedMethod.desc == lambdaMethod.desc) {
-                return@findContainingMethod method to (lambdaCount - 1)
+                val locationInfo =
+                    SourceCodeLocationInfo(lambdaCount - 1, lineNumber, lambdaCountThisLine - 1)
+                return@findContainingMethod method to locationInfo
             }
         }
     }
@@ -701,47 +714,48 @@ private fun findContainingMethod(clazz: ClassNode, lambdaMethod: MethodNode): Pa
     return null
 }
 
-private fun findAssociatedLambda(psiClass: PsiClass, clazz: ClassNode, lambdaMethod: MethodNode): PsiElement? {
+private fun findAssociatedLambda(project: Project, scope: GlobalSearchScope, clazz: ClassNode, lambdaMethod: MethodNode): PsiElement? {
     return RecursionManager.doPreventingRecursion(lambdaMethod, false) {
         val pair = findContainingMethod(clazz, lambdaMethod) ?: return@doPreventingRecursion null
-        val (containingMethod, index) = pair
-        val parent = findAssociatedLambda(psiClass, clazz, containingMethod)
-            ?: psiClass.findMethods(containingMethod.memberReference).firstOrNull()
-            ?: return@doPreventingRecursion null
-        var i = 0
-        var result: PsiElement? = null
-        parent.accept(
-            object : JavaRecursiveElementWalkingVisitor() {
-                override fun visitAnonymousClass(aClass: PsiAnonymousClass) {
-                    // skip anonymous classes
-                }
+        val (containingMethod, locationInfo) = pair
+        val containingBodyElements = findAssociatedLambda(project, scope, clazz, containingMethod)?.let(::listOf)
+            ?: containingMethod.findBodyElements(clazz, project, scope).ifEmpty { return@doPreventingRecursion null }
 
-                override fun visitClass(aClass: PsiClass) {
-                    // skip inner classes
-                }
-
-                override fun visitLambdaExpression(expression: PsiLambdaExpression) {
-                    if (i++ == index) {
-                        result = expression
-                        stopWalking()
+        val psiFile = containingBodyElements.first().containingFile ?: return@doPreventingRecursion null
+        val matcher = locationInfo.createMatcher<PsiElement>(psiFile)
+        for (bodyElement in containingBodyElements) {
+            bodyElement.accept(
+                object : JavaRecursiveElementWalkingVisitor() {
+                    override fun visitAnonymousClass(aClass: PsiAnonymousClass) {
+                        // skip anonymous classes
                     }
-                    // skip walking inside the lambda
-                }
 
-                override fun visitMethodReferenceExpression(expression: PsiMethodReferenceExpression) {
-                    // walk inside the reference first, visits the qualifier first (it's first in the bytecode)
-                    super.visitMethodReferenceExpression(expression)
+                    override fun visitClass(aClass: PsiClass) {
+                        // skip inner classes
+                    }
 
-                    if (expression.hasSyntheticMethod) {
-                        if (i++ == index) {
-                            result = expression
+                    override fun visitLambdaExpression(expression: PsiLambdaExpression) {
+                        if (matcher.accept(expression)) {
                             stopWalking()
                         }
+                        // skip walking inside the lambda
                     }
-                }
-            },
-        )
-        result
+
+                    override fun visitMethodReferenceExpression(expression: PsiMethodReferenceExpression) {
+                        // walk inside the reference first, visits the qualifier first (it's first in the bytecode)
+                        super.visitMethodReferenceExpression(expression)
+
+                        if (expression.hasSyntheticMethod) {
+                            if (matcher.accept(expression)) {
+                                stopWalking()
+                            }
+                        }
+                    }
+                },
+            )
+        }
+
+        matcher.result
     }
 }
 
@@ -966,7 +980,68 @@ fun MethodNode.findSourceElement(
         // don't walk into stub compiled elements to look for lambdas
         return null
     }
-    return findAssociatedLambda(psiClass, clazz, this)
+    return findAssociatedLambda(project, scope, clazz, this)
+}
+
+fun MethodNode.findBodyElements(clazz: ClassNode, project: Project, scope: GlobalSearchScope): List<PsiElement> {
+    if (isClinit) {
+        val psiClass = clazz.findSourceClass(project, scope, canDecompile = true) ?: return emptyList()
+        val result = mutableListOf<PsiElement>()
+        for (element in psiClass.children) {
+            when (element) {
+                is PsiEnumConstant -> element.argumentList?.expressions?.let { result += it }
+                is PsiField -> {
+                    if (element.hasModifierProperty(PsiModifier.STATIC)) {
+                        element.initializer?.let { result += it }
+                    }
+                }
+                is PsiClassInitializer -> {
+                    if (element.hasModifierProperty(PsiModifier.STATIC)) {
+                        result += element.body
+                    }
+                }
+            }
+        }
+        return result
+    }
+
+    val sourceMethod = findSourceElement(clazz, project, scope, canDecompile = true) ?: return emptyList()
+
+    if (isConstructor && findDelegateConstructorCall()?.owner != clazz.name && sourceMethod is PsiMethod) {
+        val result = mutableListOf<PsiElement>()
+        val body = sourceMethod.body
+        if (body != null) {
+            val children = body.children
+            val superCtorIndex = children.indexOfFirst {
+                it is PsiMethodCallExpression && it.methodExpression.text == PsiKeyword.SUPER
+            }
+            result += children.take(superCtorIndex + 1)
+            sourceMethod.containingClass?.children?.forEach { element ->
+                when (element) {
+                    is PsiField -> {
+                        if (!element.hasModifierProperty(PsiModifier.STATIC)) {
+                            element.initializer?.let { result += it }
+                        }
+                    }
+                    is PsiClassInitializer -> {
+                        if (!element.hasModifierProperty(PsiModifier.STATIC)) {
+                            result += element.body
+                        }
+                    }
+                }
+            }
+            result += children.drop(superCtorIndex + 1)
+            return result
+        }
+    }
+
+    val body = when (sourceMethod) {
+        is PsiMethod -> sourceMethod.body
+        is PsiLambdaExpression -> sourceMethod.body
+        else -> null
+    }
+
+    return listOfNotNull(body)
 }
 
 /**

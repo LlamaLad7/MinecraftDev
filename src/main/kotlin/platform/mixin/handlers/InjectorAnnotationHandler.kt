@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -20,6 +20,7 @@
 
 package com.demonwav.mcdev.platform.mixin.handlers
 
+import com.demonwav.mcdev.asset.MixinAssets
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.AtResolver
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.CollectVisitor
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InsnResolutionInfo
@@ -173,6 +174,8 @@ abstract class InjectorAnnotationHandler : MixinAnnotationHandler {
     open val allowCoerce = false
 
     override val isEntryPoint = true
+
+    override val icon = MixinAssets.MIXIN_INJECTOR_ICON
 
     abstract val mixinExtrasExpressionContextType: ExpressionContext.Type
 
