@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -31,7 +31,6 @@ import com.demonwav.mcdev.util.findContainingModifierList
 import com.demonwav.mcdev.util.findField
 import com.demonwav.mcdev.util.findMethods
 import com.demonwav.mcdev.util.insideAnnotationAttribute
-import com.demonwav.mcdev.util.mapFirstNotNull
 import com.demonwav.mcdev.util.mapToArray
 import com.demonwav.mcdev.util.reference.PolyReferenceResolver
 import com.demonwav.mcdev.util.toTypedArray
@@ -96,15 +95,13 @@ abstract class AbstractDefinitionReference : PolyReferenceResolver(), MixinRefer
     private fun resolveInBytecode(context: PsiElement, memberReference: MemberReference): List<MemberReference> {
         val project = context.project
         val modifierList = context.findContainingModifierList() ?: return emptyList()
-        val (annotation, handler) = modifierList.annotations.mapFirstNotNull { annotation ->
-            val qName = annotation.qualifiedName ?: return@mapFirstNotNull null
-            val handler = MixinAnnotationHandler.forMixinAnnotation(qName, project) ?: return@mapFirstNotNull null
-            annotation to handler
+        val annotation = modifierList.annotations.firstOrNull {
+            MixinAnnotationHandler.forMixinAnnotation(it, project) != null
         } ?: return emptyList()
 
         val result = mutableListOf<MemberReference>()
 
-        for (target in handler.resolveTarget(annotation)) {
+        for (target in MixinAnnotationHandler.resolveTarget(annotation)) {
             if (target !is MethodTargetMember) {
                 continue
             }

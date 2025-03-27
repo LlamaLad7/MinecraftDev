@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -40,8 +40,7 @@ class MixinAnnotationsInspection : MixinInspection() {
     private class Visitor(private val holder: ProblemsHolder) : JavaElementVisitor() {
 
         override fun visitAnnotation(annotation: PsiAnnotation) {
-            val qualifiedName = annotation.qualifiedName ?: return
-            if (MixinAnnotationHandler.forMixinAnnotation(qualifiedName, annotation.project) == null) {
+            if (MixinAnnotationHandler.forMixinAnnotation(annotation, annotation.project) == null) {
                 return
             }
 

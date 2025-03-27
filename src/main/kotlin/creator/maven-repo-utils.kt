@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -22,20 +22,27 @@ package com.demonwav.mcdev.creator
 
 import com.demonwav.mcdev.update.PluginUtil
 import com.github.kittinunf.fuel.core.FuelManager
+import com.github.kittinunf.fuel.core.Request
 import com.github.kittinunf.fuel.core.requests.suspendable
 import java.io.IOException
+import java.util.function.Function
 import java.util.function.Predicate
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.events.XMLEvent
 
 @Throws(IOException::class)
-suspend fun collectMavenVersions(url: String, filter: Predicate<String> = Predicate { true }): List<String> {
+suspend fun collectMavenVersions(
+    url: String,
+    requestCustomizer: Function<Request, Request>? = null,
+    filter: Predicate<String> = Predicate { true }
+): List<String> {
     val manager = FuelManager()
     manager.proxy = selectProxy(url)
 
     val response = manager.get(url)
         .header("User-Agent", PluginUtil.useragent)
         .allowRedirects(true)
+        .let { requestCustomizer?.apply(it) ?: it }
         .suspendable()
         .await()
 

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -22,18 +22,24 @@ package com.demonwav.mcdev.creator.custom.types
 
 import com.demonwav.mcdev.creator.collectMavenVersions
 import com.demonwav.mcdev.creator.custom.CreatorContext
+import com.demonwav.mcdev.creator.custom.CreatorCredentials
 import com.demonwav.mcdev.creator.custom.TemplateEvaluator
 import com.demonwav.mcdev.creator.custom.TemplatePropertyDescriptor
 import com.demonwav.mcdev.creator.custom.TemplateValidationReporter
 import com.demonwav.mcdev.util.SemanticVersion
 import com.demonwav.mcdev.util.getOrLogException
+import com.github.kittinunf.fuel.core.Request
+import com.github.kittinunf.fuel.core.extensions.authentication
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.observable.properties.GraphProperty
 import com.intellij.ui.ComboboxSpeedSearch
+import com.intellij.ui.JBColor
 import com.intellij.ui.dsl.builder.Panel
 import com.intellij.ui.dsl.builder.bindItem
+import com.intellij.ui.dsl.builder.bindText
 import com.intellij.util.ui.AsyncProcessIcon
 import java.util.concurrent.ConcurrentHashMap
+import java.util.function.Function
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -50,6 +56,7 @@ class MavenArtifactVersionCreatorProperty(
     override val graphProperty: GraphProperty<SemanticVersion> = graph.property(SemanticVersion(emptyList()))
     private val versionsProperty = graph.property<Collection<SemanticVersion>>(emptyList())
     private val loadingVersionsProperty = graph.property(true)
+    private val loadingVersionsStatusProperty = graph.property("")
 
     override fun buildUi(panel: Panel) {
         panel.row(descriptor.translatedLabel) {
@@ -59,6 +66,9 @@ class MavenArtifactVersionCreatorProperty(
                 .also { ComboboxSpeedSearch.installOn(it.component) }
 
             cell(AsyncProcessIcon(makeStorageKey("progress")))
+                .visibleIf(loadingVersionsProperty)
+            label("").applyToComponent { foreground = JBColor.RED }
+                .bindText(loadingVersionsStatusProperty)
                 .visibleIf(loadingVersionsProperty)
 
             versionsProperty.afterChange { versions ->
@@ -115,9 +125,13 @@ class MavenArtifactVersionCreatorProperty(
             rawVersionFilter,
             versionFilter,
             descriptor.limit ?: 50
-        ) { versions ->
-            versionsProperty.set(versions)
-            loadingVersionsProperty.set(false)
+        ) { result ->
+            result.onSuccess { versions ->
+                versionsProperty.set(versions)
+                loadingVersionsProperty.set(false)
+            }.onFailure { exception ->
+                loadingVersionsStatusProperty.set(exception.message ?: exception.javaClass.simpleName)
+            }
         }
     }
 
@@ -132,32 +146,40 @@ class MavenArtifactVersionCreatorProperty(
             rawVersionFilter: (String) -> Boolean,
             versionFilter: (SemanticVersion) -> Boolean,
             limit: Int,
-            uiCallback: (List<SemanticVersion>) -> Unit
+            uiCallback: (Result<List<SemanticVersion>>) -> Unit
         ) {
             // Let's not mix up cached versions if different properties
             // point to the same URL, but have different filters or limits
             val cacheKey = "$key-$url"
             val cachedVersions = versionsCache[cacheKey]
             if (cachedVersions != null) {
-                uiCallback(cachedVersions)
+                uiCallback(Result.success(cachedVersions))
                 return
             }
 
             val scope = context.childScope("MavenArtifactVersionCreatorProperty")
             scope.launch(Dispatchers.Default) {
-                val versions = withContext(Dispatchers.IO) { collectMavenVersions(url) }
-                    .asSequence()
-                    .filter(rawVersionFilter)
-                    .mapNotNull(SemanticVersion::tryParse)
-                    .filter(versionFilter)
-                    .sortedDescending()
-                    .take(limit)
-                    .toList()
+                val result = withContext(Dispatchers.IO) {
+                    var requestCustomizer = CreatorCredentials.findMavenRepoCredentials(url)?.let { (user, pass) ->
+                        Function<Request, Request> { request -> request.authentication().basic(user, pass) }
+                    }
 
-                versionsCache[cacheKey] = versions
+                    runCatching { collectMavenVersions(url, requestCustomizer) }
+                }.map { result ->
+                    val versions = result.asSequence()
+                        .filter(rawVersionFilter)
+                        .mapNotNull(SemanticVersion::tryParse)
+                        .filter(versionFilter)
+                        .sortedDescending()
+                        .take(limit)
+                        .toList()
+
+                    versionsCache[cacheKey] = versions
+                    versions
+                }
 
                 withContext(context.uiContext) {
-                    uiCallback(versions)
+                    uiCallback(result)
                 }
             }
         }

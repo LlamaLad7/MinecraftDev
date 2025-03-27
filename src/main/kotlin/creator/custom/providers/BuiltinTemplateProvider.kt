@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -51,7 +51,7 @@ class BuiltinTemplateProvider : RemoteTemplateProvider() {
             return
         }
 
-        if (doUpdateRepo(indicator, label, builtinRepoUrl)) {
+        if (doUpdateRepo(indicator, label, builtinRepoUrl, RemoteAuthType.NONE, "")) {
             repoUpdated = true
         }
     }

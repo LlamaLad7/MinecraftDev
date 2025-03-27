@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -108,9 +108,9 @@ class InjectCouldBeOverwriteInspection : MixinInspection() {
             }
 
             // check there is only one target
-            val injectHandler = MixinAnnotationHandler.forMixinAnnotation(MixinConstants.Annotations.INJECT)!!
-            val targetMethod = (injectHandler.resolveTarget(injectAnnotation).singleOrNull() as? MethodTargetMember)
-                ?.classAndMethod ?: return
+            val targetMethod =
+                (MixinAnnotationHandler.resolveTarget(injectAnnotation).singleOrNull() as? MethodTargetMember)
+                    ?.classAndMethod ?: return
 
             // can't overwrite constructors / static initializers
             if (targetMethod.method.isConstructor || targetMethod.method.isClinit) {

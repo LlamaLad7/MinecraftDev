@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -41,7 +41,7 @@ class CtorHeadUsedForNonConstructorInspection : MixinInspection() {
             if (atValue.constantValue != "CTOR_HEAD") {
                 return
             }
-            if (!UnnecessaryUnsafeInspection.mightTargetConstructor(holder.project, annotation)) {
+            if (!UnnecessaryUnsafeInspection.mightTargetConstructor(annotation)) {
                 holder.registerProblem(
                     atValue,
                     "CTOR_HEAD used without targeting a constructor",

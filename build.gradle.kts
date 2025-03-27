@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -105,12 +105,14 @@ dependencies {
         bundledPlugin("ByteCodeViewer")
         bundledPlugin("org.intellij.intelliLang")
         bundledPlugin("com.intellij.properties")
+        bundledPlugin("Git4Idea")
         bundledPlugin("com.intellij.modules.json")
 
         // Optional dependencies
         bundledPlugin("org.jetbrains.kotlin")
         bundledPlugin("org.toml.lang")
         bundledPlugin("org.jetbrains.plugins.yaml")
+
 
         testFramework(TestFrameworkType.JUnit5)
         testFramework(TestFrameworkType.Platform)

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2024 minecraft-dev
+ * Copyright (C) 2025 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -36,6 +36,8 @@ import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
 
 class WrapMethodHandler : InjectorAnnotationHandler() {
+    override val allowCoerce get() = true
+
     override fun expectedMethodSignature(
         annotation: PsiAnnotation,
         targetClass: ClassNode,
