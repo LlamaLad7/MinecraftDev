@@ -16,21 +16,25 @@ jobs:
           - 'windows-latest'
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: |
-            11
-            17
-      - uses: actions/cache@v4
+          distribution: 'temurin'
+          java-version: 17
+      - uses: actions-ecosystem/action-regex-match@d50fd2e7a37d0e617aea3d7ada663bd56862b9cc
+        id: branch-match
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/jdks
-            ~/.gradle/native
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', 'gradle/**', 'gradle.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-      - run: ./gradlew build --no-daemon --stacktrace
+          text: ${{ github.ref }}
+          regex: '^refs\/heads\/\d{4}\.\d$'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/dev' && steps.branch-match.outputs.match == '' }}
+      - shell: bash
+        run: |
+          mkdir -p ~/.gradle/
+          echo -e '\norg.gradle.jvmargs=-Xmx4G\n' >> ~/.gradle/gradle.properties
+      - name: Build
+        run: ./gradlew build --stacktrace

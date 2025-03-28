@@ -18,6 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -25,10 +26,10 @@ plugins {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    options.release.set(8)
+    options.release.set(17)
 }
 tasks.withType<KotlinCompile>().configureEach {
-    kotlinOptions.jvmTarget = "1.8"
+    compilerOptions.jvmTarget = JvmTarget.JVM_17
 }
 
 repositories {
