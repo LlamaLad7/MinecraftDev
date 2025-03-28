@@ -9,27 +9,21 @@ jobs:
     name: Publish
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout sources
+        uses: actions/checkout@v4
         with:
           submodules: true
       - name: Fetch latest submodule updates
         run: git submodule update --remote
-      - uses: actions/setup-java@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: |
-            11
-            17
-      - uses: actions/cache@v4
+          distribution: 'temurin'
+          java-version: 17
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/jdks
-            ~/.gradle/native
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', 'gradle/**', 'gradle.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          cache-read-only: true
       - name: Setup publish token
         env:
           JETBRAINS_TOKEN: ${{ secrets.JETBRAINS_TOKEN }}
@@ -38,8 +32,12 @@ jobs:
           mkdir -p ~/.gradle/
           echo "GRADLE_USER_HOME=$HOME/.gradle" >> "$GITHUB_ENV"
           echo "mcdev.deploy.token=${JETBRAINS_TOKEN}" > ~/.gradle/gradle.properties
+      - shell: bash
+        run: |
+          mkdir -p ~/.gradle/
+          echo -e '\norg.gradle.jvmargs=-Xmx4G\n' >> ~/.gradle/gradle.properties
       - name: Publish plugin
-        run: ./gradlew clean :publishPlugin --no-daemon --stacktrace
+        run: ./gradlew clean :publishPlugin --stacktrace
       - name: Get tag name
         id: get_tag
         shell: bash
