@@ -8,7 +8,7 @@ fuel = "2.3.1"
 licenser = "0.6.1"
 changelog = "2.2.0"
 intellij-plugin = "2.4.0"
-intellij-ide = "251.23774-EAP-CANDIDATE-SNAPSHOT"
+intellij-ide = "2025.1"
 idea-ext = "1.1.8"
 psiPlugin = "251.175"
 
@@ -39,7 +39,7 @@ jflex-skeleton = "org.jetbrains.idea:jflex:1.7.0-c1fdf11"
 grammarKit = "org.jetbrains.idea:grammar-kit:1.5.1"
 
 # Gradle Tooling
-gradleToolingExtension = { module = "com.jetbrains.intellij.gradle:gradle-tooling-extension", version.ref = "intellij-ide" }
+gradleToolingExtension = { module = "com.jetbrains.intellij.gradle:gradle-tooling-extension", version = "251.23774.435" }
 annotations = "org.jetbrains:annotations:24.0.0"
 groovy = "org.codehaus.groovy:groovy:3.0.19"
 
