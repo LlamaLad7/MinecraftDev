@@ -1,6 +1,12 @@
 # Minecraft Development for IntelliJ
 
-## [Unreleased]
+## [1.8.4]
+
+### Added
+
+- Added datagen to Fabric project templates
+
+## [1.8.3]
 
 ### Added
 
