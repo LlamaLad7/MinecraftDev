@@ -133,17 +133,19 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
                                 ),
                             )
                         } else if (!shouldBeStatic && modifiers.hasModifierProperty(PsiModifier.STATIC)) {
-                            reportedStatic = true
-                            holder.registerProblem(
-                                modifiers.findKeyword(PsiModifier.STATIC) ?: identifier,
-                                "Method must not be static",
-                                QuickFixFactory.getInstance().createModifierListFix(
-                                    modifiers,
-                                    PsiModifier.STATIC,
-                                    false,
-                                    false,
-                                ),
-                            )
+                            if (!handler.canAlwaysBeStatic(method)) {
+                                reportedStatic = true
+                                holder.registerProblem(
+                                    modifiers.findKeyword(PsiModifier.STATIC) ?: identifier,
+                                    "Method must not be static",
+                                    QuickFixFactory.getInstance().createModifierListFix(
+                                        modifiers,
+                                        PsiModifier.STATIC,
+                                        false,
+                                        false,
+                                    ),
+                                )
+                            }
                         }
                     }
 

@@ -58,7 +58,7 @@ class FabricReferenceContributor : PsiReferenceContributor() {
 
         registrar.registerReferenceProvider(
             stringInModJson.isPropertyValue("accessWidener"),
-            ResourceFileReference("access widener '%s'", Regex("(.+)\\.accesswidener")),
+            ResourceFileReference("access widener '%s'", Regex("(.+)\\.(accesswidener|aw)")),
         )
 
         registrar.registerReferenceProvider(

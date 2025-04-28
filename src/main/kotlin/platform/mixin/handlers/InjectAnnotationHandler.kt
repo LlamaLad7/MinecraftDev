@@ -27,6 +27,7 @@ import com.demonwav.mcdev.platform.mixin.util.callbackInfoReturnableType
 import com.demonwav.mcdev.platform.mixin.util.callbackInfoType
 import com.demonwav.mcdev.platform.mixin.util.getGenericReturnType
 import com.demonwav.mcdev.platform.mixin.util.hasAccess
+import com.demonwav.mcdev.platform.mixin.util.isFabricMixin
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
 import com.demonwav.mcdev.util.Parameter
 import com.demonwav.mcdev.util.findModule
@@ -129,6 +130,10 @@ class InjectAnnotationHandler : InjectorAnnotationHandler() {
         }
 
         return listOf(MethodSignature(result, PsiTypes.voidType()))
+    }
+
+    override fun canAlwaysBeStatic(method: PsiMethod): Boolean {
+        return method.isFabricMixin
     }
 
     override val allowCoerce = true

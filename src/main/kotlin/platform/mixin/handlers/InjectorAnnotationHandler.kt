@@ -45,6 +45,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiEllipsisType
+import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiType
 import com.intellij.psi.util.PsiModificationTracker
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
@@ -169,6 +170,10 @@ abstract class InjectorAnnotationHandler : MixinAnnotationHandler {
 
     override fun createUnresolvedMessage(annotation: PsiAnnotation): String? {
         return "Cannot resolve any target instructions in target class"
+    }
+
+    open fun canAlwaysBeStatic(method: PsiMethod): Boolean {
+        return true
     }
 
     open val allowCoerce = false

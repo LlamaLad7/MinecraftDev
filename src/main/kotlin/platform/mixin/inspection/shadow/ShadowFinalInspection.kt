@@ -23,13 +23,21 @@ package com.demonwav.mcdev.platform.mixin.inspection.shadow
 import com.demonwav.mcdev.platform.mixin.inspection.MixinInspection
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.FINAL
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.MUTABLE
+import com.demonwav.mcdev.util.findContainingClass
 import com.intellij.codeInsight.intention.AddAnnotationFix
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.JavaElementVisitor
-import com.intellij.psi.PsiAssignmentExpression
+import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiClassInitializer
 import com.intellij.psi.PsiElementVisitor
-import com.intellij.psi.PsiModifierListOwner
+import com.intellij.psi.PsiField
+import com.intellij.psi.PsiLambdaExpression
+import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiModifier
+import com.intellij.psi.PsiModifierList
 import com.intellij.psi.PsiReferenceExpression
+import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.util.PsiUtil
 
 class ShadowFinalInspection : MixinInspection() {
 
@@ -40,19 +48,44 @@ class ShadowFinalInspection : MixinInspection() {
     override fun buildVisitor(holder: ProblemsHolder): PsiElementVisitor = Visitor(holder)
 
     private class Visitor(private val holder: ProblemsHolder) : JavaElementVisitor() {
-
-        override fun visitAssignmentExpression(expression: PsiAssignmentExpression) {
-            val left = expression.lExpression as? PsiReferenceExpression ?: return
-            val resolved = left.resolve() as? PsiModifierListOwner ?: return
-            val modifiers = resolved.modifierList ?: return
-
-            if (modifiers.findAnnotation(FINAL) != null && modifiers.findAnnotation(MUTABLE) == null) {
-                holder.registerProblem(
-                    expression,
-                    "@Final fields cannot be modified",
-                    AddAnnotationFix(MUTABLE, resolved),
-                )
+        override fun visitReferenceExpression(expression: PsiReferenceExpression) {
+            if (!PsiUtil.isAccessedForWriting(expression)) {
+                return
             }
+
+            val field = expression.resolve() as? PsiField ?: return
+            val modifiers = field.modifierList ?: return
+
+            if (modifiers.hasAnnotation(FINAL) && !modifiers.hasAnnotation(MUTABLE)) {
+                if (!isAssignmentInAppropriateInitializer(expression, field, modifiers)) {
+                    holder.registerProblem(
+                        expression,
+                        "@Final fields cannot be modified",
+                        AddAnnotationFix(MUTABLE, field),
+                    )
+                }
+            }
+        }
+
+        private fun isAssignmentInAppropriateInitializer(
+            expression: PsiReferenceExpression,
+            field: PsiField,
+            modifiers: PsiModifierList
+        ): Boolean {
+            if (field.containingClass != expression.findContainingClass()) {
+                return false
+            }
+
+            val initializer = PsiTreeUtil.getParentOfType(
+                expression,
+                PsiClassInitializer::class.java,
+                true,
+                PsiClass::class.java,
+                PsiMethod::class.java,
+                PsiLambdaExpression::class.java,
+            ) ?: return false
+
+            return initializer.hasModifierProperty(PsiModifier.STATIC) == modifiers.hasModifierProperty(PsiModifier.STATIC)
         }
     }
 }

@@ -66,9 +66,9 @@ class MixinCancellableInspection : MixinInspection() {
             } ?: return
 
             val ciType = (ciParam.type as? PsiClassType)?.resolve() ?: return
-            val searchingFor = ciType.findMethodsByName("setReturnValue", false).firstOrNull()
-                ?: ciType.findMethodsByName("cancel", false).firstOrNull()
-                ?: return
+            val searchingFor = ciType.findMethodsByName("setReturnValue", false) +
+                ciType.findMethodsByName("cancel", true)
+            searchingFor.ifEmpty { return }
 
             var mayUseCancel = false
             var definitelyUsesCancel = false
@@ -79,7 +79,7 @@ class MixinCancellableInspection : MixinInspection() {
                     mayUseCancel = true
                 }
                 val methodCall = parent as? PsiReferenceExpression ?: return@Processor true
-                if (methodCall.references.any { it.isReferenceTo(searchingFor) }) {
+                if (methodCall.references.any { reference -> searchingFor.any(reference::isReferenceTo) }) {
                     definitelyUsesCancel = true
                     return@Processor false
                 }
