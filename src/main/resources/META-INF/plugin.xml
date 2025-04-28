@@ -632,7 +632,7 @@
         <!-- access widener file type -->
         <fileType name="Access Widener" language="Access Widener"
                   implementationClass="com.demonwav.mcdev.platform.mcp.aw.AwFileType" fieldName="INSTANCE"
-                  patterns="*.accesswidener"/>
+                  patterns="*.accesswidener;*.aw"/>
         <lang.parserDefinition language="Access Widener"
                                implementationClass="com.demonwav.mcdev.platform.mcp.aw.AwParserDefinition"/>
         <lang.syntaxHighlighterFactory language="Access Widener"
@@ -1038,7 +1038,7 @@
                          groupName="Mixin"
                          language="JAVA"
                          enabledByDefault="true"
-                         level="ERROR"
+                         level="WARNING"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.MixinAnnotationsInspection"/>
         <localInspection displayName="Missing or unused cancellable @Inject"
@@ -1070,7 +1070,7 @@
                          groupName="Mixin"
                          language="JAVA"
                          enabledByDefault="true"
-                         level="ERROR"
+                         level="WARNING"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.StaticMemberInspection"/>
         <localInspection displayName="Inner classes in Mixins"

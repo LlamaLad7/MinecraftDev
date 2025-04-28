@@ -7,9 +7,10 @@ asm = "9.6"
 fuel = "2.3.1"
 licenser = "0.6.1"
 changelog = "2.2.0"
-intellij-plugin = "2.4.0"
+intellij-plugin = "2.5.0"
+intellij-plugin-repository-rest-client = "2.0.46"
 intellij-ide = "2024.3.5"
-idea-ext = "1.1.8"
+idea-ext = "1.1.10"
 psiPlugin = "243.7768"
 
 [plugins]
@@ -20,6 +21,8 @@ licenser = { id = "org.cadixdev.licenser", version.ref = "licenser" }
 changelog = { id = "org.jetbrains.changelog", version.ref = "changelog" }
 
 [libraries]
+intellij-plugin-repository-rest-client = { module = "org.jetbrains.intellij:plugin-repository-rest-client", version.ref = "intellij-plugin-repository-rest-client" }
+
 kotlin-plugin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin", version.ref = "kotlin" }
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib-jdk8", version.ref = "kotlin" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
