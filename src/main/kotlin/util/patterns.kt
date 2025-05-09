@@ -24,11 +24,15 @@ import com.intellij.patterns.PlatformPatterns
 import com.intellij.patterns.PsiAnnotationPattern
 import com.intellij.patterns.PsiJavaElementPattern
 import com.intellij.patterns.PsiJavaPatterns
+import com.intellij.patterns.StandardPatterns
+import com.intellij.psi.PsiAnnotationMemberValue
 import com.intellij.psi.PsiAnnotationParameterList
 import com.intellij.psi.PsiElement
 
 private val ANNOTATION_ATTRIBUTE_STOP =
-    PlatformPatterns.not(PsiJavaPatterns.psiExpression()).andNot(PsiJavaPatterns.psiNameValuePair())
+    PlatformPatterns.not(PsiJavaPatterns.psiExpression())
+        .andNot(StandardPatterns.instanceOf(PsiAnnotationMemberValue::class.java))
+        .andNot(PsiJavaPatterns.psiNameValuePair())
 
 // PsiJavaElementPattern.insideAnnotationParam checks for the parameter list only up to 3 levels
 // It can be more if the value is for example enclosed in parentheses

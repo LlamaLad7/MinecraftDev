@@ -25,8 +25,11 @@ import com.intellij.navigation.AnonymousElementProvider
 import com.intellij.openapi.project.Project
 import com.intellij.psi.CommonClassNames
 import com.intellij.psi.JavaPsiFacade
+import com.intellij.psi.JavaRecursiveElementWalkingVisitor
+import com.intellij.psi.PsiAnonymousClass
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiClassType
+import com.intellij.psi.PsiCompiledElement
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiInvalidElementAccessException
@@ -36,6 +39,7 @@ import com.intellij.psi.PsiParameterList
 import com.intellij.psi.PsiPrimitiveType
 import com.intellij.psi.PsiTypeParameter
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.PsiUtil
 
 val PsiClass.packageName
     get() = (containingFile as? PsiJavaFile)?.packageName
@@ -101,8 +105,14 @@ inline fun PsiClass.buildInnerName(builder: StringBuilder, getName: (PsiClass) -
         } else {
             parentClass = currentClass.parent.findContainingClass() ?: throw ClassNameResolutionFailedException()
 
-            // Add index of anonymous class to list
-            list.add(parentClass.getAnonymousIndex(currentClass).toString())
+            if (currentClass is PsiAnonymousClass) {
+                // Add index of anonymous class to list
+                list.add(parentClass.getAnonymousIndex(currentClass).toString())
+            } else {
+                // Add index and name of local class to list
+                val currentName = currentClass.name ?: throw ClassNameResolutionFailedException()
+                list.add(parentClass.getLocalIndex(currentClass).toString() + currentName)
+            }
         }
 
         currentClass = parentClass
@@ -157,21 +167,32 @@ fun findQualifiedClass(
 }
 
 private fun PsiClass.findInnerClass(name: String): PsiClass? {
-    val anonymousIndex = name.toIntOrNull()
-    return if (anonymousIndex == null) {
+    val innerIndexAndName = innerIndexAndName(name)
+    return if (innerIndexAndName == null) {
         // Named inner class
         findInnerClassByName(name, false)
     } else {
-        if (anonymousIndex > 0 && anonymousIndex <= anonymousElements.size) {
-            anonymousElements[anonymousIndex - 1] as PsiClass
+        val (innerIndex, innerName) = innerIndexAndName
+        if (innerName != null) {
+            val localClasses = this.localClasses.filter { it.name == innerName }
+            if (innerIndex > 0 && innerIndex <= localClasses.size) {
+                localClasses[innerIndex - 1]
+            } else {
+                null
+            }
         } else {
-            null
+            if (innerIndex > 0 && innerIndex <= anonymousElements.size) {
+                anonymousElements[innerIndex - 1] as PsiClass
+            } else {
+                null
+            }
         }
     }
 }
 
 @Throws(ClassNameResolutionFailedException::class)
-fun PsiElement.getAnonymousIndex(anonymousElement: PsiElement): Int {
+@PublishedApi
+internal fun PsiElement.getAnonymousIndex(anonymousElement: PsiElement): Int {
     // Attempt to find name for anonymous class
     for ((i, element) in anonymousElements.withIndex()) {
         if (element equivalentTo anonymousElement) {
@@ -193,6 +214,51 @@ val PsiElement.anonymousElements: Array<PsiElement>
 
         return emptyArray()
     }
+
+@Throws(ClassNameResolutionFailedException::class)
+@PublishedApi
+internal fun PsiElement.getLocalIndex(localClass: PsiClass): Int {
+    // Attempt to find index for local class
+    var index = 0
+    for (aLocalClass in localClasses) {
+        if (aLocalClass.name == localClass.name) {
+            index++
+            if (aLocalClass equivalentTo localClass) {
+                return index
+            }
+        }
+    }
+
+    throw ClassNameResolutionFailedException("Failed to determine local class index for $localClass")
+}
+
+val PsiElement.localClasses: List<PsiClass>
+    get() {
+        if (this is PsiCompiledElement) {
+            return emptyList()
+        }
+
+        val list = mutableListOf<PsiClass>()
+        accept(object : JavaRecursiveElementWalkingVisitor() {
+            override fun visitClass(clazz: PsiClass) {
+                if (clazz === this@localClasses) {
+                    super.visitClass(clazz)
+                } else {
+                    if (PsiUtil.isLocalClass(clazz)) {
+                        list += clazz
+                    }
+                }
+            }
+        })
+        return list
+    }
+
+private val INNER_INDEX_AND_NAME_REGEX = "(\\d+)(\\w*)".toRegex()
+fun innerIndexAndName(className: String): Pair<Int, String?>? {
+    val (indexStr, name) = INNER_INDEX_AND_NAME_REGEX.matchEntire(className)?.destructured ?: return null
+    val index = indexStr.toIntOrNull() ?: return null
+    return index to name.ifEmpty { null }
+}
 
 // Inheritance
 

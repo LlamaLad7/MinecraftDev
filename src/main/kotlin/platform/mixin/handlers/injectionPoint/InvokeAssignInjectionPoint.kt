@@ -25,28 +25,65 @@ import com.demonwav.mcdev.util.MemberReference
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.CommonClassNames
-import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
-import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiForeachStatement
 import com.intellij.psi.PsiLiteral
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
-import com.intellij.psi.PsiNewExpression
+import com.intellij.util.ArrayUtilRt
+import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
+import org.objectweb.asm.tree.VarInsnNode
+import org.objectweb.asm.util.Printer
 
-class InvokeInjectionPoint : AbstractMethodInjectionPoint() {
+class InvokeAssignInjectionPoint : AbstractMethodInjectionPoint() {
+    companion object {
+        private val ARGS_KEYS = arrayOf("fuzz", "skip")
+        private val SKIP_LIST_DELIMITER = "[ ,;]".toRegex()
+        private val OPCODES_BY_NAME = Printer.OPCODES.withIndex().associate { it.value to it.index }
+        private val DEFAULT_SKIP = setOf(
+            // Opcodes which may appear if the targetted method is part of an
+            // expression eg. int foo = 2 + this.bar();
+            Opcodes.DUP, Opcodes.IADD, Opcodes.LADD, Opcodes.FADD, Opcodes.DADD,
+            Opcodes.ISUB, Opcodes.LSUB, Opcodes.FSUB, Opcodes.DSUB, Opcodes.IMUL,
+            Opcodes.LMUL, Opcodes.FMUL, Opcodes.DMUL, Opcodes.IDIV, Opcodes.LDIV,
+            Opcodes.FDIV, Opcodes.DDIV, Opcodes.IREM, Opcodes.LREM, Opcodes.FREM,
+            Opcodes.DREM, Opcodes.INEG, Opcodes.LNEG, Opcodes.FNEG, Opcodes.DNEG,
+            Opcodes.ISHL, Opcodes.LSHL, Opcodes.ISHR, Opcodes.LSHR, Opcodes.IUSHR,
+            Opcodes.LUSHR, Opcodes.IAND, Opcodes.LAND, Opcodes.IOR, Opcodes.LOR,
+            Opcodes.IXOR, Opcodes.LXOR, Opcodes.IINC,
+
+            // Opcodes which may appear if the targetted method is cast before
+            // assignment eg. int foo = (int)this.getFloat();
+            Opcodes.I2L, Opcodes.I2F, Opcodes.I2D, Opcodes.L2I, Opcodes.L2F,
+            Opcodes.L2D, Opcodes.F2I, Opcodes.F2L, Opcodes.F2D, Opcodes.D2I,
+            Opcodes.D2L, Opcodes.D2F, Opcodes.I2B, Opcodes.I2C, Opcodes.I2S,
+            Opcodes.CHECKCAST, Opcodes.INSTANCEOF
+        )
+    }
+
     override fun onCompleted(editor: Editor, reference: PsiLiteral) {
         completeExtraStringAtAttribute(editor, reference, "target")
     }
 
+    override fun getArgsKeys(at: PsiAnnotation) = ARGS_KEYS
+
+    override fun getArgsValues(at: PsiAnnotation, key: String): Array<out Any> {
+        if (key == "skip") {
+            return Printer.OPCODES
+        }
+        return ArrayUtilRt.EMPTY_OBJECT_ARRAY
+    }
+
+    override fun getArgValueListDelimiter(at: PsiAnnotation, key: String) =
+        SKIP_LIST_DELIMITER.takeIf { key == "skip" }
+
     override fun isShiftDiscouraged(shift: Int): Boolean {
-        // Allow shifting after INVOKE
-        return shift != 0 && shift != 1
+        // Allow shifting before INVOKE_ASSIGN
+        return shift != 0 && shift != -1
     }
 
     override fun createNavigationVisitor(
@@ -63,10 +100,25 @@ class InvokeInjectionPoint : AbstractMethodInjectionPoint() {
         targetClass: ClassNode,
         mode: CollectVisitor.Mode,
     ): CollectVisitor<PsiMethod>? {
+        val args = AtResolver.getArgs(at)
+        val fuzz = args["fuzz"]?.toIntOrNull()?.coerceAtLeast(1) ?: 1
+        val skip = args["skip"]?.let { parseSkip(it) } ?: DEFAULT_SKIP
+
         if (mode == CollectVisitor.Mode.COMPLETION) {
-            return MyCollectVisitor(mode, at.project, MemberReference(""))
+            return MyCollectVisitor(mode, at.project, MemberReference(""), fuzz, skip)
         }
-        return target?.let { MyCollectVisitor(mode, at.project, it) }
+        return target?.let { MyCollectVisitor(mode, at.project, it, fuzz, skip) }
+    }
+
+    private fun parseSkip(string: String): Set<Int> {
+        return string.split(SKIP_LIST_DELIMITER)
+            .asSequence()
+            .mapNotNull { part ->
+                val trimmedPart = part.trim()
+                OPCODES_BY_NAME[trimmedPart.removePrefix("Opcodes.")]
+                    ?: trimmedPart.toIntOrNull()?.takeIf { it >= 0 && it < Printer.OPCODES.size }
+            }
+            .toSet()
     }
 
     private class MyNavigationVisitor(
@@ -101,57 +153,14 @@ class InvokeInjectionPoint : AbstractMethodInjectionPoint() {
 
             super.visitMethodCallExpression(expression)
         }
-
-        override fun visitNewExpression(expression: PsiNewExpression) {
-            val constructor = expression.resolveConstructor()
-            if (constructor != null) {
-                visitMethodUsage(constructor, constructor.containingClass!!, expression)
-            }
-
-            super.visitNewExpression(expression)
-        }
-
-        override fun visitForeachStatement(statement: PsiForeachStatement) {
-            // Enhanced for loops get compiled to a loop calling next on an Iterator
-            // Since these method calls are not available in the method source we need
-            // to generate 3 virtual method calls: the call to get the Iterator
-            // (Iterable.iterator()) and "Iterator.next()" and "Iterator.hasNext()"
-
-            val type = (statement.iteratedValue?.type as? PsiClassType)?.resolve()
-            if (type != null) {
-                // Find iterator() method
-                val method = type.findMethodsByName("iterator", true).first { it.parameterList.parametersCount == 0 }
-                if (method != null) {
-                    visitMethodUsage(method, type, statement)
-                }
-            }
-
-            // Get Iterator class to resolve next and hasNext
-            val iteratorClass = JavaPsiFacade.getInstance(statement.project)
-                .findClass(CommonClassNames.JAVA_UTIL_ITERATOR, statement.resolveScope)
-
-            if (iteratorClass != null) {
-                val hasNext =
-                    iteratorClass.findMethodsByName("hasNext", false).first { it.parameterList.parametersCount == 0 }
-                if (hasNext != null) {
-                    visitMethodUsage(hasNext, iteratorClass, statement)
-                }
-
-                val next =
-                    iteratorClass.findMethodsByName("next", false).first { it.parameterList.parametersCount == 0 }
-                if (next != null) {
-                    visitMethodUsage(next, iteratorClass, statement)
-                }
-            }
-
-            super.visitForeachStatement(statement)
-        }
     }
 
     private class MyCollectVisitor(
         mode: Mode,
         private val project: Project,
         private val selector: MixinSelector,
+        private val fuzz: Int,
+        private val skip: Set<Int>,
     ) : CollectVisitor<PsiMethod>(mode) {
         override fun accept(methodNode: MethodNode) {
             val insns = methodNode.instructions ?: return
@@ -161,8 +170,24 @@ class InvokeInjectionPoint : AbstractMethodInjectionPoint() {
                 }
 
                 val sourceMethod = nodeMatchesSelector(insn, mode, selector, project) ?: return@forEachRemaining
+
+                val offset = insns.indexOf(insn)
+                val maxOffset = (offset + fuzz + 1).coerceAtMost(insns.size())
+                var resultingInsn = insn
+                for (i in offset + 1 until maxOffset) {
+                    val candidate = insns[i]
+                    if (candidate is VarInsnNode && candidate.opcode >= Opcodes.ISTORE) {
+                        resultingInsn = candidate
+                        break
+                    } else if (skip.isNotEmpty() && candidate.opcode !in skip) {
+                        break
+                    }
+                }
+
+                resultingInsn = resultingInsn.next ?: resultingInsn
+
                 addResult(
-                    insn,
+                    resultingInsn,
                     sourceMethod,
                     qualifier = insn.owner.replace('/', '.'),
                 )

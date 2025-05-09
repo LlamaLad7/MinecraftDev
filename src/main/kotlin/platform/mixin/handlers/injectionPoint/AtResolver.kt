@@ -20,18 +20,22 @@
 
 package com.demonwav.mcdev.platform.mixin.handlers.injectionPoint
 
+import com.demonwav.mcdev.platform.mixin.handlers.desugar.DesugarUtil
 import com.demonwav.mcdev.platform.mixin.reference.MixinSelector
 import com.demonwav.mcdev.platform.mixin.reference.isMiscDynamicSelector
 import com.demonwav.mcdev.platform.mixin.reference.parseMixinSelector
 import com.demonwav.mcdev.platform.mixin.reference.target.TargetReference
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.SLICE
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Classes.SHIFT
-import com.demonwav.mcdev.platform.mixin.util.findBodyElements
+import com.demonwav.mcdev.platform.mixin.util.findSourceClass
 import com.demonwav.mcdev.platform.mixin.util.findSourceElement
+import com.demonwav.mcdev.platform.mixin.util.isClinit
+import com.demonwav.mcdev.platform.mixin.util.memberReference
 import com.demonwav.mcdev.util.computeStringArray
 import com.demonwav.mcdev.util.constantStringValue
 import com.demonwav.mcdev.util.constantValue
 import com.demonwav.mcdev.util.equivalentTo
+import com.demonwav.mcdev.util.findMethods
 import com.demonwav.mcdev.util.fullQualifiedName
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.psi.JavaPsiFacade
@@ -43,7 +47,9 @@ import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiEnumConstant
 import com.intellij.psi.PsiExpression
+import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiModifierList
+import com.intellij.psi.PsiParameterListOwner
 import com.intellij.psi.PsiQualifiedReference
 import com.intellij.psi.PsiReference
 import com.intellij.psi.PsiReferenceExpression
@@ -89,7 +95,7 @@ class AtResolver(
             // remove slice selector
             val isInSlice = at.parentOfType<PsiAnnotation>()?.hasQualifiedName(SLICE) ?: false
             if (isInSlice) {
-                if (SliceSelector.values().any { atCode.endsWith(":${it.name}") }) {
+                if (SliceSelector.entries.any { atCode.endsWith(":${it.name}") }) {
                     atCode = atCode.substringBeforeLast(':')
                 }
             }
@@ -221,35 +227,54 @@ class AtResolver(
         val target = targetAttr?.let { parseMixinSelector(it) }
         val bytecodeResults = resolveInstructions()
 
-        // Then attempt to find the corresponding source elements using the navigation visitor
-        val mainTargetElement = targetMethod.findSourceElement(
-            getTargetClass(target),
-            at.project,
-            GlobalSearchScope.allScope(at.project),
-            canDecompile = true,
-        )
-        val targetElements = targetMethod.findBodyElements(
-            getTargetClass(target),
-            at.project,
-            GlobalSearchScope.allScope(at.project),
-        )
-        if (mainTargetElement == null && targetElements.isEmpty()) {
-            return emptyList()
-        }
+        val project = at.project
 
-        val targetPsiClass = (mainTargetElement ?: targetElements.first()).parentOfType<PsiClass>()
+        // Resolve the target source class
+        val targetPsiClass = getTargetClass(target)
+            .findSourceClass(project, GlobalSearchScope.allScope(project), canDecompile = true)
             ?: return emptyList()
         val targetPsiFile = targetPsiClass.containingFile ?: return emptyList()
 
+        // Desugar the target class
+        val desugaredTargetClass = DesugarUtil.desugar(project, targetPsiClass)
+
+        // Find the element in the desugared class, first by directly searching and then by searching in the original
+        // and reverse mapping it into the desugared class.
+        val desugaredTargetElement = when {
+            targetMethod.isClinit -> desugaredTargetClass.initializers.firstOrNull {
+                it.hasModifierProperty(PsiModifier.STATIC)
+            }
+            else -> desugaredTargetClass.findMethods(targetMethod.memberReference).firstOrNull()
+        } ?: run {
+            val originalTargetElement = targetMethod.findSourceElement(
+                getTargetClass(target),
+                project,
+                GlobalSearchScope.allScope(project),
+                canDecompile = true,
+            ) ?: return emptyList()
+            DesugarUtil.getOriginalToDesugaredMap(desugaredTargetClass)[originalTargetElement]
+                ?.firstOrNull { it is PsiParameterListOwner }
+                ?: return listOf(originalTargetElement)
+        }
+
+        // Find the source element in the desugared class
         val navigationVisitor = injectionPoint.createNavigationVisitor(at, target, targetPsiClass) ?: return emptyList()
         navigationVisitor.configureBytecodeTarget(targetClass, targetMethod)
-        navigationVisitor.visitStart(mainTargetElement ?: targetElements.first())
-        targetElements.forEach { it.accept(navigationVisitor) }
-        navigationVisitor.visitEnd(mainTargetElement ?: targetElements.last())
+        navigationVisitor.visitStart(desugaredTargetElement)
+        if (desugaredTargetElement is PsiParameterListOwner) {
+            desugaredTargetElement.acceptChildren(navigationVisitor)
+        } else {
+            desugaredTargetElement.accept(navigationVisitor)
+        }
+        navigationVisitor.visitEnd(desugaredTargetElement)
 
+        // Map the desugared results back into the original source class
+        val sourceResults = navigationVisitor.result.mapNotNull(DesugarUtil::getOriginalElement)
+
+        // Match the bytecode results to the source results
         return bytecodeResults.mapNotNull { bytecodeResult ->
             val matcher = bytecodeResult.sourceLocationInfo.createMatcher<PsiElement>(targetPsiFile)
-            navigationVisitor.result.forEach(matcher::accept)
+            sourceResults.forEach(matcher::accept)
             matcher.result
         }
     }
