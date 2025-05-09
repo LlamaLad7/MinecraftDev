@@ -31,6 +31,7 @@ import com.demonwav.mcdev.platform.mcp.at.gen.psi.AtTypes
 import com.demonwav.mcdev.util.anonymousElements
 import com.demonwav.mcdev.util.fullQualifiedName
 import com.demonwav.mcdev.util.getSimilarity
+import com.demonwav.mcdev.util.localClasses
 import com.demonwav.mcdev.util.nameAndParameterTypes
 import com.demonwav.mcdev.util.qualifiedMemberReference
 import com.demonwav.mcdev.util.simpleQualifiedMemberReference
@@ -157,6 +158,17 @@ class AtCompletionContributor : CompletionContributor() {
                     ),
                 )
             }
+
+            for (localClass in currentClass.localClasses) {
+                val name = localClass.fullQualifiedName ?: continue
+                result.addElement(
+                    PrioritizedLookupElement.withPriority(
+                        LookupElementBuilder.create(name).withIcon(PlatformIcons.CLASS_ICON),
+                        1.0,
+                    ),
+                )
+            }
+
             return
         }
 

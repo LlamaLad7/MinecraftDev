@@ -52,7 +52,7 @@ class FieldInjectionPoint : QualifiedInjectionPoint<PsiField>() {
     companion object {
         private val VALID_OPCODES = setOf(Opcodes.GETFIELD, Opcodes.GETSTATIC, Opcodes.PUTFIELD, Opcodes.PUTSTATIC)
         private val ARGS_KEYS = arrayOf("array")
-        private val ARRAY_VALUES = arrayOf<Any>("length", "get", "set")
+        private val ARRAY_VALUES = arrayOf("length", "get", "set")
     }
 
     override fun onCompleted(editor: Editor, reference: PsiLiteral) {
@@ -66,7 +66,7 @@ class FieldInjectionPoint : QualifiedInjectionPoint<PsiField>() {
 
     override fun getArgsKeys(at: PsiAnnotation) = ARGS_KEYS
 
-    override fun getArgsValues(at: PsiAnnotation, key: String): Array<Any> =
+    override fun getArgsValues(at: PsiAnnotation, key: String): Array<out Any> =
         ARRAY_VALUES.takeIf { key == "array" } ?: ArrayUtilRt.EMPTY_OBJECT_ARRAY
 
     private fun getArrayAccessType(args: Map<String, String>): ArrayAccessType? {

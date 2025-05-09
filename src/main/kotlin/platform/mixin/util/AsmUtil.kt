@@ -31,7 +31,9 @@ import com.demonwav.mcdev.util.findModule
 import com.demonwav.mcdev.util.findQualifiedClass
 import com.demonwav.mcdev.util.fullQualifiedName
 import com.demonwav.mcdev.util.hasSyntheticMethod
+import com.demonwav.mcdev.util.innerIndexAndName
 import com.demonwav.mcdev.util.isErasureEquivalentTo
+import com.demonwav.mcdev.util.localClasses
 import com.demonwav.mcdev.util.lockedCached
 import com.demonwav.mcdev.util.loggerForTopLevel
 import com.demonwav.mcdev.util.mapToArray
@@ -71,6 +73,7 @@ import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiModifierList
 import com.intellij.psi.PsiParameter
 import com.intellij.psi.PsiParameterList
+import com.intellij.psi.PsiParameterListOwner
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypes
 import com.intellij.psi.impl.compiled.ClsElementImpl
@@ -284,29 +287,65 @@ private fun ClassNode.constructClass(project: Project, body: String): PsiClass? 
         append(outerClassSimpleName)
         append(" {\n")
         var indent = "   "
+        val closingBraces = mutableListOf("}")
         for ((index, innerClass) in innerClasses.withIndex()) {
-            val anonymousIndex = innerClass.toIntOrNull()
-            if (anonymousIndex != null) {
-                // add anonymous classes make the anonymous class index correct
-                if (anonymousIndex in 1..999) {
-                    repeat(anonymousIndex - 1) { i ->
-                        append(indent)
-                        append("Object inner")
-                        append(i)
-                        append(" = new Object() {};\n")
+            val innerIndexAndName = innerIndexAndName(innerClass)
+            if (innerIndexAndName != null) {
+                val (innerIndex, innerName) = innerIndexAndName
+                if (innerIndex in 1..999) {
+                    if (innerName != null) {
+                        // add local classes to make the local class index correct
+                        repeat(innerIndex - 1) { i ->
+                            append(indent)
+                            append("static void method")
+                            append(i)
+                            append("() {\n")
+                            append(indent)
+                            append("   class ")
+                            append(innerName)
+                            append(" {}\n")
+                            append(indent)
+                            append("}\n")
+                        }
+                    } else {
+                        // add anonymous classes to make the anonymous class index correct
+                        repeat(innerIndex - 1) { i ->
+                            append(indent)
+                            append("Object inner")
+                            append(i)
+                            append(" = new Object() {};\n")
+                        }
                     }
                 }
+
                 append(indent)
-                append("Object inner")
-                append(anonymousIndex)
-                append(" = new ")
-                if (index == innerClasses.lastIndex) {
-                    val superName = superName ?: "java/lang/Object"
-                    append(superName.replace('/', '.').replace('$', '.'))
+                if (innerName != null) {
+                    append("static void method")
+                    append(innerIndex)
+                    append("() {\n")
+                    closingBraces += "}"
+                    indent += "   "
+                    append(indent)
+                    append("class ")
+                    append(innerName)
+                    if (index == innerClasses.lastIndex) {
+                        append("<T>")
+                    }
+                    append(" {\n")
+                    closingBraces += "}"
                 } else {
-                    append("Object")
+                    append("Object inner")
+                    append(innerIndex)
+                    append(" = new ")
+                    if (index == innerClasses.lastIndex) {
+                        val superName = superName ?: "java/lang/Object"
+                        append(superName.replace('/', '.').replace('$', '.'))
+                    } else {
+                        append("Object")
+                    }
+                    append("() {\n")
+                    closingBraces += ");"
                 }
-                append("() {} {\n")
             } else {
                 append(indent)
                 if (index != innerClasses.lastIndex || hasAccess(Opcodes.ACC_STATIC)) {
@@ -318,18 +357,15 @@ private fun ClassNode.constructClass(project: Project, body: String): PsiClass? 
                     append("<T>")
                 }
                 append(" {\n")
+                closingBraces += "}"
             }
             indent += "   "
         }
         append(body.prependIndent(indent))
-        repeat(innerClasses.size + 1) { i ->
+        for (i in closingBraces.lastIndex downTo 0) {
             append("\n")
-            append("   ".repeat(innerClasses.size - i))
-            append("}")
-            // append ; after anonymous class declarations
-            if (i < innerClasses.size && innerClasses[innerClasses.size - 1 - i].toIntOrNull() != null) {
-                append(";")
-            }
+            append("   ".repeat(i))
+            append(closingBraces[i])
         }
     }
     val file = PsiFileFactory.getInstance(project).createFileFromText(
@@ -354,6 +390,7 @@ private fun ClassNode.constructClass(project: Project, body: String): PsiClass? 
     while (true) {
         clazz = clazz.innerClasses.firstOrNull()
             ?: clazz.anonymousElements.lastOrNull { it !== clazz && it is PsiClass } as? PsiClass
+            ?: clazz.localClasses.lastOrNull()
             ?: break
     }
 
@@ -1036,8 +1073,7 @@ fun MethodNode.findBodyElements(clazz: ClassNode, project: Project, scope: Globa
     }
 
     val body = when (sourceMethod) {
-        is PsiMethod -> sourceMethod.body
-        is PsiLambdaExpression -> sourceMethod.body
+        is PsiParameterListOwner -> sourceMethod.body
         else -> null
     }
 

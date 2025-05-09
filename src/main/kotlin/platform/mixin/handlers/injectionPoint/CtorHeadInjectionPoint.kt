@@ -80,8 +80,8 @@ class CtorHeadInjectionPoint : InjectionPoint<PsiElement>() {
     }
 
     override fun getArgsKeys(at: PsiAnnotation) = ARGS_KEYS
-    override fun getArgsValues(at: PsiAnnotation, key: String): Array<Any> = if (key == "enforce") {
-        EnforceMode.values().mapToArray { it.name }
+    override fun getArgsValues(at: PsiAnnotation, key: String): Array<out Any> = if (key == "enforce") {
+        EnforceMode.entries.mapToArray { it.name }
     } else {
         ArrayUtilRt.EMPTY_OBJECT_ARRAY
     }

@@ -76,6 +76,8 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
             "classValue",
             "expandZeroConditions"
         )
+
+        private val COMMA_LIST_DELIMITER = ",".toRegex()
     }
 
     override fun onCompleted(editor: Editor, reference: PsiLiteral) {
@@ -84,7 +86,7 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
 
     override fun getArgsKeys(at: PsiAnnotation) = ARGS_KEYS
 
-    override fun getArgsValues(at: PsiAnnotation, key: String): Array<Any> {
+    override fun getArgsValues(at: PsiAnnotation, key: String): Array<out Any> {
         fun collectTargets(constantToCompletion: (Any) -> Any?): Array<Any> {
             val injectorAnnotation = AtResolver.findInjectorAnnotation(at) ?: return ArrayUtilRt.EMPTY_OBJECT_ARRAY
             val expandConditions = parseExpandConditions(AtResolver.getArgs(at))
@@ -103,7 +105,7 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
         }
 
         return when (key) {
-            "expandZeroConditions" -> ExpandCondition.values().mapToArray { it.name.lowercase(Locale.ROOT) }
+            "expandZeroConditions" -> ExpandCondition.entries.toTypedArray().mapToArray { it.name.lowercase(Locale.ROOT) }
             "intValue" -> collectTargets { cst -> cst.takeIf { it is Int } }
             "floatValue" -> collectTargets { cst -> cst.takeIf { it is Float } }
             "longValue" -> collectTargets { cst -> cst.takeIf { it is Long } }
@@ -124,7 +126,8 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
         }
     }
 
-    override fun isArgValueList(at: PsiAnnotation, key: String) = key == "expandZeroConditions"
+    override fun getArgValueListDelimiter(at: PsiAnnotation, key: String) =
+        COMMA_LIST_DELIMITER.takeIf { key == "expandZeroConditions" }
 
     fun getConstantInfo(at: PsiAnnotation): ConstantInfo? {
         val args = AtResolver.getArgs(at)

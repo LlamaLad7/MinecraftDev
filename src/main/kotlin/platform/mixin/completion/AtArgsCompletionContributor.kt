@@ -86,8 +86,12 @@ class AtArgsCompletionContributor : CompletionContributor() {
                 val key = beforeCursor.substring(0, equalsIndex)
                 val argsValues = injectionPoint.getArgsValues(atAnnotation, key)
                 var prefix = beforeCursor.substring(equalsIndex + 1)
-                if (injectionPoint.isArgValueList(atAnnotation, key)) {
-                    prefix = prefix.substringAfterLast(',').trimStart()
+                val argValueListDelimieter = injectionPoint.getArgValueListDelimiter(atAnnotation, key)
+                if (argValueListDelimieter != null) {
+                    val delimiterEndIndex = argValueListDelimieter.findAll(prefix).lastOrNull()?.range?.last
+                    if (delimiterEndIndex != null) {
+                        prefix = prefix.substring(delimiterEndIndex + 1).trimStart()
+                    }
                 }
                 result.withPrefixMatcher(prefix).addAllElements(
                     argsValues.map { completion ->

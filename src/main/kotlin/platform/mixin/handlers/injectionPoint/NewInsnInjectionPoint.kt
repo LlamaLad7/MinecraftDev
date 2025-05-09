@@ -64,7 +64,7 @@ class NewInsnInjectionPoint : InjectionPoint<PsiMember>() {
 
     override fun getArgsKeys(at: PsiAnnotation) = ARGS_KEYS
 
-    override fun getArgsValues(at: PsiAnnotation, key: String): Array<Any> {
+    override fun getArgsValues(at: PsiAnnotation, key: String): Array<out Any> {
         if (key != "class") {
             return ArrayUtilRt.EMPTY_OBJECT_ARRAY
         }

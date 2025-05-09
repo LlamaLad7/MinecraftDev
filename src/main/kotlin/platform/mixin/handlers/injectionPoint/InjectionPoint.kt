@@ -98,11 +98,11 @@ abstract class InjectionPoint<T : PsiElement> {
         return ArrayUtilRt.EMPTY_STRING_ARRAY
     }
 
-    open fun getArgsValues(at: PsiAnnotation, key: String): Array<Any> {
+    open fun getArgsValues(at: PsiAnnotation, key: String): Array<out Any> {
         return ArrayUtilRt.EMPTY_OBJECT_ARRAY
     }
 
-    open fun isArgValueList(at: PsiAnnotation, key: String) = false
+    open fun getArgValueListDelimiter(at: PsiAnnotation, key: String): Regex? = null
 
     open val discouragedMessage: String? = null
 
