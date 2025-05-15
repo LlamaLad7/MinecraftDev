@@ -94,7 +94,10 @@ dependencies {
     implementation(libs.mappingIo)
     implementation(libs.bundles.asm)
 
-    implementation(libs.bundles.fuel)
+    implementation(libs.bundles.fuel) {
+        exclude(group = "org.jetbrains.kotlin")
+        exclude(group = "org.jetbrains.kotlinx")
+    }
 
     intellijPlatform {
         intellijIdeaCommunity(libs.versions.intellij.ide, useInstaller = false)
@@ -108,7 +111,7 @@ dependencies {
         bundledPlugin("org.intellij.intelliLang")
         bundledPlugin("com.intellij.properties")
         bundledPlugin("Git4Idea")
-        bundledPlugin("com.intellij.modules.json")
+        bundledPlugin("com.intellij.json")
 
         // Optional dependencies
         bundledPlugin("org.jetbrains.kotlin")
