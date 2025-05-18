@@ -59,9 +59,10 @@ class UnresolvedLocalCaptureInspection : MixinInspection() {
             val localInfo = LocalInfo.fromAnnotation(parameter.type.unwrapLocalRef(), localAnnotation)
 
             for (target in targets) {
-                val locals = localInfo.getLocals(module, target.method.clazz, target.method.method, target.result.insn)
-                    ?: continue
-                val matchingLocals = localInfo.matchLocals(locals, CollectVisitor.Mode.MATCH_ALL)
+                val matchingLocals = localInfo.matchLocals(
+                    module, target.method.clazz, target.method.method, target.result.insn,
+                    CollectVisitor.Mode.MATCH_ALL
+                ) ?: continue
                 if (matchingLocals.size != 1) {
                     holder.registerProblem(
                         localAnnotation.nameReferenceElement ?: localAnnotation,

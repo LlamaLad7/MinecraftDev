@@ -219,9 +219,10 @@ object MEExpressionMatchUtil {
                         physicalInsn
                     }
 
-                    val unfilteredLocals = localInfo.getLocals(module, targetClass, targetMethod, actualInsn)
-                        ?: return@addMember false
-                    val filteredLocals = localInfo.matchLocals(unfilteredLocals, CollectVisitor.Mode.MATCH_ALL)
+                    val filteredLocals = localInfo.matchLocals(
+                        module, targetClass, targetMethod, actualInsn,
+                        CollectVisitor.Mode.MATCH_ALL
+                    ) ?: return@addMember false
                     filteredLocals.any { it.index == virtualInsn.`var` }
                 }
             }

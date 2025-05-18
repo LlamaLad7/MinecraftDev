@@ -953,19 +953,23 @@ object MEExpressionCompletionUtil {
         isStore: Boolean,
         mixinClass: PsiClass,
     ): List<EliminableLookup> {
+        val isStatic = targetMethod.hasAccess(Opcodes.ACC_STATIC)
         // ignore "this"
-        if (!targetMethod.hasAccess(Opcodes.ACC_STATIC) && index == 0) {
+        if (!isStatic && index == 0) {
             return emptyList()
         }
 
         var argumentsSize = Type.getArgumentsAndReturnSizes(targetMethod.desc) shr 2
-        if (targetMethod.hasAccess(Opcodes.ACC_STATIC)) {
+        if (isStatic) {
             argumentsSize--
         }
         val isArgsOnly = index < argumentsSize
 
         if (targetMethod.localVariables != null) {
             val localsHere = targetMethod.localVariables.filter { localVariable ->
+                if (!isStatic && localVariable.index == 0) {
+                    return@filter false
+                }
                 val firstValidInstruction = if (isStore) {
                     generateSequence<AbstractInsnNode>(localVariable.start) { it.previous }
                         .firstOrNull { it.opcode >= 0 }
@@ -1012,7 +1016,11 @@ object MEExpressionCompletionUtil {
 
         // fallback to ASM dataflow
         val localTypes = AsmDfaUtil.getLocalVariableTypes(project, targetClass, targetMethod, originalInsn)
+            ?.toMutableList()
             ?: return emptyList()
+        if (!isStatic) {
+            localTypes[0] = null
+        }
         val localType = localTypes.getOrNull(index) ?: return emptyList()
         val ordinal = localTypes.asSequence().take(index).filter { it == localType }.count()
         val localName = localType.typeNameToInsert().replace("[]", "Array") + (ordinal + 1)

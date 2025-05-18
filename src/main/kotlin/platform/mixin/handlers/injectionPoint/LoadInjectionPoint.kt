@@ -304,11 +304,11 @@ abstract class AbstractLoadInjectionPoint(private val store: Boolean) : Injectio
                 }
 
                 val shiftedInsn = if (store) insn.next ?: insn else insn
-                val locals = info.getLocals(module, targetClass, methodNode, shiftedInsn) ?: continue
+                val locals = info.matchLocals(module, targetClass, methodNode, shiftedInsn, mode) ?: continue
 
                 val elementFactory = JavaPsiFacade.getElementFactory(module.project)
 
-                for (result in info.matchLocals(locals, mode)) {
+                for (result in locals) {
                     addResult(shiftedInsn, elementFactory.createExpressionFromText(result.name, null))
                 }
             }

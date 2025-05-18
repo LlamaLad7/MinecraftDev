@@ -88,10 +88,10 @@ class ModifyVariableArgsOnlyInspection : MixinInspection() {
 
             val wantedDesc = wantedType.descriptor
 
-            for ((targetClass, targetMethod) in methodTargets) {
+            for ((_, targetMethod) in methodTargets) {
                 val argTypes = mutableListOf<String?>()
                 if (!targetMethod.hasAccess(Opcodes.ACC_STATIC)) {
-                    argTypes += "L${targetClass.name};"
+                    argTypes += null
                 }
                 for (arg in Type.getArgumentTypes(targetMethod.desc)) {
                     argTypes += arg.descriptor
