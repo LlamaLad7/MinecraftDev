@@ -31,6 +31,7 @@ import com.intellij.openapi.editor.Document
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.module.ModuleUtilCore
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.LibraryOrderEntry
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.roots.ProjectFileIndex
@@ -53,6 +54,7 @@ import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiKeyword
 import com.intellij.psi.PsiLanguageInjectionHost
+import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMember
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodReferenceExpression
@@ -62,11 +64,13 @@ import com.intellij.psi.PsiModifierList
 import com.intellij.psi.PsiNameValuePair
 import com.intellij.psi.PsiParameter
 import com.intellij.psi.PsiParameterList
+import com.intellij.psi.PsiPrimitiveType
 import com.intellij.psi.PsiReference
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiType
 import com.intellij.psi.ResolveResult
 import com.intellij.psi.filters.ElementFilter
+import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
@@ -276,6 +280,14 @@ fun PsiType.normalize(): PsiType {
     }
     return normalized
 }
+
+fun PsiType.toObjectType(project: Project): PsiType =
+    when (val normalized = normalize()) {
+        is PsiPrimitiveType ->
+            normalized.getBoxedType(PsiManager.getInstance(project), GlobalSearchScope.allScope(project))
+                ?: normalized
+        else -> normalized
+    }
 
 val PsiMethod.nameAndParameterTypes: String
     get() = "$name(${parameterList.parameters.joinToString(", ") { it.type.presentableText }})"

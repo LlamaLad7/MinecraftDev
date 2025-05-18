@@ -24,6 +24,7 @@ import com.demonwav.mcdev.platform.mixin.inspection.MixinInspection
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.platform.mixin.util.isAssignable
 import com.demonwav.mcdev.util.McdevDfaUtil
+import com.demonwav.mcdev.util.toObjectType
 import com.intellij.codeInsight.intention.FileModifier.SafeFieldForPreview
 import com.intellij.codeInspection.LocalQuickFixOnPsiElement
 import com.intellij.codeInspection.ProblemsHolder
@@ -52,6 +53,7 @@ class WrongOperationParametersInspection : MixinInspection() {
             if (expression.resolveMethod()?.containingClass?.qualifiedName != MixinConstants.MixinExtras.OPERATION) {
                 return
             }
+            val project = expression.project
 
             val containingMethod = PsiTreeUtil.getParentOfType(
                 expression,
@@ -85,7 +87,7 @@ class WrongOperationParametersInspection : MixinInspection() {
             if (expression.argumentList.expressionCount == expectedParamTypes.size) {
                 val allValid = expression.argumentList.expressions.zip(expectedParamTypes).all { (expr, expectedType) ->
                     val exprType = McdevDfaUtil.getDataflowType(expr) ?: return@all true
-                    isAssignable(expectedType, exprType, false)
+                    isAssignable(expectedType.toObjectType(project), exprType.toObjectType(project))
                 }
                 if (allValid) {
                     return
