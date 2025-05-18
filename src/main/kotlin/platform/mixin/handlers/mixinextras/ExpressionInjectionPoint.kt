@@ -188,21 +188,18 @@ class ExpressionInjectionPoint : InjectionPoint<PsiElement>() {
                     (exprAnnotation.findDeclaredAttributeValue("id")?.constantStringValue ?: "") == atId
             }
             .flatMap { exprAnnotation ->
-                val expressionElements = exprAnnotation.findDeclaredAttributeValue("value")?.parseArray { it }
-                    ?: return@flatMap emptySequence<Pair<Expression, MEStatement>>()
-                expressionElements.asSequence().mapNotNull { expressionElement ->
-                    val text = expressionElement.constantStringValue ?: return@mapNotNull null
-                    val rootStatementPsi = InjectedLanguageManager.getInstance(project)
-                        .getInjectedPsiFiles(expressionElement)?.firstOrNull()
-                        ?.let {
-                            (it.first as? MEExpressionFile)?.statements?.firstOrNull { stmt ->
-                                stmt.findMultiInjectionHost()?.parentOfType<PsiAnnotation>() == exprAnnotation
-                            }
-                        }
-                        ?: project.meExpressionElementFactory.createFile("do {$text}").statements.singleOrNull()
-                        ?: project.meExpressionElementFactory.createStatement("empty")
-                    MEExpressionMatchUtil.createExpression(text)?.let { it to rootStatementPsi }
-                }
+                exprAnnotation.findDeclaredAttributeValue("value")?.parseArray { it }.orEmpty()
+            }
+            .mapIndexedNotNull { exprIndex, expressionElement ->
+                val text = expressionElement.constantStringValue ?: return@mapIndexedNotNull null
+                val rootStatementPsi = InjectedLanguageManager.getInstance(project)
+                    .getInjectedPsiFiles(expressionElement)?.firstOrNull()
+                    ?.let {
+                        (it.first as? MEExpressionFile)?.statements?.getOrNull(exprIndex)
+                    }
+                    ?: project.meExpressionElementFactory.createFile("do {$text}").statements.singleOrNull()
+                    ?: project.meExpressionElementFactory.createStatement("empty")
+                MEExpressionMatchUtil.createExpression(text)?.let { it to rootStatementPsi }
             }
             .toList()
     }
