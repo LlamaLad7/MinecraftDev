@@ -29,3 +29,24 @@ fun Sequence<*>.notNullToArray(): Array<Any> {
 }
 
 fun <T> Sequence<T>.filterNotNull(transform: (T) -> Any?) = this.filter { transform(it) != null }
+
+fun <T> Sequence<T>.memoized(): Sequence<T> {
+    val cache = mutableListOf<T>()
+    val iterator = this.iterator()
+
+    return sequence {
+        var index = 0
+        while (true) {
+            if (index < cache.size) {
+                yield(cache[index])
+            } else if (iterator.hasNext()) {
+                val next = iterator.next()
+                cache.add(next)
+                yield(next)
+            } else {
+                break
+            }
+            index++
+        }
+    }
+}

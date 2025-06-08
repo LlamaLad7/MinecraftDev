@@ -162,14 +162,14 @@ class NewInsnInjectionPoint : InjectionPoint<PsiMember>() {
         private val project: Project,
         private val selector: MixinSelector,
     ) : CollectVisitor<PsiMember>(mode) {
-        override fun accept(methodNode: MethodNode) {
-            val insns = methodNode.instructions ?: return
-            insns.iterator().forEachRemaining { insn ->
-                if (insn !is TypeInsnNode) return@forEachRemaining
-                if (insn.opcode != Opcodes.NEW) return@forEachRemaining
-                val initCall = findInitCall(insn) ?: return@forEachRemaining
+        override fun accept(methodNode: MethodNode) = sequence {
+            val insns = methodNode.instructions ?: return@sequence
+            for (insn in insns) {
+                if (insn !is TypeInsnNode) continue
+                if (insn.opcode != Opcodes.NEW) continue
+                val initCall = findInitCall(insn) ?: continue
 
-                val sourceMethod = nodeMatchesSelector(initCall, mode, selector, project) ?: return@forEachRemaining
+                val sourceMethod = nodeMatchesSelector(initCall, mode, selector, project) ?: continue
                 addResult(
                     insn,
                     sourceMethod,

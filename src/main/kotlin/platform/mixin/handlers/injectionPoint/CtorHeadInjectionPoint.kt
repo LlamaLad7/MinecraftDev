@@ -124,23 +124,24 @@ class CtorHeadInjectionPoint : InjectionPoint<PsiElement>() {
         mode: Mode,
         private val enforce: EnforceMode,
     ) : HeadInjectionPoint.MyCollectVisitor(project, clazz, mode) {
-        override fun accept(methodNode: MethodNode) {
-            val insns = methodNode.instructions ?: return
+        override fun accept(methodNode: MethodNode) = sequence {
+            val insns = methodNode.instructions ?: return@sequence
 
             if (!methodNode.isConstructor) {
-                super.accept(methodNode)
-                return
+                yieldAll(super.accept(methodNode))
+                return@sequence
             }
 
-            val delegateCtorCall = methodNode.findDelegateConstructorCall() ?: run {
-                super.accept(methodNode)
-                return
+            val delegateCtorCall = methodNode.findDelegateConstructorCall()
+            if (delegateCtorCall == null) {
+                yieldAll(super.accept(methodNode))
+                return@sequence
             }
 
             if (enforce == EnforceMode.POST_DELEGATE) {
-                val insn = delegateCtorCall.next ?: return
+                val insn = delegateCtorCall.next ?: return@sequence
                 addResult(insn, methodNode.findOrConstructSourceMethod(clazz, project))
-                return
+                return@sequence
             }
 
             // Although Mumfrey's original intention was to target the last *unique* field store,
@@ -155,7 +156,7 @@ class CtorHeadInjectionPoint : InjectionPoint<PsiElement>() {
                         (insn as FieldInsnNode).owner == clazz.name
                 } ?: delegateCtorCall
 
-            val lastFieldStoreNext = lastFieldStore.next ?: return
+            val lastFieldStoreNext = lastFieldStore.next ?: return@sequence
             addResult(lastFieldStoreNext, methodNode.findOrConstructSourceMethod(clazz, project))
         }
     }

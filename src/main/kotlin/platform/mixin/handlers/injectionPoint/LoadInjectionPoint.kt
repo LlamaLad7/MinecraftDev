@@ -112,29 +112,31 @@ abstract class AbstractLoadInjectionPoint(private val store: Boolean) : Injectio
         return null
     }
 
-    override fun addOrdinalFilter(at: PsiAnnotation, targetClass: ClassNode, collectVisitor: CollectVisitor<*>) {
+    override fun addOrdinalFilter(at: PsiAnnotation, targetClass: ClassNode, collectVisitor: CollectVisitor<PsiElement>) {
         val ordinal = at.findDeclaredAttributeValue("ordinal")?.constantValue as? Int ?: return
         if (ordinal < 0) return
 
         // Replace the ordinal filter with one that takes into account the type of the local variable being modified.
         // Fixes otherwise incorrect results for completion.
-        val project = at.project
-        val ordinals = mutableMapOf<String, Int>()
-        collectVisitor.addResultFilter("ordinal") { result, method ->
-            // store returns the instruction after the variable
-            val varInsn = (if (store) result.originalInsn.previous ?: result.originalInsn else result.originalInsn)
-                as? VarInsnNode ?: throw IllegalStateException("AbstractLoadInjectionPoint returned non-var insn")
-            val localType = AsmDfaUtil.getLocalVariableType(
-                project,
-                targetClass,
-                method,
-                result.originalInsn,
-                varInsn.`var`,
-            ) ?: return@addResultFilter true
-            val desc = localType.descriptor
-            val ord = ordinals[desc] ?: 0
-            ordinals[desc] = ord + 1
-            ord == ordinal
+        collectVisitor.addResultFilter("ordinal") { results, method ->
+            val project = at.project
+            val ordinals = mutableMapOf<String, Int>()
+            results.filter { result ->
+                // store returns the instruction after the variable
+                val varInsn = (if (store) result.originalInsn.previous ?: result.originalInsn else result.originalInsn)
+                    as? VarInsnNode ?: throw IllegalStateException("AbstractLoadInjectionPoint returned non-var insn")
+                val localType = AsmDfaUtil.getLocalVariableType(
+                    project,
+                    targetClass,
+                    method,
+                    result.originalInsn,
+                    varInsn.`var`,
+                ) ?: return@filter true
+                val desc = localType.descriptor
+                val ord = ordinals[desc] ?: 0
+                ordinals[desc] = ord + 1
+                ord == ordinal
+            }
         }
     }
 
@@ -271,7 +273,7 @@ abstract class AbstractLoadInjectionPoint(private val store: Boolean) : Injectio
         private val info: LocalInfo,
         private val store: Boolean,
     ) : CollectVisitor<PsiElement>(mode) {
-        override fun accept(methodNode: MethodNode) {
+        override fun accept(methodNode: MethodNode) = sequence {
             var opcode = when (info.type) {
                 null -> null
                 !is PsiPrimitiveType -> Opcodes.ALOAD
@@ -304,11 +306,11 @@ abstract class AbstractLoadInjectionPoint(private val store: Boolean) : Injectio
                 }
 
                 val shiftedInsn = if (store) insn.next ?: insn else insn
-                val locals = info.getLocals(module, targetClass, methodNode, shiftedInsn) ?: continue
+                val locals = info.matchLocals(module, targetClass, methodNode, shiftedInsn, mode) ?: continue
 
                 val elementFactory = JavaPsiFacade.getElementFactory(module.project)
 
-                for (result in info.matchLocals(locals, mode)) {
+                for (result in locals) {
                     addResult(shiftedInsn, elementFactory.createExpressionFromText(result.name, null))
                 }
             }

@@ -162,14 +162,14 @@ class InvokeAssignInjectionPoint : AbstractMethodInjectionPoint() {
         private val fuzz: Int,
         private val skip: Set<Int>,
     ) : CollectVisitor<PsiMethod>(mode) {
-        override fun accept(methodNode: MethodNode) {
-            val insns = methodNode.instructions ?: return
-            insns.iterator().forEachRemaining { insn ->
+        override fun accept(methodNode: MethodNode) = sequence {
+            val insns = methodNode.instructions ?: return@sequence
+            for (insn in insns) {
                 if (insn !is MethodInsnNode) {
-                    return@forEachRemaining
+                    continue
                 }
 
-                val sourceMethod = nodeMatchesSelector(insn, mode, selector, project) ?: return@forEachRemaining
+                val sourceMethod = nodeMatchesSelector(insn, mode, selector, project) ?: continue
 
                 val offset = insns.indexOf(insn)
                 val maxOffset = (offset + fuzz + 1).coerceAtMost(insns.size())

@@ -90,7 +90,7 @@ object TargetReference : PolyReferenceResolver(), MixinReference {
         return targets.all {
             val failure = AtResolver(at, it.clazz, it.method).isUnresolved()
             // leave it if there is a filter to blame, the target reference was at least resolved
-            failure != null && failure.filterToBlame == null
+            failure != null && failure.filterStats.isEmpty()
         }
     }
 

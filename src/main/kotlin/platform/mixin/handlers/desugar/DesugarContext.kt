@@ -20,9 +20,4 @@
 
 package com.demonwav.mcdev.platform.mixin.handlers.desugar
 
-import com.intellij.openapi.project.Project
-import com.intellij.psi.PsiJavaFile
-
-abstract class Desugarer {
-    abstract fun desugar(project: Project, file: PsiJavaFile, context: DesugarContext)
-}
+class DesugarContext(val classVersion: Int)

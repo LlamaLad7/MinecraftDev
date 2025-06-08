@@ -70,8 +70,8 @@ class SourceCodeLocationInfo(val index: Int, val lineNumber: Int?, val indexInLi
                 }
 
                 if (count++ == index) {
-                    myResult = t
                     if (lineNumber == null) {
+                        myResult = t
                         return true
                     }
                 }

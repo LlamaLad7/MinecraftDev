@@ -37,7 +37,7 @@ object MixinConstants {
         const val COMPATIBILITY_LEVEL = "org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel"
         const val CONSTANT_CONDITION = "org.spongepowered.asm.mixin.injection.Constant.Condition"
         const val INJECTION_POINT = "org.spongepowered.asm.mixin.injection.InjectionPoint"
-        const val SELECTOR = "org.spongepowered.asm.mixin.injection.InjectionPoint.Selector"
+        const val SPECIFIER = "org.spongepowered.asm.mixin.injection.InjectionPoint.Specifier"
         const val TARGET_SELECTOR = "org.spongepowered.asm.mixin.injection.selectors.TargetSelector"
         const val MIXIN_AGENT = "org.spongepowered.tools.agent.MixinAgent"
         const val MIXIN_CONFIG = "org.spongepowered.asm.mixin.transformer.MixinConfig"

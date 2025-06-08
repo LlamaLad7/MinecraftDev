@@ -36,6 +36,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiFile
 import com.intellij.psi.impl.DebugUtil
+import com.intellij.testFramework.IdeaTestUtil
 import com.intellij.testFramework.LexerTestCase
 import com.intellij.testFramework.fixtures.JavaCodeInsightTestFixture
 import com.intellij.util.ReflectionUtil
@@ -50,11 +51,7 @@ const val BASE_DATA_PATH = "$RESOURCE_ROOT/$ROOT_PACKAGE"
 const val BASE_DATA_PATH_2 = "\$PROJECT_ROOT/$BASE_DATA_PATH/"
 
 val mockJdk by lazy {
-    val path = findLibraryPath("mock-jdk")
-    val rtFile = StandardFileSystems.local().findFileByPath(path)!!
-    val rt = JarFileSystem.getInstance().getRootByLocal(rtFile)!!
-    val home = rtFile.parent!!
-    MockJdk("1.7", rt, home)
+    IdeaTestUtil.getMockJdk21()
 }
 
 fun findLibraryPath(name: String) = FileUtil.toSystemIndependentName(System.getProperty("testLibs.$name")!!)

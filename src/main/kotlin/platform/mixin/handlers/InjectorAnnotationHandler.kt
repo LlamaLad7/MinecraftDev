@@ -141,7 +141,7 @@ abstract class InjectorAnnotationHandler : MixinAnnotationHandler {
         annotation: PsiAnnotation,
         targetClass: ClassNode,
         targetMethod: MethodNode,
-        mode: CollectVisitor.Mode = CollectVisitor.Mode.MATCH_ALL,
+        mode: CollectVisitor.Mode = CollectVisitor.Mode.RESOLUTION,
     ): List<CollectVisitor.Result<*>> {
         val cache = annotation.cached(PsiModificationTracker.MODIFICATION_COUNT) {
             ConcurrentHashMap<Pair<ClassAndMethodNode, CollectVisitor.Mode>, List<CollectVisitor.Result<*>>>()
