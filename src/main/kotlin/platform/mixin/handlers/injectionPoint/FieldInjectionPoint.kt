@@ -196,23 +196,23 @@ class FieldInjectionPoint : QualifiedInjectionPoint<PsiField>() {
         private val arrayAccess: ArrayAccessType?,
         private val fuzz: Int,
     ) : CollectVisitor<PsiField>(mode) {
-        override fun accept(methodNode: MethodNode) {
-            val insns = methodNode.instructions ?: return
-            insns.iterator().forEachRemaining { insn ->
-                if (insn !is FieldInsnNode) return@forEachRemaining
+        override fun accept(methodNode: MethodNode) = sequence {
+            val insns = methodNode.instructions ?: return@sequence
+            for (insn in insns) {
+                if (insn !is FieldInsnNode) continue
                 if (mode != Mode.COMPLETION) {
                     if (opcode != -1 && opcode != insn.opcode) {
-                        return@forEachRemaining
+                        continue
                     }
                     if (!selector.matchField(insn.owner, insn.name, insn.desc)) {
-                        return@forEachRemaining
+                        continue
                     }
                 }
                 val actualInsn = if (arrayAccess == null) {
                     insn
                 } else {
                     findArrayInsn(insn, arrayAccess)
-                } ?: return@forEachRemaining
+                } ?: continue
                 val fieldNode = insn.fakeResolve()
                 val psiField = fieldNode.field.findOrConstructSourceField(
                     fieldNode.clazz,

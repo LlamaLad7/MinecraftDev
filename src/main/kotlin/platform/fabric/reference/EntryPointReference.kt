@@ -35,6 +35,7 @@ import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementResolveResult
 import com.intellij.psi.PsiField
+import com.intellij.psi.PsiLanguageInjectionHost
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiPolyVariantReference
@@ -51,12 +52,17 @@ import com.intellij.util.ProcessingContext
 
 object EntryPointReference : PsiReferenceProvider() {
     override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<PsiReference> {
-        if (element !is JsonStringLiteral) {
+        if (element !is JsonStringLiteral || element !is PsiLanguageInjectionHost) {
             return PsiReference.EMPTY_ARRAY
         }
         val manipulator = element.manipulator ?: return PsiReference.EMPTY_ARRAY
         val range = manipulator.getRangeInElement(element)
-        val text = element.text.substring(range.startOffset, range.endOffset)
+        val escaper = element.createLiteralTextEscaper()
+        val text = buildString {
+            if (!escaper.decode(range, this)) {
+                return PsiReference.EMPTY_ARRAY
+            }
+        }
         val memberParts = text.split("::", limit = 2)
         val clazzParts = memberParts[0].split("$", limit = 0)
         val references = mutableListOf<Reference>()
@@ -68,7 +74,10 @@ object EntryPointReference : PsiReferenceProvider() {
             references.add(
                 Reference(
                     element,
-                    range.cutOut(TextRange.from(cursor, clazzPart.length)),
+                    TextRange.create(
+                        escaper.getOffsetInHost(cursor, range),
+                        escaper.getOffsetInHost(cursor + clazzPart.length, range)
+                    ),
                     innerClassDepth,
                     false,
                 ),
@@ -80,12 +89,16 @@ object EntryPointReference : PsiReferenceProvider() {
             references.add(
                 Reference(
                     element,
-                    range.cutOut(TextRange.from(cursor, memberParts[1].length)),
+                    TextRange.create(
+                        escaper.getOffsetInHost(cursor, range),
+                        escaper.getOffsetInHost(cursor + memberParts[1].length, range),
+                    ),
                     innerClassDepth,
                     true,
                 ),
             )
         }
+        references.lastOrNull()?.isFinalPart = true
         return references.toTypedArray()
     }
 
@@ -166,6 +179,9 @@ object EntryPointReference : PsiReferenceProvider() {
         PsiReferenceBase<JsonStringLiteral>(element, range),
         PsiPolyVariantReference,
         InspectionReference {
+
+        var isFinalPart = false
+            internal set
 
         override val description = "entry point '%s'"
         override val unresolved = resolve() == null

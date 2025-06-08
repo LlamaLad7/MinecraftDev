@@ -42,7 +42,7 @@ class LocalInfo(
     val ordinal: Int?,
     val names: Set<String>,
 ) {
-    fun getLocals(
+    private fun getLocals(
         module: Module,
         targetClass: ClassNode,
         methodNode: MethodNode,
@@ -69,10 +69,16 @@ class LocalInfo(
     }
 
     fun matchLocals(
-        locals: Array<LocalVariables.LocalVariable?>,
+        module: Module,
+        targetClass: ClassNode,
+        methodNode: MethodNode,
+        insn: AbstractInsnNode,
         mode: CollectVisitor.Mode,
         matchType: Boolean = true,
-    ): List<LocalVariables.LocalVariable> {
+    ): List<LocalVariables.LocalVariable>? {
+        val locals = getLocals(module, targetClass, methodNode, insn)
+            ?.drop(if (methodNode.hasAccess(Opcodes.ACC_STATIC)) 0 else 1)
+            ?: return null
         val typeDesc = type?.descriptor
         if (ordinal != null) {
             val ordinals = mutableMapOf<String, Int>()

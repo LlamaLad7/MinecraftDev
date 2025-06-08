@@ -714,6 +714,7 @@
         <weigher key="completion"
                  implementationClass="com.demonwav.mcdev.platform.mixin.completion.MixinCompletionWeigher"
                  id="mcdev.mixin" order="first"/>
+        <typedHandler implementation="com.demonwav.mcdev.platform.mixin.completion.InjectionPointTypedHandlerDelegate" />
 
         <!-- Mixin configuration -->
         <fileType name="Mixin Json Configuration" language="JSON"

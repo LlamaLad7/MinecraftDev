@@ -122,7 +122,6 @@ dependencies {
         pluginVerifier()
     }
 
-    testLibs(libs.test.mockJdk)
     testLibs(libs.test.mixin)
     testLibs(libs.test.spigotapi)
     testLibs(libs.test.bungeecord)

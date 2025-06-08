@@ -133,10 +133,10 @@ abstract class AbstractReturnInjectionPoint(private val tailOnly: Boolean) : Inj
         mode: Mode,
         private val tailOnly: Boolean,
     ) : CollectVisitor<PsiElement>(mode) {
-        override fun accept(methodNode: MethodNode) {
-            val insns = methodNode.instructions ?: return
+        override fun accept(methodNode: MethodNode) = sequence {
+            val insns = methodNode.instructions ?: return@sequence
             val elementFactory = JavaPsiFacade.getElementFactory(project)
-            fun insnHandler(insn: AbstractInsnNode): Boolean {
+            suspend fun SequenceScope<Result<PsiElement>>.insnHandler(insn: AbstractInsnNode): Boolean {
                 if (insn.opcode !in Opcodes.IRETURN..Opcodes.RETURN) {
                     return false
                 }
@@ -160,7 +160,9 @@ abstract class AbstractReturnInjectionPoint(private val tailOnly: Boolean) : Inj
                     insn = insn.previous
                 }
             } else {
-                insns.iterator().forEach(::insnHandler)
+                for (insn in insns) {
+                    insnHandler(insn)
+                }
             }
         }
     }

@@ -204,10 +204,10 @@ class ConstantStringMethodInjectionPoint : AbstractMethodInjectionPoint() {
         private val selector: MixinSelector,
         private val ldc: String?,
     ) : CollectVisitor<PsiMethod>(mode) {
-        override fun accept(methodNode: MethodNode) {
-            val insns = methodNode.instructions ?: return
+        override fun accept(methodNode: MethodNode) = sequence {
+            val insns = methodNode.instructions ?: return@sequence
             var seenStringConstant: String? = null
-            insns.iterator().forEachRemaining { insn ->
+            for (insn in insns) {
                 if (insn is MethodInsnNode) {
                     // make sure we're coming from a string constant
                     if (seenStringConstant != null) {
@@ -225,7 +225,7 @@ class ConstantStringMethodInjectionPoint : AbstractMethodInjectionPoint() {
             }
         }
 
-        private fun processMethodInsn(insn: MethodInsnNode) {
+        private suspend fun SequenceScope<Result<PsiMethod>>.processMethodInsn(insn: MethodInsnNode) {
             // must take a string and return void
             if (insn.desc != "(Ljava/lang/String;)V") return
 

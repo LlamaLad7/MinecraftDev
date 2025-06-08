@@ -188,21 +188,18 @@ class ExpressionInjectionPoint : InjectionPoint<PsiElement>() {
                     (exprAnnotation.findDeclaredAttributeValue("id")?.constantStringValue ?: "") == atId
             }
             .flatMap { exprAnnotation ->
-                val expressionElements = exprAnnotation.findDeclaredAttributeValue("value")?.parseArray { it }
-                    ?: return@flatMap emptySequence<Pair<Expression, MEStatement>>()
-                expressionElements.asSequence().mapNotNull { expressionElement ->
-                    val text = expressionElement.constantStringValue ?: return@mapNotNull null
-                    val rootStatementPsi = InjectedLanguageManager.getInstance(project)
-                        .getInjectedPsiFiles(expressionElement)?.firstOrNull()
-                        ?.let {
-                            (it.first as? MEExpressionFile)?.statements?.firstOrNull { stmt ->
-                                stmt.findMultiInjectionHost()?.parentOfType<PsiAnnotation>() == exprAnnotation
-                            }
-                        }
-                        ?: project.meExpressionElementFactory.createFile("do {$text}").statements.singleOrNull()
-                        ?: project.meExpressionElementFactory.createStatement("empty")
-                    MEExpressionMatchUtil.createExpression(text)?.let { it to rootStatementPsi }
-                }
+                exprAnnotation.findDeclaredAttributeValue("value")?.parseArray { it }.orEmpty()
+            }
+            .mapIndexedNotNull { exprIndex, expressionElement ->
+                val text = expressionElement.constantStringValue ?: return@mapIndexedNotNull null
+                val rootStatementPsi = InjectedLanguageManager.getInstance(project)
+                    .getInjectedPsiFiles(expressionElement)?.firstOrNull()
+                    ?.let {
+                        (it.first as? MEExpressionFile)?.statements?.getOrNull(exprIndex)
+                    }
+                    ?: project.meExpressionElementFactory.createFile("do {$text}").statements.singleOrNull()
+                    ?: project.meExpressionElementFactory.createStatement("empty")
+                MEExpressionMatchUtil.createExpression(text)?.let { it to rootStatementPsi }
             }
             .toList()
     }
@@ -222,11 +219,11 @@ class ExpressionInjectionPoint : InjectionPoint<PsiElement>() {
         private val poolFactory: IdentifierPoolFactory,
         private val contextType: ExpressionContext.Type,
     ) : CollectVisitor<PsiElement>(mode) {
-        override fun accept(methodNode: MethodNode) {
-            val insns = methodNode.instructions ?: return
+        override fun accept(methodNode: MethodNode) = sequence {
+            val insns = methodNode.instructions ?: return@sequence
 
             val pool = poolFactory(methodNode)
-            val flows = MEExpressionMatchUtil.getFlowMap(project, targetClass, methodNode) ?: return
+            val flows = MEExpressionMatchUtil.getFlowMap(project, targetClass, methodNode) ?: return@sequence
 
             val result = IdentityHashMap<AbstractInsnNode, Pair<PsiElement, Map<String, Any?>>>()
 
@@ -250,7 +247,7 @@ class ExpressionInjectionPoint : InjectionPoint<PsiElement>() {
             }
 
             if (result.isEmpty()) {
-                return
+                return@sequence
             }
 
             for (insn in insns) {

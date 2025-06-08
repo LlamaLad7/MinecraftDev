@@ -79,6 +79,10 @@ class FabricEntrypointsInspection : LocalInspectionTool() {
                     )
                 }
 
+                if (!reference.isFinalPart) {
+                    continue
+                }
+
                 val element = resolved.singleOrNull()?.element
                 when {
                     element is PsiClass && !literal.text.contains("::") -> {

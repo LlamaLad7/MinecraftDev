@@ -92,9 +92,9 @@ class JumpInjectionPoint : InjectionPoint<PsiElement>() {
         mode: Mode,
         private val opcode: Int
     ) : CollectVisitor<PsiElement>(mode) {
-        override fun accept(methodNode: MethodNode) {
-            val insns = methodNode.instructions ?: return
-            insns.iterator().forEachRemaining { insn ->
+        override fun accept(methodNode: MethodNode) = sequence {
+            val insns = methodNode.instructions ?: return@sequence
+            for (insn in insns) {
                 if (insn is JumpInsnNode && (opcode == -1 || insn.opcode == opcode)) {
                     addResult(insn, methodNode.findOrConstructSourceMethod(clazz, project))
                 }

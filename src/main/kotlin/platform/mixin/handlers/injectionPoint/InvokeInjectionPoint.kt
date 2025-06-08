@@ -153,14 +153,14 @@ class InvokeInjectionPoint : AbstractMethodInjectionPoint() {
         private val project: Project,
         private val selector: MixinSelector,
     ) : CollectVisitor<PsiMethod>(mode) {
-        override fun accept(methodNode: MethodNode) {
-            val insns = methodNode.instructions ?: return
-            insns.iterator().forEachRemaining { insn ->
+        override fun accept(methodNode: MethodNode) = sequence {
+            val insns = methodNode.instructions ?: return@sequence
+            for (insn in insns) {
                 if (insn !is MethodInsnNode) {
-                    return@forEachRemaining
+                    continue
                 }
 
-                val sourceMethod = nodeMatchesSelector(insn, mode, selector, project) ?: return@forEachRemaining
+                val sourceMethod = nodeMatchesSelector(insn, mode, selector, project) ?: continue
                 addResult(
                     insn,
                     sourceMethod,

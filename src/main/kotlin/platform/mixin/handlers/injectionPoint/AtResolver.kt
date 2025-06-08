@@ -20,12 +20,13 @@
 
 package com.demonwav.mcdev.platform.mixin.handlers.injectionPoint
 
+import com.demonwav.mcdev.platform.mixin.handlers.desugar.DesugarContext
 import com.demonwav.mcdev.platform.mixin.handlers.desugar.DesugarUtil
 import com.demonwav.mcdev.platform.mixin.reference.MixinSelector
 import com.demonwav.mcdev.platform.mixin.reference.isMiscDynamicSelector
 import com.demonwav.mcdev.platform.mixin.reference.parseMixinSelector
 import com.demonwav.mcdev.platform.mixin.reference.target.TargetReference
-import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.SLICE
+import com.demonwav.mcdev.platform.mixin.util.InjectionPointSpecifier
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Classes.SHIFT
 import com.demonwav.mcdev.platform.mixin.util.findSourceClass
 import com.demonwav.mcdev.platform.mixin.util.findSourceElement
@@ -55,7 +56,6 @@ import com.intellij.psi.PsiReference
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiUtil
-import com.intellij.psi.util.parentOfType
 import com.intellij.psi.util.parents
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
@@ -92,10 +92,9 @@ class AtResolver(
             var atCode = at.qualifiedName?.let { InjectionPointAnnotation.atCodeFor(it) }
                 ?: at.findDeclaredAttributeValue("value")?.constantStringValue ?: return null
 
-            // remove slice selector
-            val isInSlice = at.parentOfType<PsiAnnotation>()?.hasQualifiedName(SLICE) ?: false
-            if (isInSlice) {
-                if (SliceSelector.entries.any { atCode.endsWith(":${it.name}") }) {
+            // remove specifier
+            if (InjectionPointSpecifier.isAllowed(at)) {
+                if (InjectionPointSpecifier.entries.any { atCode.endsWith(":${it.name}") }) {
                     atCode = atCode.substringBeforeLast(':')
                 }
             }
@@ -181,7 +180,7 @@ class AtResolver(
             at,
             target,
             getTargetClass(target),
-            CollectVisitor.Mode.MATCH_FIRST,
+            CollectVisitor.Mode.RESOLUTION,
         )
         if (collectVisitor == null) {
             // syntax error in target
@@ -192,32 +191,24 @@ class AtResolver(
                 InsnResolutionInfo.Failure()
             }
         }
-        collectVisitor.visit(targetMethod)
-        return if (collectVisitor.result.isEmpty()) {
-            InsnResolutionInfo.Failure(collectVisitor.filterToBlame)
-        } else {
-            null
-        }
+        return collectVisitor.visit(targetMethod) as? InsnResolutionInfo.Failure
     }
 
-    fun resolveInstructions(mode: CollectVisitor.Mode = CollectVisitor.Mode.MATCH_ALL): List<CollectVisitor.Result<*>> {
-        return (getInstructionResolutionInfo(mode) as? InsnResolutionInfo.Success)?.results ?: emptyList()
+    fun resolveInstructions(
+        mode: CollectVisitor.Mode = CollectVisitor.Mode.RESOLUTION,
+    ): Sequence<CollectVisitor.Result<*>> {
+        return getInstructionResolutionInfo(mode).results
     }
 
-    fun getInstructionResolutionInfo(mode: CollectVisitor.Mode = CollectVisitor.Mode.MATCH_ALL): InsnResolutionInfo {
+    fun getInstructionResolutionInfo(mode: CollectVisitor.Mode = CollectVisitor.Mode.RESOLUTION): InsnResolutionInfo<*> {
         val injectionPoint = getInjectionPoint(at) ?: return InsnResolutionInfo.Failure()
         val targetAttr = at.findAttributeValue("target")
         val target = targetAttr?.let { parseMixinSelector(it) }
 
         val collectVisitor = injectionPoint.createCollectVisitor(at, target, getTargetClass(target), mode)
             ?: return InsnResolutionInfo.Failure()
-        collectVisitor.visit(targetMethod)
-        val result = collectVisitor.result
-        return if (result.isEmpty()) {
-            InsnResolutionInfo.Failure(collectVisitor.filterToBlame)
-        } else {
-            InsnResolutionInfo.Success(result)
-        }
+
+        return collectVisitor.visit(targetMethod)
     }
 
     fun resolveNavigationTargets(): List<PsiElement> {
@@ -236,7 +227,8 @@ class AtResolver(
         val targetPsiFile = targetPsiClass.containingFile ?: return emptyList()
 
         // Desugar the target class
-        val desugaredTargetClass = DesugarUtil.desugar(project, targetPsiClass)
+        val desugaredTargetClass = DesugarUtil.desugar(project, targetPsiClass, DesugarContext(targetClass.version))
+            ?: return emptyList()
 
         // Find the element in the desugared class, first by directly searching and then by searching in the original
         // and reverse mapping it into the desugared class.
@@ -277,6 +269,7 @@ class AtResolver(
             sourceResults.forEach(matcher::accept)
             matcher.result
         }
+            .toList()
     }
 
     fun collectTargetVariants(completionHandler: (LookupElementBuilder) -> LookupElementBuilder): List<Any> {
@@ -291,11 +284,13 @@ class AtResolver(
                 CollectVisitor.Mode.COMPLETION
             )
                 ?: return emptyList()
-            visitor.visit(targetMethod)
-            return visitor.result
+
+            return visitor.visit(targetMethod)
+                .results
                 .mapNotNull { result ->
                     injectionPoint.createLookup(getTargetClass(target), result)?.let { completionHandler(it) }
                 }
+                .toList()
         }
         return doCollectVariants(injectionPoint)
     }
@@ -305,21 +300,17 @@ class AtResolver(
     }
 }
 
-sealed class InsnResolutionInfo {
-    class Success(val results: List<CollectVisitor.Result<*>>) : InsnResolutionInfo()
-    class Failure(val filterToBlame: String? = null) : InsnResolutionInfo() {
+sealed class InsnResolutionInfo<out T : PsiElement>(val results: Sequence<CollectVisitor.Result<T>>) {
+    class Success<T : PsiElement>(results: Sequence<CollectVisitor.Result<T>>) : InsnResolutionInfo<T>(results)
+    class Failure(val filterStats: Map<String, Int> = emptyMap()) : InsnResolutionInfo<Nothing>(emptySequence()) {
         infix fun combine(other: Failure): Failure {
-            return if (filterToBlame != null) {
-                this
-            } else {
-                other
+            val result = LinkedHashMap(this.filterStats)
+            for ((key, value) in other.filterStats) {
+                result[key] = (result[key] ?: 0) + value
             }
+            return Failure(result)
         }
     }
-}
-
-enum class SliceSelector {
-    FIRST, LAST, ONE
 }
 
 object QualifiedMember {

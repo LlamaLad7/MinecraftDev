@@ -62,9 +62,9 @@ class HeadInjectionPoint : InjectionPoint<PsiElement>() {
         protected val clazz: ClassNode,
         mode: Mode,
     ) : CollectVisitor<PsiElement>(mode) {
-        override fun accept(methodNode: MethodNode) {
-            val insns = methodNode.instructions ?: return
-            val firstInsn = Iterable { insns.iterator() }.firstOrNull { it.opcode >= 0 } ?: return
+        override fun accept(methodNode: MethodNode) = sequence {
+            val insns = methodNode.instructions ?: return@sequence
+            val firstInsn = insns.firstOrNull { it.opcode >= 0 } ?: return@sequence
             addResult(firstInsn, methodNode.findOrConstructSourceMethod(clazz, project))
         }
     }

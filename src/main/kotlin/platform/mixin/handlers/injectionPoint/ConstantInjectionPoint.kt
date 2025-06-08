@@ -310,15 +310,15 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
         private val constantInfo: ConstantInfo?,
         private val expectedType: Type? = null,
     ) : CollectVisitor<PsiElement>(mode) {
-        override fun accept(methodNode: MethodNode) {
-            methodNode.instructions?.iterator()?.forEachRemaining { insn ->
+        override fun accept(methodNode: MethodNode) = sequence {
+            for (insn in methodNode.instructions ?: emptyList()) {
                 val constant = (
                     insn.computeConstantValue(constantInfo?.expandConditions ?: emptySet())
-                        ?: return@forEachRemaining
+                        ?: continue
                     ).let { if (it is NullSentinel) null else it }
 
                 if (constantInfo != null && constant != constantInfo.constant) {
-                    return@forEachRemaining
+                    continue
                 }
 
                 if (expectedType != null && constant != null) {
@@ -328,7 +328,7 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
                             expectedType.className != CommonClassNames.JAVA_LANG_STRING
                         )
                     ) {
-                        return@forEachRemaining
+                        continue
                     }
 
                     // then check if we expect any class literal
@@ -337,14 +337,14 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
                             expectedType.className != CommonClassNames.JAVA_LANG_CLASS
                         )
                     ) {
-                        return@forEachRemaining
+                        continue
                     }
 
                     // otherwise we expect a primitive literal
                     if (expectedType.sort in Type.BOOLEAN..Type.DOUBLE &&
                         constant::class.javaPrimitiveType?.let(Type::getType) != expectedType
                     ) {
-                        return@forEachRemaining
+                        continue
                     }
                 }
 

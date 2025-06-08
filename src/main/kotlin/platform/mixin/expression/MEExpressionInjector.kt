@@ -23,6 +23,7 @@ package com.demonwav.mcdev.platform.mixin.expression
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.util.findContainingModifierList
 import com.demonwav.mcdev.util.findContainingNameValuePair
+import com.demonwav.mcdev.util.parseArray
 import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.injection.MultiHostInjector
 import com.intellij.lang.injection.MultiHostRegistrar
@@ -117,23 +118,24 @@ class MEExpressionInjector : MultiHostInjector {
                     }
                 }
             } else if (annotation.hasQualifiedName(MixinConstants.MixinExtras.EXPRESSION)) {
-                val valueExpr = annotation.findDeclaredAttributeValue("value") ?: continue
-                val places = mutableListOf<Pair<PsiLanguageInjectionHost, TextRange>>()
-                iterateConcatenation(valueExpr) { op ->
-                    if (op is PsiLanguageInjectionHost) {
-                        for (textRange in getTextRanges(op)) {
-                            places += op to textRange
+                for (valueExpr in annotation.findDeclaredAttributeValue("value")?.parseArray { it }.orEmpty()) {
+                    val places = mutableListOf<Pair<PsiLanguageInjectionHost, TextRange>>()
+                    iterateConcatenation(valueExpr) { op ->
+                        if (op is PsiLanguageInjectionHost) {
+                            for (textRange in getTextRanges(op)) {
+                                places += op to textRange
+                            }
+                        } else {
+                            isFrankenstein = true
                         }
-                    } else {
-                        isFrankenstein = true
                     }
-                }
-                if (places.isNotEmpty()) {
-                    for ((i, place) in places.withIndex()) {
-                        val (host, range) = place
-                        val prefix = "\ndo { ".takeIf { i == 0 }
-                        val suffix = " }".takeIf { i == places.size - 1 }
-                        registrar.addPlace(prefix, suffix, host, range)
+                    if (places.isNotEmpty()) {
+                        for ((i, place) in places.withIndex()) {
+                            val (host, range) = place
+                            val prefix = "\ndo { ".takeIf { i == 0 }
+                            val suffix = " }".takeIf { i == places.size - 1 }
+                            registrar.addPlace(prefix, suffix, host, range)
+                        }
                     }
                 }
             }
