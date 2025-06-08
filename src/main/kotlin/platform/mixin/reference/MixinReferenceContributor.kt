@@ -47,8 +47,7 @@ class MixinReferenceContributor : PsiReferenceContributor() {
 
         // Injection point types
         registrar.registerReferenceProvider(
-            PsiJavaPatterns.psiLiteral(StandardPatterns.string())
-                .insideAnnotationAttribute(AT),
+            InjectionPointReference.ELEMENT_PATTERN,
             InjectionPointReference,
         )
 

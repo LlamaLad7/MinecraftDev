@@ -24,83 +24,94 @@ import com.demonwav.mcdev.util.constantValue
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAssignmentExpression
+import com.intellij.psi.PsiBlockStatement
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiClassInitializer
 import com.intellij.psi.PsiExpressionStatement
 import com.intellij.psi.PsiField
+import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiStatement
 import com.intellij.psi.PsiType
 import com.intellij.util.JavaPsiConstructorUtil
 
-object FieldAssignmentDesugarer : Desugarer {
-    override fun desugar(project: Project, clazz: PsiClass) {
+object FieldAssignmentDesugarer : Desugarer() {
+    override fun desugar(project: Project, file: PsiJavaFile, context: DesugarContext) {
         val staticStatementsToInsertPre = mutableListOf<PsiStatement>()
         val staticStatementsToInsertPost = mutableListOf<PsiStatement>()
         val nonStaticStatementsToInsert = mutableListOf<PsiStatement>()
         var seenStaticInitializer = false
+        val factory = JavaPsiFacade.getElementFactory(project)
 
-        for (child in clazz.children) {
-            when (child) {
-                is PsiField -> {
-                    val initializer = child.initializer ?: continue
+        for (aClass in DesugarUtil.allClasses(file)) {
+            for (child in aClass.children) {
+                when (child) {
+                    is PsiField -> {
+                        val initializer = child.initializer ?: continue
 
-                    if (child.hasModifierProperty(PsiModifier.STATIC)) {
-                        // check if the field is a ConstantValue with no initializer in the bytecode
-                        val constantValue = initializer.constantValue
-                        if (constantValue != null && constantValue !is PsiType) {
-                            continue
-                        }
+                        if (child.hasModifierProperty(PsiModifier.STATIC)) {
+                            // check if the field is a ConstantValue with no initializer in the bytecode
+                            if (child.hasModifierProperty(PsiModifier.FINAL)) {
+                                val constantValue = initializer.constantValue
+                                if (constantValue != null && constantValue !is PsiType) {
+                                    continue
+                                }
+                            }
 
-                        val fieldInitializer = JavaPsiFacade.getElementFactory(project)
-                            .createStatementFromText("${child.name} = null;", child) as PsiExpressionStatement
-                        (fieldInitializer.expression as PsiAssignmentExpression).rExpression!!.replace(initializer)
-                        DesugarUtil.setOriginalElement(fieldInitializer, DesugarUtil.getOriginalElement(child))
+                            val fieldInitializer = factory.createStatementFromText("${child.name} = null;", child)
+                                    as PsiExpressionStatement
+                            (fieldInitializer.expression as PsiAssignmentExpression).rExpression!!.replace(initializer)
+                            DesugarUtil.setOriginalElement(fieldInitializer, DesugarUtil.getOriginalElement(child))
 
-                        if (seenStaticInitializer) {
-                            staticStatementsToInsertPost += fieldInitializer
+                            if (seenStaticInitializer) {
+                                staticStatementsToInsertPost += fieldInitializer
+                            } else {
+                                staticStatementsToInsertPre += fieldInitializer
+                            }
                         } else {
-                            staticStatementsToInsertPre += fieldInitializer
+                            val fieldInitializer = factory.createStatementFromText("this.${child.name} = null;", child)
+                                    as PsiExpressionStatement
+                            (fieldInitializer.expression as PsiAssignmentExpression).rExpression!!.replace(initializer)
+                            DesugarUtil.setOriginalElement(fieldInitializer, DesugarUtil.getOriginalElement(child))
+
+                            nonStaticStatementsToInsert += fieldInitializer
                         }
-                    } else {
-                        val fieldInitializer = JavaPsiFacade.getElementFactory(project)
-                            .createStatementFromText("this.${child.name} = null;", child) as PsiExpressionStatement
-                        (fieldInitializer.expression as PsiAssignmentExpression).rExpression!!.replace(initializer)
-                        DesugarUtil.setOriginalElement(fieldInitializer, DesugarUtil.getOriginalElement(child))
 
-                        nonStaticStatementsToInsert += fieldInitializer
+                        initializer.delete()
                     }
 
-                    initializer.delete()
-                }
-                is PsiClassInitializer -> {
-                    if (child.hasModifierProperty(PsiModifier.STATIC)) {
-                        seenStaticInitializer = true
-                    } else {
-                        nonStaticStatementsToInsert += child.body.statements
-                        child.delete()
+                    is PsiClassInitializer -> {
+                        if (child.hasModifierProperty(PsiModifier.STATIC)) {
+                            seenStaticInitializer = true
+                        } else {
+                            val blockStatement = factory.createStatementFromText("{}", null) as PsiBlockStatement
+                            DesugarUtil.setOriginalElement(blockStatement, DesugarUtil.getOriginalElement(child))
+                            blockStatement.codeBlock.replace(child.body)
+                            nonStaticStatementsToInsert += blockStatement
+                            child.delete()
+                        }
                     }
                 }
             }
-        }
 
-        if (staticStatementsToInsertPre.isNotEmpty() || staticStatementsToInsertPost.isNotEmpty()) {
-            val staticBlock = findStaticBlock(project, clazz)
-            for (statement in staticStatementsToInsertPre) {
-                staticBlock.body.addAfter(statement, staticBlock.body.lBrace)
+            if (staticStatementsToInsertPre.isNotEmpty() || staticStatementsToInsertPost.isNotEmpty()) {
+                val staticBlock = findStaticBlock(project, aClass)
+                for (statement in staticStatementsToInsertPre) {
+                    staticBlock.body.addAfter(statement, staticBlock.body.lBrace)
+                }
+                for (statement in staticStatementsToInsertPost) {
+                    staticBlock.body.addBefore(statement, staticBlock.body.rBrace)
+                }
             }
-            for (statement in staticStatementsToInsertPost) {
-                staticBlock.body.addBefore(statement, staticBlock.body.rBrace)
-            }
-        }
 
-        if (nonStaticStatementsToInsert.isNotEmpty()) {
-            for (constructor in findConstructorsCallingSuper(project, clazz)) {
-                val body = constructor.body ?: continue
-                val delegateCtorCall = JavaPsiConstructorUtil.findThisOrSuperCallInConstructor(constructor)
-                for (statement in nonStaticStatementsToInsert.asReversed()) {
-                    body.addAfter(statement, delegateCtorCall?.parent ?: body.lBrace)
+            if (nonStaticStatementsToInsert.isNotEmpty()) {
+                for (constructor in findConstructorsCallingSuper(project, aClass)) {
+                    val body = constructor.body ?: continue
+                    val delegateCtorCall = JavaPsiConstructorUtil.findThisOrSuperCallInConstructor(constructor)
+                    for (statement in nonStaticStatementsToInsert.asReversed()) {
+                        body.addAfter(statement, delegateCtorCall?.parent ?: body.lBrace)
+                    }
                 }
             }
         }
@@ -113,10 +124,8 @@ object FieldAssignmentDesugarer : Desugarer {
             }
         }
 
-        val initializer = JavaPsiFacade.getElementFactory(project)
-            .createClass("class _Dummy_ { static {} }")
-            .initializers
-            .first()
+        val initializer = JavaPsiFacade.getElementFactory(project).createClassInitializer()
+        initializer.modifierList!!.setModifierProperty(PsiModifier.STATIC, true)
         DesugarUtil.setOriginalElement(initializer, DesugarUtil.getOriginalElement(clazz))
         return clazz.add(initializer) as PsiClassInitializer
     }

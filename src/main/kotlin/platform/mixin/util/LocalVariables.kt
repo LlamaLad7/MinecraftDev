@@ -48,6 +48,7 @@ package com.demonwav.mcdev.platform.mixin.util
 
 import com.demonwav.mcdev.facet.MinecraftFacet
 import com.demonwav.mcdev.platform.mixin.MixinModuleType
+import com.demonwav.mcdev.platform.mixin.handlers.desugar.DesugarUtil
 import com.demonwav.mcdev.util.SemanticVersion
 import com.demonwav.mcdev.util.cached
 import com.demonwav.mcdev.util.mapToArray
@@ -118,7 +119,7 @@ object LocalVariables {
         }
 
         for (parameter in method.parameterList.parameters) {
-            val mixinName = if (argsOnly) "var$argsIndex" else parameter.name
+            val mixinName = if (argsOnly) "arg$argsIndex" else parameter.name
             args += SourceLocalVariable(
                 parameter.name,
                 parameter.type,
@@ -217,7 +218,8 @@ object LocalVariables {
                         name,
                         instruction.variable.type,
                         localIndex,
-                        variable = instruction.variable
+                        variable = instruction.variable,
+                        mixinName = if (DesugarUtil.isUnnamedVariable(instruction.variable)) "var$localIndex" else name,
                     )
                     if (instruction.variable.isDoubleSlot && localIndex + 1 < localsHere.size) {
                         localsHere[localIndex + 1] = null
@@ -250,7 +252,6 @@ object LocalVariables {
                 val localsHere = this.locals[offset] ?: emptyArray()
                 var changed = false
                 val nextLocals = this.locals[nextOffset]
-                @Suppress("KotlinConstantConditions") // kotlin is wrong
                 if (nextLocals == null) {
                     this.locals[nextOffset] = localsHere.clone()
                     changed = true
@@ -270,7 +271,6 @@ object LocalVariables {
                         }
                     }
                 }
-                @Suppress("KotlinConstantConditions") // kotlin is wrong
                 if (changed) {
                     instructionQueue.add(nextOffset)
                 }
@@ -325,8 +325,8 @@ object LocalVariables {
             is PsiVariable -> if (element.isDoubleSlot) 2 else 1
             // arrays have copy of array, length and index variables, iterables have the iterator variable
             is PsiForeachStatement -> {
-                val param = element.iterationParameter as? PsiParameter
-                if (param?.type is PsiArrayType) 3 else 1
+                val param = element.iterationParameter
+                if (param.type is PsiArrayType) 3 else 1
             }
             else -> 0
         }

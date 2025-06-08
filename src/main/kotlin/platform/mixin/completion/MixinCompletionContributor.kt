@@ -106,12 +106,13 @@ class MixinCompletionContributor : CompletionContributor() {
             }
 
             // Process methods and fields from target class
-            findShadowTargets(psiClass, start, superMixin != null)
+            val elements = findShadowTargets(psiClass, start, superMixin != null)
                 .map { it.createLookupElement(psiClass.project) }
                 .filter { prefixMatcher.prefixMatches(it) }
                 .filter(filter, position)
-                .map { PrioritizedLookupElement.withExplicitProximity(it, 1) }
-                .forEach(r::addElement)
+                .toList()
+
+            r.addAllElements(elements)
         }
     }
 }

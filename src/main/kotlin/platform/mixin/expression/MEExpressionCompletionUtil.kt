@@ -84,6 +84,8 @@ import com.intellij.codeInsight.template.TemplateBuilderImpl
 import com.intellij.codeInsight.template.TemplateEditingAdapter
 import com.intellij.codeInsight.template.TemplateManager
 import com.intellij.codeInsight.template.TextResult
+import com.intellij.injected.editor.VirtualFileWindow
+import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.command.WriteCommandAction
@@ -103,6 +105,7 @@ import com.intellij.psi.PsiModifierList
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.psi.createSmartPointer
+import com.intellij.psi.impl.source.resolve.FileContextUtil
 import com.intellij.psi.impl.source.tree.injected.InjectedLanguageEditorUtil
 import com.intellij.psi.tree.TokenSet
 import com.intellij.psi.util.PsiTreeUtil
@@ -142,6 +145,7 @@ private typealias TemplateExpressionContext = com.intellij.codeInsight.template.
 
 object MEExpressionCompletionUtil {
     private const val DEBUG_COMPLETION = false
+    var debugCompletionUnitTest = false
 
     private val NORMAL_ELEMENT = PlatformPatterns.psiElement()
         .inside(MEStatement::class.java)
@@ -953,19 +957,23 @@ object MEExpressionCompletionUtil {
         isStore: Boolean,
         mixinClass: PsiClass,
     ): List<EliminableLookup> {
+        val isStatic = targetMethod.hasAccess(Opcodes.ACC_STATIC)
         // ignore "this"
-        if (!targetMethod.hasAccess(Opcodes.ACC_STATIC) && index == 0) {
+        if (!isStatic && index == 0) {
             return emptyList()
         }
 
         var argumentsSize = Type.getArgumentsAndReturnSizes(targetMethod.desc) shr 2
-        if (targetMethod.hasAccess(Opcodes.ACC_STATIC)) {
+        if (isStatic) {
             argumentsSize--
         }
         val isArgsOnly = index < argumentsSize
 
         if (targetMethod.localVariables != null) {
             val localsHere = targetMethod.localVariables.filter { localVariable ->
+                if (!isStatic && localVariable.index == 0) {
+                    return@filter false
+                }
                 val firstValidInstruction = if (isStore) {
                     generateSequence<AbstractInsnNode>(localVariable.start) { it.previous }
                         .firstOrNull { it.opcode >= 0 }
@@ -1012,7 +1020,11 @@ object MEExpressionCompletionUtil {
 
         // fallback to ASM dataflow
         val localTypes = AsmDfaUtil.getLocalVariableTypes(project, targetClass, targetMethod, originalInsn)
+            ?.toMutableList()
             ?: return emptyList()
+        if (!isStatic) {
+            localTypes[0] = null
+        }
         val localType = localTypes.getOrNull(index) ?: return emptyList()
         val ordinal = localTypes.asSequence().take(index).filter { it == localType }.count()
         val localName = localType.typeNameToInsert().replace("[]", "Array") + (ordinal + 1)
@@ -1191,6 +1203,32 @@ object MEExpressionCompletionUtil {
         id: String,
         definitionValue: String
     ): PsiAnnotation? {
+        if (debugCompletionUnitTest) {
+            val injectedLanguageManager = InjectedLanguageManager.getInstance(project)
+            System.err.println("Here 1")
+            val injectionHostElement = injectedLanguageManager.getInjectionHost(contextElement) ?: run {
+                val injectedFile = contextElement.containingFile ?: return null
+                System.err.println("Here 6, ${injectedFile.text}")
+                val virtualFile = injectedFile.virtualFile ?: return null
+                System.err.println("Here 7, ${virtualFile.javaClass.name}")
+                if (virtualFile is VirtualFileWindow) {
+                    val hostPtr = injectedFile.getUserData(FileContextUtil.INJECTED_IN_ELEMENT) ?: return null
+                    System.err.println("Here 8, $hostPtr")
+                    val hostElement = hostPtr.element ?: return null
+                    System.err.println("Here 9, ${hostElement.text}")
+                }
+                return null
+            }
+            System.err.println("Here 2, ${injectionHostElement.text}")
+            val injectionHostFile = injectionHostElement.containingFile ?: return null
+            System.err.println("Here 3, ${injectionHostFile.text}")
+            val hostOffset =
+                injectedLanguageManager.injectedToHost(contextElement, contextElement.textRange.startOffset)
+            System.err.println("Here 4, ${contextElement.textRange.startOffset}, $hostOffset")
+            val hostElement = injectionHostFile.findElementAt(hostOffset) ?: return null
+            System.err.println("Here 5, ${hostElement.text}")
+        }
+
         val injectionHost = contextElement.findMultiInjectionHost() ?: return null
         val expressionAnnotation = injectionHost.parentOfType<PsiAnnotation>() ?: return null
         if (!expressionAnnotation.hasQualifiedName(MixinConstants.MixinExtras.EXPRESSION)) {

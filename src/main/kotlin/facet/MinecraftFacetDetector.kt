@@ -32,6 +32,7 @@ import com.intellij.facet.FacetManager
 import com.intellij.facet.impl.ui.libraries.LibrariesValidatorContextImpl
 import com.intellij.framework.library.LibraryVersionProperties
 import com.intellij.openapi.application.EDT
+import com.intellij.openapi.application.readAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.module.Module
@@ -132,8 +133,14 @@ class MinecraftFacetDetector : ProjectActivity {
             }
         }
 
-        private fun checkNoFacet(module: Module) {
-            val platforms = autoDetectTypes(module).ifEmpty { return }
+        private suspend fun checkNoFacet(module: Module) {
+            val platforms = readAction {
+                if (!module.isDisposed) {
+                    autoDetectTypes(module)
+                } else {
+                    emptyList()
+                }
+            }.ifEmpty { return }
 
             runWriteTaskLater {
                 // Only add the new facet if there isn't a Minecraft facet already - double check here since this

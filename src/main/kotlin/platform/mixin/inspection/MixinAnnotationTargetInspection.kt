@@ -83,12 +83,26 @@ class MixinAnnotationTargetInspection : MixinInspection() {
 
             private fun addProblem(annotation: PsiAnnotation, message: String, failure: InsnResolutionInfo.Failure) {
                 val nameElement = annotation.nameReferenceElement ?: return
-                var betterMessage = message
-                if (failure.filterToBlame != null) {
-                    betterMessage += " (filtered out by ${failure.filterToBlame})"
-                }
+                val betterMessage = addFilterMessage(message, failure.filterStats)
                 val quickFix = RemoveAnnotationQuickFix(annotation, annotation.parentOfType())
-                holder.registerProblem(nameElement, message, quickFix)
+                holder.registerProblem(nameElement, betterMessage, quickFix)
+            }
+
+            private fun addFilterMessage(message: String, stats: Map<String, Int>): String {
+                val statsItr = stats.entries.asSequence().filter { it.value != 0 }.iterator()
+                if (!statsItr.hasNext()) {
+                    return message
+                }
+
+                return buildString {
+                    append(message)
+                    append(" (")
+                    append(statsItr.next().let { (k, v) -> "$v filtered out by $k" })
+                    for ((k, v) in statsItr) {
+                        append(", $v more by $k")
+                    }
+                    append(')')
+                }
             }
         }
     }

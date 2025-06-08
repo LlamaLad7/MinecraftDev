@@ -22,6 +22,8 @@ package com.demonwav.mcdev.platform.mixin.handlers.injectionPoint
 
 import com.demonwav.mcdev.platform.mixin.reference.MixinSelector
 import com.demonwav.mcdev.platform.mixin.reference.toMixinString
+import com.demonwav.mcdev.platform.mixin.util.InjectionPointSpecifier
+import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.SLICE
 import com.demonwav.mcdev.platform.mixin.util.SourceCodeLocationInfo
 import com.demonwav.mcdev.platform.mixin.util.fakeResolve
 import com.demonwav.mcdev.platform.mixin.util.findOrConstructSourceMethod
@@ -32,6 +34,7 @@ import com.demonwav.mcdev.util.findAnnotations
 import com.demonwav.mcdev.util.fullQualifiedName
 import com.demonwav.mcdev.util.getQualifiedMemberReference
 import com.demonwav.mcdev.util.internalName
+import com.demonwav.mcdev.util.memoized
 import com.demonwav.mcdev.util.realName
 import com.demonwav.mcdev.util.shortName
 import com.intellij.codeInsight.completion.JavaLookupElementBuilder
@@ -50,17 +53,16 @@ import com.intellij.psi.PsiLambdaExpression
 import com.intellij.psi.PsiLiteral
 import com.intellij.psi.PsiMember
 import com.intellij.psi.PsiMethod
-import com.intellij.psi.PsiMethodReferenceExpression
 import com.intellij.psi.PsiSubstitutor
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.util.parentOfType
 import com.intellij.serviceContainer.BaseKeyedLazyInstance
 import com.intellij.util.ArrayUtilRt
 import com.intellij.util.KeyedLazyInstance
+import com.intellij.util.containers.sequenceOfNotNull
 import com.intellij.util.xmlb.annotations.Attribute
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.ClassNode
-import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.LineNumberNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
@@ -128,26 +130,39 @@ abstract class InjectionPoint<T : PsiElement> {
         mode: CollectVisitor.Mode,
     ): CollectVisitor<T>? {
         return doCreateCollectVisitor(at, target, targetClass, mode)?.also {
-            addFilters(at, targetClass, it)
+            val isInsideSlice = at.parentOfType<PsiAnnotation>()?.hasQualifiedName(SLICE) == true
+            val defaultSpecifier = if (isInsideSlice) InjectionPointSpecifier.FIRST else InjectionPointSpecifier.ALL
+            addFilters(at, targetClass, it, defaultSpecifier)
         }
     }
 
-    protected open fun addFilters(at: PsiAnnotation, targetClass: ClassNode, collectVisitor: CollectVisitor<T>) {
-        addStandardFilters(at, targetClass, collectVisitor)
+    protected open fun addFilters(
+        at: PsiAnnotation,
+        targetClass: ClassNode,
+        collectVisitor: CollectVisitor<T>,
+        defaultSpecifier: InjectionPointSpecifier
+    ) {
+        addStandardFilters(at, targetClass, collectVisitor, defaultSpecifier)
     }
 
-    fun addStandardFilters(at: PsiAnnotation, targetClass: ClassNode, collectVisitor: CollectVisitor<*>) {
+    fun addStandardFilters(
+        at: PsiAnnotation,
+        targetClass: ClassNode,
+        collectVisitor: CollectVisitor<T>,
+        defaultSpecifier: InjectionPointSpecifier
+    ) {
         addShiftSupport(at, targetClass, collectVisitor)
         addSliceFilter(at, targetClass, collectVisitor)
         // make sure the ordinal filter is last, so that the ordinal only increments once the other filters have passed
         addOrdinalFilter(at, targetClass, collectVisitor)
+        addSpecifierFilter(at, targetClass, collectVisitor, defaultSpecifier)
     }
 
     protected open fun addShiftSupport(at: PsiAnnotation, targetClass: ClassNode, collectVisitor: CollectVisitor<*>) {
         collectVisitor.shiftBy = AtResolver.getShift(at)
     }
 
-    protected open fun addSliceFilter(at: PsiAnnotation, targetClass: ClassNode, collectVisitor: CollectVisitor<*>) {
+    protected open fun addSliceFilter(at: PsiAnnotation, targetClass: ClassNode, collectVisitor: CollectVisitor<T>) {
         // resolve slice annotation, take into account slice id if present
         val sliceId = at.findDeclaredAttributeValue("slice")?.constantStringValue
         val parentAnnotation = at.parentOfType<PsiAnnotation>() ?: return
@@ -168,52 +183,50 @@ abstract class InjectionPoint<T : PsiElement> {
         if (from == null && to == null) {
             return
         }
-        val fromSelector = from?.findDeclaredAttributeValue("value")?.constantStringValue?.let { atCode ->
-            SliceSelector.values().firstOrNull { atCode.endsWith(":${it.name}") }
-        } ?: SliceSelector.FIRST
-        val toSelector = to?.findDeclaredAttributeValue("value")?.constantStringValue?.let { atCode ->
-            SliceSelector.values().firstOrNull { atCode.endsWith(":${it.name}") }
-        } ?: SliceSelector.FIRST
 
         fun resolveSliceIndex(
             sliceAt: PsiAnnotation?,
-            selector: SliceSelector,
-            insns: InsnList,
             method: MethodNode,
         ): Int? {
             return sliceAt?.let {
-                val results = AtResolver(sliceAt, targetClass, method).resolveInstructions()
-                val insn = if (selector == SliceSelector.LAST) {
-                    results.lastOrNull()?.insn
-                } else {
-                    results.firstOrNull()?.insn
-                }
-                insn?.let { insns.indexOf(it) }
+                AtResolver(sliceAt, targetClass, method).resolveInstructions()
+                    .singleOrNull()
+                    ?.let { method.instructions.indexOf(it.insn) }
             }
         }
 
-        // allocate lazy indexes so we don't have to re-run the at resolver for the slices each time
-        var fromInsnIndex: Int? = null
-        var toInsnIndex: Int? = null
-
-        collectVisitor.addResultFilter("slice") { result, method ->
-            val insns = method.instructions ?: return@addResultFilter true
-            if (fromInsnIndex == null) {
-                fromInsnIndex = resolveSliceIndex(from, fromSelector, insns, method) ?: 0
-            }
-            if (toInsnIndex == null) {
-                toInsnIndex = resolveSliceIndex(to, toSelector, insns, method) ?: insns.size()
-            }
-
-            insns.indexOf(result.insn) in fromInsnIndex!!..toInsnIndex!!
+        collectVisitor.addResultFilter("slice") { results, method ->
+            val insns = method.instructions
+            val fromInsnIndex = resolveSliceIndex(from, method) ?: 0
+            val toInsnIndex = resolveSliceIndex(to, method) ?: insns.size()
+            results.filter { insns.indexOf(it.insn) in fromInsnIndex.. toInsnIndex }
         }
     }
 
-    protected open fun addOrdinalFilter(at: PsiAnnotation, targetClass: ClassNode, collectVisitor: CollectVisitor<*>) {
+    protected open fun addOrdinalFilter(at: PsiAnnotation, targetClass: ClassNode, collectVisitor: CollectVisitor<T>) {
         val ordinal = at.findDeclaredAttributeValue("ordinal")?.constantValue as? Int ?: return
         if (ordinal < 0) return
-        collectVisitor.addResultFilter("ordinal") { _, _ ->
-            collectVisitor.ordinal++ == ordinal
+        collectVisitor.addResultFilter("ordinal") { results, _ ->
+            results.drop(ordinal).take(1)
+        }
+    }
+
+    protected open fun addSpecifierFilter(
+        at: PsiAnnotation,
+        targetClass: ClassNode,
+        collectVisitor: CollectVisitor<T>,
+        defaultSpecifier: InjectionPointSpecifier
+    ) {
+        val point = at.findDeclaredAttributeValue("value")?.constantStringValue ?: return
+        val specifier = InjectionPointSpecifier.entries.firstOrNull { point.endsWith(":$it") } ?: defaultSpecifier
+        collectVisitor.addResultFilter("specifier") { results, _ ->
+            val single = when (specifier) {
+                InjectionPointSpecifier.FIRST -> results.firstOrNull()
+                InjectionPointSpecifier.LAST -> results.lastOrNull()
+                InjectionPointSpecifier.ONE -> results.singleOrNull()
+                InjectionPointSpecifier.ALL -> return@addResultFilter results
+            }
+            sequenceOfNotNull(single)
         }
     }
 
@@ -334,31 +347,35 @@ abstract class NavigationVisitor : JavaRecursiveElementVisitor() {
 }
 
 abstract class CollectVisitor<T : PsiElement>(protected val mode: Mode) {
-    fun visit(methodNode: MethodNode) {
-        this.method = methodNode
-        try {
-            accept(methodNode)
-        } catch (e: StopWalkingException) {
-            // ignore
+    fun visit(methodNode: MethodNode): InsnResolutionInfo<T> {
+        val numRetained = IntArray(resultFilters.size + 1)
+        var results = accept(methodNode).onEach { numRetained[0]++ }
+        for ((i, filter) in resultFilters.asSequence().map { it.second }.withIndex()) {
+            results = filter(results, methodNode).onEach { numRetained[i + 1]++ }
         }
+        results = results.memoized()
+        if (results.iterator().hasNext()) {
+            return InsnResolutionInfo.Success(results)
+        }
+        val filterStats = resultFilters.asSequence()
+            .map { it.first }
+            .zip(numRetained.asSequence().zipWithNext(Int::minus))
+            .toMap()
+        return InsnResolutionInfo.Failure(filterStats)
     }
 
     fun addResultFilter(name: String, filter: CollectResultFilter<T>) {
         resultFilters += name to filter
     }
 
-    protected abstract fun accept(methodNode: MethodNode)
+    protected abstract fun accept(methodNode: MethodNode): Sequence<Result<T>>
 
-    private lateinit var method: MethodNode
     private var nextIndex = 0
     private val nextIndexByLine = mutableMapOf<Int, Int>()
-    val result = mutableListOf<Result<T>>()
     private val resultFilters = mutableListOf<Pair<String, CollectResultFilter<T>>>()
-    var filterToBlame: String? = null
-    internal var ordinal = 0
     internal var shiftBy = 0
 
-    protected fun addResult(
+    protected suspend fun SequenceScope<Result<T>>.addResult(
         insn: AbstractInsnNode,
         element: T,
         qualifier: String? = null,
@@ -395,22 +412,7 @@ abstract class CollectVisitor<T : PsiElement>(protected val mode: Mode) {
             if (insn === shiftedInsn) decorations else emptyMap()
         )
 
-        var isFiltered = false
-        for ((name, filter) in resultFilters) {
-            if (!filter(result, method)) {
-                isFiltered = true
-                if (filterToBlame == null) {
-                    filterToBlame = name
-                }
-                break
-            }
-        }
-        if (!isFiltered) {
-            this.result.add(result)
-            if (mode == Mode.MATCH_FIRST) {
-                stopWalking()
-            }
-        }
+        yield(result)
     }
 
     private fun getLineNumber(insn: AbstractInsnNode): Int? {
@@ -425,18 +427,7 @@ abstract class CollectVisitor<T : PsiElement>(protected val mode: Mode) {
         return null
     }
 
-    @Suppress("MemberVisibilityCanBePrivate")
-    protected fun stopWalking() {
-        throw StopWalkingException()
-    }
-
-    private class StopWalkingException : Exception() {
-        override fun fillInStackTrace(): Throwable {
-            return this
-        }
-    }
-
-    data class Result<T : PsiElement>(
+    data class Result<out T : PsiElement>(
         val sourceLocationInfo: SourceCodeLocationInfo,
         val originalInsn: AbstractInsnNode,
         val insn: AbstractInsnNode,
@@ -447,7 +438,7 @@ abstract class CollectVisitor<T : PsiElement>(protected val mode: Mode) {
         val index: Int get() = sourceLocationInfo.index
     }
 
-    enum class Mode { MATCH_ALL, MATCH_FIRST, COMPLETION }
+    enum class Mode { RESOLUTION, COMPLETION }
 }
 
 fun nodeMatchesSelector(
@@ -471,4 +462,5 @@ fun nodeMatchesSelector(
     )
 }
 
-typealias CollectResultFilter<T> = (CollectVisitor.Result<T>, MethodNode) -> Boolean
+typealias CollectResultFilter<T> =
+        (Sequence<CollectVisitor.Result<T>>, MethodNode) -> Sequence<CollectVisitor.Result<T>>

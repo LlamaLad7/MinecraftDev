@@ -23,23 +23,27 @@ package com.demonwav.mcdev.platform.mixin.reference
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InjectionPoint
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.AT
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.AT_CODE
-import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.SLICE
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Classes.INJECTION_POINT
-import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Classes.SELECTOR
+import com.demonwav.mcdev.platform.mixin.util.InjectionPointSpecifier
 import com.demonwav.mcdev.util.cached
 import com.demonwav.mcdev.util.constantStringValue
+import com.demonwav.mcdev.util.insideAnnotationAttribute
 import com.demonwav.mcdev.util.reference.ReferenceResolver
 import com.demonwav.mcdev.util.reference.completeToLiteral
 import com.demonwav.mcdev.util.toTypedArray
+import com.intellij.codeInsight.completion.CompletionUtil
 import com.intellij.codeInsight.completion.PrioritizedLookupElement
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
+import com.intellij.patterns.ElementPattern
+import com.intellij.patterns.PsiJavaPatterns
+import com.intellij.patterns.StandardPatterns
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiEnumConstant
+import com.intellij.psi.PsiLiteral
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.AnnotatedElementsSearch
 import com.intellij.psi.search.searches.ClassInheritorsSearch
@@ -51,6 +55,8 @@ import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.parentOfType
 
 object InjectionPointReference : ReferenceResolver(), MixinReference {
+    val ELEMENT_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
+        .insideAnnotationAttribute(AT)
 
     override val description: String
         get() = "injection point type '%s'"
@@ -60,11 +66,9 @@ object InjectionPointReference : ReferenceResolver(), MixinReference {
     override fun resolveReference(context: PsiElement): PsiElement? {
         // Remove slice selectors from the injection point type
         var name = context.constantStringValue ?: return null
-        val at = context.parentOfType<PsiAnnotation>() ?: return null
-        val isInsideSlice = at.parentOfType<PsiAnnotation>()?.hasQualifiedName(SLICE) == true
-        if (isInsideSlice) {
-            for (sliceSelector in getSliceSelectors(context.project)) {
-                if (name.endsWith(":$sliceSelector")) {
+        if (allowSpecifiers(context)) {
+            for (specifier in InjectionPointSpecifier.entries) {
+                if (name.endsWith(":$specifier")) {
                     name = name.substringBeforeLast(':')
                     break
                 }
@@ -85,8 +89,16 @@ object InjectionPointReference : ReferenceResolver(), MixinReference {
     }
 
     override fun collectVariants(context: PsiElement): Array<Any> {
+        val atCodes = getAllAtCodes(context.project).keys
+        val text = context.constantStringValue?.removeSuffix(CompletionUtil.DUMMY_IDENTIFIER)
+        val prefix = text?.substringBeforeLast(':', missingDelimiterValue = "")
+        if (prefix != null && prefix in atCodes && allowSpecifiers(context)) {
+            return InjectionPointSpecifier.entries.asSequence()
+                .map { LookupElementBuilder.create("$prefix:$it") }
+                .toTypedArray()
+        }
         return (
-            getAllAtCodes(context.project).keys.asSequence()
+            atCodes.asSequence()
                 .filter {
                     InjectionPoint.byAtCode(it)?.discouragedMessage == null
                 }
@@ -106,32 +118,17 @@ object InjectionPointReference : ReferenceResolver(), MixinReference {
             ).toTypedArray()
     }
 
+    private fun allowSpecifiers(context: PsiElement): Boolean {
+        val at = context.parentOfType<PsiAnnotation>() ?: return false
+        return InjectionPointSpecifier.isAllowed(at)
+    }
+
     private fun LookupElementBuilder.completeInjectionPoint(context: PsiElement): LookupElementBuilder {
         val injectionPoint = InjectionPoint.byAtCode(lookupString) ?: return completeToLiteral(context)
 
         return completeToLiteral(context) { editor, element ->
             injectionPoint.onCompleted(editor, element)
         }
-    }
-
-    private val SLICE_SELECTORS_KEY = Key<CachedValue<List<String>>>("mcdev.sliceSelectors")
-
-    private fun getSliceSelectors(project: Project): List<String> {
-        return CachedValuesManager.getManager(project).getCachedValue(
-            project,
-            SLICE_SELECTORS_KEY,
-            {
-                val selectorClass = JavaPsiFacade.getInstance(project)
-                    .findClass(SELECTOR, GlobalSearchScope.allScope(project))
-                    ?: return@getCachedValue CachedValueProvider.Result(
-                        emptyList(),
-                        PsiModificationTracker.MODIFICATION_COUNT,
-                    )
-                val enumConstants = selectorClass.fields.mapNotNull { (it as? PsiEnumConstant)?.name }
-                CachedValueProvider.Result(enumConstants, PsiModificationTracker.MODIFICATION_COUNT)
-            },
-            false,
-        )
     }
 
     private val INJECTION_POINT_INHERITORS = Key<CachedValue<List<String>>>("mcdev.injectionPointInheritors")

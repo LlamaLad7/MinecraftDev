@@ -56,7 +56,7 @@ abstract class ReferenceResolver : PsiReferenceProvider() {
 
         override fun resolve(): PsiElement? {
             val context = element.findContextElement()
-            if (context.isValid) {
+            if (context != null && context.isValid) {
                 return resolver.resolveReference(context)
             }
             return null
@@ -64,8 +64,8 @@ abstract class ReferenceResolver : PsiReferenceProvider() {
 
         override fun getVariants(): Array<Any> {
             val context = element.findContextElement()
-            if (context.isValid) {
-                return resolver.collectVariants(element.findContextElement())
+            if (context != null && context.isValid) {
+                return resolver.collectVariants(context)
             }
             return ArrayUtil.EMPTY_OBJECT_ARRAY
         }
@@ -89,7 +89,7 @@ abstract class PolyReferenceResolver : PsiReferenceProvider() {
 
         override fun multiResolve(incompleteCode: Boolean): Array<ResolveResult> {
             val context = element.findContextElement()
-            if (context.isValid) {
+            if (context != null && context.isValid) {
                 return resolver.resolveReference(context)
             }
             return ResolveResult.EMPTY_ARRAY
@@ -97,15 +97,15 @@ abstract class PolyReferenceResolver : PsiReferenceProvider() {
 
         override fun getVariants(): Array<Any> {
             val context = element.findContextElement()
-            if (context.isValid) {
-                return resolver.collectVariants(element.findContextElement())
+            if (context != null && context.isValid) {
+                return resolver.collectVariants(context)
             }
             return ArrayUtil.EMPTY_OBJECT_ARRAY
         }
     }
 }
 
-private fun PsiElement.findContextElement(): PsiElement {
+fun PsiElement.findContextElement(): PsiElement? {
     var current: PsiElement
     var parent = this
 
@@ -117,7 +117,7 @@ private fun PsiElement.findContextElement(): PsiElement {
         }
     } while (parent is PsiExpression)
 
-    throw IllegalStateException("Cannot find context element of $this")
+    return null
 }
 
 /**
@@ -155,7 +155,7 @@ private class ReplaceElementWithLiteral(
         // Run command to replace PsiElement
         CommandProcessor.getInstance().runUndoTransparentAction {
             runWriteAction {
-                val element = file.findElementAt(editor.caretModel.offset)!!.findContextElement()
+                val element = file.findElementAt(editor.caretModel.offset)?.findContextElement() ?: return@runWriteAction
                 val newElement = element.replace(
                     JavaPsiFacade.getElementFactory(element.project).createExpressionFromText(
                         "\"$text\"",
