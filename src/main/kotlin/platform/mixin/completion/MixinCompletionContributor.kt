@@ -58,6 +58,9 @@ class MixinCompletionContributor : CompletionContributor() {
             return
         }
 
+        // Run all the other contributors first
+        result.runRemainingContributors(parameters, result::passResult)
+
         val superMixin = psiClass.superClass?.takeIf { it.isWritable && it.isMixin }
 
         val javaResult = JavaCompletionSorting.addJavaSorting(parameters, result)
