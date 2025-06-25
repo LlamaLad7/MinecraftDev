@@ -32,6 +32,7 @@ import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.completion.JavaCompletionContributor
 import com.intellij.codeInsight.completion.JavaCompletionSorting
 import com.intellij.codeInsight.completion.LegacyCompletionContributor
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiExpression
@@ -114,6 +115,7 @@ class MixinCompletionContributor : CompletionContributor() {
                     val name = it.name
                     StringUtil.isJavaIdentifier(name) && prefixMatcher.prefixMatches(name)
                 }
+                .onEach { ProgressManager.checkCanceled() }
                 .map { it.createLookupElement(psiClass.project) }
                 .filter(filter, position)
                 .toList()
