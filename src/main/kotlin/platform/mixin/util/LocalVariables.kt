@@ -692,7 +692,7 @@ object LocalVariables {
         return size.coerceAtLeast(initialFrameSize)
     }
 
-    private fun getLocalVariableAt(
+    fun getLocalVariableAt(
         project: Project,
         classNode: ClassNode,
         method: MethodNode,

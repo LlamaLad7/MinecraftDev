@@ -1551,6 +1551,11 @@
                 description="Generate an accessor for the selected member">
             <add-to-group group-id="GenerateGroup" anchor="last"/>
         </action>
+        <action class="com.demonwav.mcdev.platform.mixin.expression.gui.MEShowFlowAction"
+                text="Show MixinExtras Flow Diagram" description="Visualize MixinExtras Expression flow as a diagram"
+                popup="true">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+        </action>
         <action class="com.demonwav.mcdev.platform.mcp.actions.FindSrgMappingAction" id="FindSrgMappingAction"
                 text="Get SRG Name"
                 description="Find the associated SRG mapping for this element">
