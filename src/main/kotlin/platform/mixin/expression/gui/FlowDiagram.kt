@@ -24,25 +24,19 @@ import com.demonwav.mcdev.platform.mixin.expression.MEExpressionMatchUtil
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.editor.colors.EditorColorsManager
-import com.intellij.openapi.editor.colors.EditorFontType
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.progress.checkCanceled
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiModifierList
-import com.intellij.ui.JBColor
-import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.UIUtil
 import com.llamalad7.mixinextras.expression.impl.ast.expressions.Expression
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import com.mxgraph.layout.hierarchical.mxHierarchicalLayout
 import com.mxgraph.model.mxCell
 import com.mxgraph.swing.mxGraphComponent
-import com.mxgraph.util.mxConstants
 import com.mxgraph.util.mxEvent
 import com.mxgraph.util.mxRectangle
 import com.mxgraph.view.mxGraph
 import java.awt.BorderLayout
-import java.awt.Color
 import java.awt.Dimension
 import java.awt.Rectangle
 import java.awt.event.MouseAdapter
@@ -64,11 +58,6 @@ private const val OUTER_PADDING = 30.0
 private const val INTER_GROUP_SPACING = 75
 private const val INTRA_GROUP_SPACING = 75
 private const val LINE_NUMBER_STYLE = "LINE_NUMBER"
-private const val HIGHLIGHT_STYLE = "HIGHLIGHT"
-private const val IGNORED_STYLE = "IGNORED"
-private const val FAILED_STYLE = "FAILED"
-private const val PARTIAL_STYLE = "PARTIAL"
-private const val SUCCESS_STYLE = "SUCCESS"
 
 class FlowDiagram(
     private val comp: mxGraphComponent,
@@ -248,21 +237,19 @@ private class MxFlowGraph : mxGraph() {
     }
 
     override fun getCellStyle(cell: Any?): MutableMap<String, Any> {
-        val defaultStyle = super.getCellStyle(cell)
-        val flow = (cell as? mxCell)?.value as? FlowNode ?: return defaultStyle
-        val styles = buildList {
-            when (flow.currentMatchStatus) {
-                MatchStatus.IGNORED -> add(IGNORED_STYLE)
-                MatchStatus.FAIL -> add(FAILED_STYLE)
-                MatchStatus.PARTIAL -> add(PARTIAL_STYLE)
-                MatchStatus.SUCCESS -> add(SUCCESS_STYLE)
-                null -> {}
-            }
-            if (flow.searchHighlight) {
-                add(HIGHLIGHT_STYLE)
-            }
+        val result = super.getCellStyle(cell).toMutableMap()
+        val flow = (cell as? mxCell)?.value as? FlowNode ?: return result
+        when (flow.currentMatchStatus) {
+            MatchStatus.IGNORED -> result += DiagramStyles.IGNORED
+            MatchStatus.FAIL -> result += DiagramStyles.FAILED
+            MatchStatus.PARTIAL -> result += DiagramStyles.PARTIAL_MATCH
+            MatchStatus.SUCCESS -> result += DiagramStyles.SUCCESS
+            null -> {}
         }
-        return styles.fold(defaultStyle) { acc, style -> stylesheet.getCellStyle(style, acc) }
+        if (flow.searchHighlight) {
+            result += DiagramStyles.SEARCH_HIGHLIGHT
+        }
+        return result
     }
 }
 
@@ -344,69 +331,10 @@ private suspend fun layOutGraph(
 }
 
 private fun setupStyles(graph: mxGraph) {
-    val colorScheme = EditorColorsManager.getInstance().globalScheme
-    graph.stylesheet.defaultVertexStyle.let {
-        it[mxConstants.STYLE_FONTFAMILY] = colorScheme.getFont(EditorFontType.PLAIN).family
-        it[mxConstants.STYLE_ROUNDED] = true
-        it[mxConstants.STYLE_FILLCOLOR] = JBUI.CurrentTheme.Button.buttonColorStart().hexString
-        it[mxConstants.STYLE_FONTCOLOR] = UIUtil.getLabelForeground().hexString
-        it[mxConstants.STYLE_STROKECOLOR] = JBUI.CurrentTheme.Button.buttonOutlineColorStart(false).hexString
-        it[mxConstants.STYLE_ALIGN] = mxConstants.ALIGN_CENTER
-        it[mxConstants.STYLE_VERTICAL_ALIGN] = mxConstants.ALIGN_TOP
-        it[mxConstants.STYLE_SHAPE] = mxConstants.SHAPE_LABEL
-        it[mxConstants.STYLE_SPACING] = 5
-        it[mxConstants.STYLE_SPACING_TOP] = 3
-    }
-
-    graph.stylesheet.defaultEdgeStyle.let {
-        it[mxConstants.STYLE_STROKECOLOR] = UIUtil.getFocusedBorderColor().hexString
-    }
-
-    graph.stylesheet.putCellStyle(
-        LINE_NUMBER_STYLE,
-        mapOf(
-            mxConstants.STYLE_FONTSIZE to "16",
-            mxConstants.STYLE_STROKECOLOR to "none",
-            mxConstants.STYLE_FILLCOLOR to "none",
-        )
-    )
-    graph.stylesheet.putCellStyle(
-        HIGHLIGHT_STYLE,
-        mapOf(
-            mxConstants.STYLE_STROKECOLOR to UIUtil.getFocusedBorderColor().hexString,
-            mxConstants.STYLE_STROKEWIDTH to "2",
-        )
-    )
-    graph.stylesheet.putCellStyle(
-        IGNORED_STYLE,
-        mapOf(
-            mxConstants.STYLE_OPACITY to 20,
-            mxConstants.STYLE_TEXT_OPACITY to 20,
-            mxConstants.STYLE_STROKE_OPACITY to 20,
-            mxConstants.STYLE_FILL_OPACITY to 20,
-        )
-    )
-    graph.stylesheet.putCellStyle(
-        FAILED_STYLE,
-        mapOf(
-            mxConstants.STYLE_STROKECOLOR to JBColor.red.hexString,
-            mxConstants.STYLE_STROKEWIDTH to "2",
-        )
-    )
-    graph.stylesheet.putCellStyle(
-        PARTIAL_STYLE,
-        mapOf(
-            mxConstants.STYLE_STROKECOLOR to JBColor.orange.hexString,
-            mxConstants.STYLE_STROKEWIDTH to "2",
-        )
-    )
-    graph.stylesheet.putCellStyle(
-        SUCCESS_STYLE,
-        mapOf(
-            mxConstants.STYLE_STROKECOLOR to JBColor.green.hexString,
-            mxConstants.STYLE_STROKEWIDTH to "2",
-        )
-    )
+    val stylesheet = graph.stylesheet
+    stylesheet.defaultVertexStyle.putAll(DiagramStyles.DEFAULT_NODE)
+    stylesheet.defaultEdgeStyle.putAll(DiagramStyles.DEFAULT_EDGE)
+    stylesheet.putCellStyle(LINE_NUMBER_STYLE, DiagramStyles.LINE_NUMBER)
 }
 
 private fun configureGraphComponent(comp: mxGraphComponent, flowGraph: FlowGraph) {
@@ -447,8 +375,6 @@ private fun configureMouseListeners(comp: mxGraphComponent, flowGraph: FlowGraph
         }
     })
 }
-
-private val Color.hexString get() = "#%06X".format(rgb)
 
 private inline fun <T> mxGraph.update(routine: () -> T): T {
     model.beginUpdate()
