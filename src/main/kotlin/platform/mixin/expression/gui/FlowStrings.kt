@@ -39,6 +39,7 @@ import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
+import org.objectweb.asm.tree.TypeInsnNode
 import org.objectweb.asm.tree.VarInsnNode
 
 fun FlowValue.shortString(project: Project, clazz: ClassNode, method: MethodNode): String {
@@ -62,6 +63,9 @@ fun FlowValue.shortString(project: Project, clazz: ClassNode, method: MethodNode
     }
     getDecoration<FlowValue>(FlowDecorations.COMPLEX_COMPARISON_JUMP)?.let { jump ->
         return complexCmpString(insn.opcode, jump.insn.opcode)
+    }
+    if (insn.opcode == Opcodes.INSTANCEOF) {
+        return instanceofString(insn as TypeInsnNode)
     }
     return when (val insn = insn) {
         is FieldInsnNode -> fieldString(insn)
@@ -96,6 +100,7 @@ private fun constantString(cst: Any): String {
     }
     return when (cst) {
         Type.VOID_TYPE -> "null"
+        is Type -> "${cst.shortName}.class"
         is String -> "'${cst.escape()}'"
         is Float -> "${cst}F"
         is Long -> "${cst}L"
@@ -128,7 +133,9 @@ private fun varString(flow: FlowValue, index: Int, project: Project, clazz: Clas
         location = location.next
     }
     val localName = ReadAction.compute<_, Nothing> {
-        LocalVariables.getLocalVariableAt(project, clazz, method, location, index)
+        runCatching {
+            LocalVariables.getLocalVariableAt(project, clazz, method, location, index)
+        }.getOrNull()
     }?.name ?: "<local $index>"
     val isStore = flow.insn.opcode in Opcodes.ISTORE..Opcodes.ASTORE
     return localName + if (isStore) " =" else ""
@@ -154,10 +161,19 @@ private fun castString(type: Type): String = "(${type.shortName})"
 
 private fun complexCmpString(opcode: Int, jumpOpcode: Int): String {
     val isG = opcode == Opcodes.FCMPG || opcode == Opcodes.DCMPG
+    val isLong = opcode == Opcodes.LCMP
     return when (jumpOpcode) {
         Opcodes.IFEQ, Opcodes.IFNE -> "== or !="
-        Opcodes.IFLT, Opcodes.IFGE -> if (isG) "<" else ">="
-        Opcodes.IFGT, Opcodes.IFLE -> if (isG) "<=" else ">"
+        Opcodes.IFLT, Opcodes.IFGE -> when {
+            isLong -> "< or >="
+            isG -> "<"
+            else -> ">="
+        }
+        Opcodes.IFGT, Opcodes.IFLE -> when {
+            isLong -> "<= or >"
+            isG -> "<="
+            else -> ">"
+        }
         else -> "Unknown jump"
     }
 }
@@ -174,6 +190,11 @@ private fun newArrayString(flow: FlowValue): String? {
         return prefix
     }
     return "$prefix{ }"
+}
+
+private fun instanceofString(insn: TypeInsnNode): String {
+    val type = Type.getObjectType(insn.desc)
+    return "instanceof ${type.shortName}"
 }
 
 private fun opcodeString(opcode: Int) = when (opcode) {
