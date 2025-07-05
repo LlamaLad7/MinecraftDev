@@ -45,17 +45,17 @@ object DiagramStyles {
     val FAILED
         get() = mapOf(
             mxConstants.STYLE_STROKECOLOR to JBColor.red.hexString,
-            mxConstants.STYLE_STROKEWIDTH to "2",
+            mxConstants.STYLE_STROKEWIDTH to "3.5",
         )
     val PARTIAL_MATCH
         get() = mapOf(
             mxConstants.STYLE_STROKECOLOR to JBColor.orange.hexString,
-            mxConstants.STYLE_STROKEWIDTH to "2",
+            mxConstants.STYLE_STROKEWIDTH to "2.5",
         )
     val SUCCESS
         get() = mapOf(
             mxConstants.STYLE_STROKECOLOR to JBColor.green.hexString,
-            mxConstants.STYLE_STROKEWIDTH to "2",
+            mxConstants.STYLE_STROKEWIDTH to "1.5",
         )
 }
 
