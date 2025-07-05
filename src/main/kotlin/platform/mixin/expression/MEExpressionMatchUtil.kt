@@ -263,8 +263,8 @@ object MEExpressionMatchUtil {
         insns: Iterable<VirtualInsn>,
         contextType: ExpressionContext.Type,
         forCompletion: Boolean,
-        crossinline reportMatchStatus: (FlowValue, Boolean) -> Unit = { _, _ -> },
-        crossinline reportPartialMatch: (FlowValue) -> Unit = {},
+        crossinline reportMatchStatus: (FlowValue, Expression, Boolean) -> Unit = { _, _, _ -> },
+        crossinline reportPartialMatch: (FlowValue, Expression) -> Unit = { _, _ -> },
         callback: (ExpressionMatch) -> Unit
     ) {
         for (insn in insns) {
@@ -287,11 +287,11 @@ object MEExpressionMatchUtil {
                 }
 
                 override fun reportMatchStatus(node: FlowValue, expr: Expression, matched: Boolean) {
-                    reportMatchStatus.invoke(node, matched)
+                    reportMatchStatus.invoke(node, expr, matched)
                 }
 
                 override fun reportPartialMatch(node: FlowValue, expr: Expression) {
-                    reportPartialMatch.invoke(node)
+                    reportPartialMatch.invoke(node, expr)
                 }
             }
 

@@ -31,6 +31,7 @@ import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.progress.checkCanceled
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiModifierList
 import com.intellij.psi.SmartPointerManager
@@ -62,7 +63,6 @@ import javax.swing.JLayeredPane
 import javax.swing.JPanel
 import javax.swing.JTextField
 import javax.swing.JToolBar
-import javax.swing.SwingUtilities
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import kotlinx.coroutines.Dispatchers
@@ -166,7 +166,7 @@ private class FlowDiagramRef {
 
 private suspend fun buildDiagram(flowGraph: FlowGraph, clazz: ClassNode, method: MethodNode): FlowDiagram {
     val diagramRef = FlowDiagramRef()
-    val graph = MxFlowGraph()
+    val graph = MxFlowGraph(flowGraph)
     setupStyles(graph)
     val groupedCells = addGraphContent(graph, flowGraph)
     val lineNumberNodes = sortedMapOf<Int, mxCell>()
@@ -343,10 +343,24 @@ private fun createSearchField(comp: mxGraphComponent, fixBounds: () -> Unit): JT
     return searchField
 }
 
-private class MxFlowGraph : mxGraph() {
-    override fun getToolTipForCell(cell: Any?): String {
+private class MxFlowGraph(private val flowGraph: FlowGraph) : mxGraph() {
+    override fun getToolTipForCell(cell: Any?): String? {
         val flow = (cell as? mxCell)?.value as? FlowNode ?: return super.getToolTipForCell(cell)
-        return flow.longText
+        if (!flowGraph.shouldShowTooltips()) {
+            return null
+        }
+        val lines = mutableListOf<String>()
+        flow.currentMatchResult?.let { match ->
+            lines += match.toString()
+        }
+        lines += flow.longText
+        return lines.joinToString(
+            prefix = "<html>",
+            separator = "<br><br>",
+            postfix = "</html>"
+        ) {
+            StringUtil.escapeXmlEntities(it).replace("\n", "<br>")
+        }
     }
 
     override fun convertValueToString(cell: Any?): String {
@@ -357,11 +371,11 @@ private class MxFlowGraph : mxGraph() {
     override fun getCellStyle(cell: Any?): MutableMap<String, Any> {
         val result = super.getCellStyle(cell).toMutableMap()
         val flow = (cell as? mxCell)?.value as? FlowNode ?: return result
-        when (flow.currentMatchStatus) {
-            MatchStatus.IGNORED -> result += DiagramStyles.IGNORED
-            MatchStatus.FAIL -> result += DiagramStyles.FAILED
-            MatchStatus.PARTIAL -> result += DiagramStyles.PARTIAL_MATCH
-            MatchStatus.SUCCESS -> result += DiagramStyles.SUCCESS
+        when (flow.currentMatchResult?.status) {
+            FlowMatchStatus.IGNORED -> result += DiagramStyles.IGNORED
+            FlowMatchStatus.FAIL -> result += DiagramStyles.FAILED
+            FlowMatchStatus.PARTIAL -> result += DiagramStyles.PARTIAL_MATCH
+            FlowMatchStatus.SUCCESS -> result += DiagramStyles.SUCCESS
             null -> {}
         }
         if (flow.searchHighlight) {

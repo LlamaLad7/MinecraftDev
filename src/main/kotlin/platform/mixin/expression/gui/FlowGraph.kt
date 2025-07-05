@@ -25,6 +25,8 @@ import com.demonwav.mcdev.platform.mixin.expression.MEExpressionMatchUtil
 import com.intellij.openapi.application.readAction
 import com.intellij.openapi.progress.checkCanceled
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.text.StringUtil
+import com.llamalad7.mixinextras.expression.impl.ast.expressions.Expression
 import com.llamalad7.mixinextras.expression.impl.flow.FlowValue
 import com.llamalad7.mixinextras.expression.impl.flow.expansion.InsnExpander
 import java.util.SortedSet
@@ -32,8 +34,22 @@ import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.LineNumberNode
 import org.objectweb.asm.tree.MethodNode
 
-enum class MatchStatus {
+enum class FlowMatchStatus {
     IGNORED, FAIL, PARTIAL, SUCCESS
+}
+
+data class FlowMatchResult(val status: FlowMatchStatus, val attempted: String?) : Comparable<FlowMatchResult> {
+    override fun compareTo(other: FlowMatchResult) = status.compareTo(other.status)
+
+    override fun toString(): String {
+        val attempted = '`' + StringUtil.escapeStringCharacters(attempted.toString()) + '`'
+        return when (status) {
+            FlowMatchStatus.IGNORED -> "Ignored"
+            FlowMatchStatus.FAIL -> "Failed to match $attempted"
+            FlowMatchStatus.PARTIAL -> "Partially matched $attempted"
+            FlowMatchStatus.SUCCESS -> "Successfully matched $attempted"
+        }
+    }
 }
 
 class FlowNode(
@@ -43,14 +59,15 @@ class FlowNode(
     method: MethodNode,
     map: MutableMap<FlowValue, FlowNode>
 ) {
-    private val matches = mutableMapOf<FlowValue, MatchStatus>().withDefault { MatchStatus.IGNORED }
-    var currentMatchStatus: MatchStatus? = null
+    private val matches =
+        mutableMapOf<FlowValue, FlowMatchResult>().withDefault { FlowMatchResult(FlowMatchStatus.IGNORED, null) }
+    var currentMatchResult: FlowMatchResult? = null
         private set
     val inputs = (0..<flow.inputCount()).map { FlowNode(flow.getInput(it), project, clazz, method, map) }
     val shortText = flow.shortString(project, clazz, method)
     val longText = flow.longString()
     var searchHighlight = false
-    val matchScore get() = matches.values.count { it >= MatchStatus.PARTIAL }
+    val matchScore get() = matches.values.count { it.status >= FlowMatchStatus.PARTIAL }
 
     init {
         map[flow] = this
@@ -65,18 +82,24 @@ class FlowNode(
     }
 
     fun clearMatchHighlight() {
-        currentMatchStatus = null
+        currentMatchResult = null
     }
 
-    fun reportMatchStatus(childFlow: FlowValue, matched: Boolean) {
-        updateMatchStatus(childFlow, if (matched) MatchStatus.SUCCESS else MatchStatus.FAIL)
+    fun reportMatchStatus(childFlow: FlowValue, expr: Expression, matched: Boolean) {
+        updateMatchStatus(
+            childFlow,
+            FlowMatchResult(
+                if (matched) FlowMatchStatus.SUCCESS else FlowMatchStatus.FAIL,
+                expr.src.toString()
+            )
+        )
     }
 
-    fun reportPartialMatch(childFlow: FlowValue) {
-        updateMatchStatus(childFlow, MatchStatus.PARTIAL)
+    fun reportPartialMatch(childFlow: FlowValue, expr: Expression) {
+        updateMatchStatus(childFlow, FlowMatchResult(FlowMatchStatus.PARTIAL, expr.src.toString()))
     }
 
-    private fun updateMatchStatus(childFlow: FlowValue, status: MatchStatus) {
+    private fun updateMatchStatus(childFlow: FlowValue, status: FlowMatchResult) {
         matches.compute(childFlow) { _, oldStatus ->
             if (oldStatus == null) {
                 status
@@ -88,7 +111,7 @@ class FlowNode(
 
     fun highlightMatches(allNodes: Iterable<FlowNode>) {
         for (node in allNodes) {
-            node.currentMatchStatus = matches.getValue(node.flow)
+            node.currentMatchResult = matches.getValue(node.flow)
         }
     }
 }
@@ -170,6 +193,8 @@ class FlowGraph(val groups: SortedSet<FlowGroup>, val flowMap: FlowMap, val allN
             node.clearMatchHighlight()
         }
     }
+
+    fun shouldShowTooltips() = !hasMatchData || hardHighlight
 }
 
 private val FlowValue.isRoot get() = next.isEmpty()
