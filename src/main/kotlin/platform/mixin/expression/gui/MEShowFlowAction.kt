@@ -20,14 +20,23 @@
 
 package com.demonwav.mcdev.platform.mixin.expression.gui
 
+import com.demonwav.mcdev.platform.mixin.expression.MEExpressionMatchUtil
+import com.demonwav.mcdev.platform.mixin.expression.psi.MEExpressionFile
+import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
+import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.reference.MethodReference
+import com.demonwav.mcdev.platform.mixin.util.MethodTargetMember
 import com.demonwav.mcdev.platform.mixin.util.findClassNodeByPsiClass
+import com.demonwav.mcdev.platform.mixin.util.mixinTargets
+import com.demonwav.mcdev.util.constantStringValue
 import com.demonwav.mcdev.util.descriptor
+import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.java.JavaLanguage
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.components.service
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiIdentifier
@@ -48,11 +57,12 @@ class MEShowFlowAction : AnAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val (clazz, method, lineNumber) = resolve(e) ?: return
-        project.service<MEFlowWindowService>().showDiagram(clazz, method, lineNumber)
+        val (clazz, method, action) = resolve(e) ?: return
+        project.service<MEFlowWindowService>().showDiagram(clazz, method, action)
     }
 
     private fun resolve(e: AnActionEvent): Resolved? {
+        val project = e.project ?: return null
         val file = e.getData(CommonDataKeys.PSI_FILE) ?: return null
         if (file.language != JavaLanguage.INSTANCE) {
             return null
@@ -80,18 +90,44 @@ class MEShowFlowAction : AnAction() {
         fun resolveMethodByLine(): Resolved? {
             val clazz = findClassNodeByPsiClass(psiClass) ?: return null
             val lineNumber = caret.logicalPosition.line + 1
-            val method = clazz.methods.find { method ->
+            val method = clazz.methods.lastOrNull { method ->
                 method.instructions.asSequence()
                     .filterIsInstance<LineNumberNode>()
                     .any { it.line == lineNumber }
             } ?: return null
-            return Resolved(clazz, method, lineNumber)
+            return Resolved(clazz, method) {
+                it.scrollToLine(lineNumber)
+            }
         }
 
-        return resolveMixinMethodString()
+        fun resolveExpressionTarget(): Resolved? {
+            val module = e.getData(LangDataKeys.MODULE) ?: return null
+            val string = element.parentOfType<PsiLiteralExpression>() ?: return null
+            val expression = string.constantStringValue?.let(MEExpressionMatchUtil::createExpression) ?: return null
+            val modifierList = string.parentOfType<PsiMethod>()?.modifierList ?: return null
+            if (InjectedLanguageManager.getInstance(project).getInjectedPsiFiles(string).orEmpty()
+                    .none { it.first is MEExpressionFile }
+            ) {
+                return null
+            }
+            val (injectorAnnotation, injector) =
+                modifierList.annotations.firstNotNullOfOrNull { ann ->
+                    (MixinAnnotationHandler.forMixinAnnotation(ann, project) as? InjectorAnnotationHandler)
+                        ?.let { ann to it }
+                } ?: return null
+            val targetClass = psiClass.mixinTargets.singleOrNull() ?: return null
+            val target = injector.resolveTarget(injectorAnnotation, targetClass).singleOrNull()
+                as? MethodTargetMember ?: return null
+            return Resolved(target.classAndMethod.clazz, target.classAndMethod.method) {
+                it.populateMatchStatuses(module, expression, modifierList)
+            }
+        }
+
+        return resolveExpressionTarget()
+            ?: resolveMixinMethodString()
             ?: resolvePsiMethod()
             ?: resolveMethodByLine()
     }
 
-    private data class Resolved(val clazz: ClassNode, val method: MethodNode, val line: Int? = null)
+    private data class Resolved(val clazz: ClassNode, val method: MethodNode, val action: (FlowDiagram) -> Unit = {})
 }

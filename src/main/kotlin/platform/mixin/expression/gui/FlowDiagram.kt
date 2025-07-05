@@ -20,13 +20,20 @@
 
 package com.demonwav.mcdev.platform.mixin.expression.gui
 
+import com.demonwav.mcdev.platform.mixin.expression.MEExpressionMatchUtil
 import com.intellij.openapi.application.EDT
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.EditorFontType
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.progress.checkCanceled
 import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiModifierList
+import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import com.llamalad7.mixinextras.expression.impl.ast.expressions.Expression
+import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import com.mxgraph.layout.hierarchical.mxHierarchicalLayout
 import com.mxgraph.model.mxCell
 import com.mxgraph.swing.mxGraphComponent
@@ -38,6 +45,8 @@ import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Dimension
 import java.awt.Rectangle
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.util.SortedMap
 import javax.swing.JButton
 import javax.swing.JLabel
@@ -56,8 +65,15 @@ private const val INTER_GROUP_SPACING = 75
 private const val INTRA_GROUP_SPACING = 75
 private const val LINE_NUMBER_STYLE = "LINE_NUMBER"
 private const val HIGHLIGHT_STYLE = "HIGHLIGHT"
+private const val IGNORED_STYLE = "IGNORED"
+private const val FAILED_STYLE = "FAILED"
+private const val PARTIAL_STYLE = "PARTIAL"
+private const val SUCCESS_STYLE = "SUCCESS"
 
 class FlowDiagram(
+    private val comp: mxGraphComponent,
+    private val flowGraph: FlowGraph,
+    private val clazz: ClassNode,
     val method: MethodNode,
     val panel: JPanel,
     val scrollToLine: (Int) -> Unit,
@@ -65,12 +81,41 @@ class FlowDiagram(
     companion object {
         suspend fun create(project: Project, clazz: ClassNode, method: MethodNode): FlowDiagram? {
             val flowGraph = FlowGraph.parse(project, clazz, method) ?: return null
-            return buildPanel(flowGraph, method)
+            return buildDiagram(flowGraph, clazz, method)
         }
+    }
+
+    fun populateMatchStatuses(module: Module, expression: Expression, modifierList: PsiModifierList) {
+        flowGraph.resetMatches()
+        ReadAction.run<Nothing> {
+            val pool = MEExpressionMatchUtil.createIdentifierPoolFactory(module, clazz, modifierList)(method)
+            for ((virtualInsn, root) in flowGraph.flowMap) {
+                val node = flowGraph.allNodes.getValue(root)
+                MEExpressionMatchUtil.findMatchingInstructions(
+                    clazz, method, pool, flowGraph.flowMap, expression, listOf(virtualInsn),
+                    ExpressionContext.Type.MODIFY_EXPRESSION_VALUE, // most permissive
+                    false,
+                    node::reportMatchStatus,
+                    node::reportPartialMatch
+                ) {}
+            }
+        }
+        showBestNode()
+    }
+
+    private fun showBestNode() {
+        val bestNode = flowGraph.allNodes.values.maxBy { it.matchScore }
+        val bestCell = comp.graph.getChildVertices(comp.graph.defaultParent).asSequence()
+            .map { it as mxCell }
+            .find { it.value === bestNode }
+            ?: return
+        flowGraph.highlightMatches(bestNode, false)
+        comp.scrollCellToVisible(bestCell, true)
+        comp.refresh()
     }
 }
 
-private suspend fun buildPanel(flowGraph: FlowGraph, method: MethodNode): FlowDiagram {
+private suspend fun buildDiagram(flowGraph: FlowGraph, clazz: ClassNode, method: MethodNode): FlowDiagram {
     val graph = MxFlowGraph()
     setupStyles(graph)
     val groupedCells = addGraphContent(graph, flowGraph)
@@ -78,19 +123,20 @@ private suspend fun buildPanel(flowGraph: FlowGraph, method: MethodNode): FlowDi
     val calculateBounds = layOutGraph(graph, groupedCells, lineNumberNodes)
 
     val panel: JPanel
-    val scrollToLine = withContext(Dispatchers.EDT) {
+    val (comp, scrollToLine) = withContext(Dispatchers.EDT) {
         panel = JPanel(BorderLayout())
-        displayGraphComponent(graph, panel, calculateBounds, lineNumberNodes)
+        displayGraphComponent(flowGraph, graph, panel, calculateBounds, lineNumberNodes)
     }
-    return FlowDiagram(method, panel, scrollToLine)
+    return FlowDiagram(comp, flowGraph, clazz, method, panel, scrollToLine)
 }
 
 private fun displayGraphComponent(
+    flowGraph: FlowGraph,
     graph: mxGraph,
     panel: JPanel,
     calculateBounds: () -> Dimension,
     lineNumberNodes: SortedMap<Int, mxCell>
-): (Int) -> Unit {
+): Pair<mxGraphComponent, (Int) -> Unit> {
     val comp = mxGraphComponent(graph)
     fun fixBounds() {
         comp.graphControl.preferredSize = calculateBounds()
@@ -100,13 +146,13 @@ private fun displayGraphComponent(
         fixBounds()
     }
     fixBounds()
-    configureGraphComponent(comp)
+    configureGraphComponent(comp, flowGraph)
 
     val toolbar = createToolbar(comp, ::fixBounds)
     panel.add(toolbar, BorderLayout.NORTH)
     panel.add(comp, BorderLayout.CENTER)
 
-    return { lineNumber ->
+    return comp to { lineNumber ->
         lineNumberNodes.tailMap(lineNumber).firstEntry()?.let { (_, node) ->
             scrollCellToVisible(comp, node)
         }
@@ -164,17 +210,14 @@ private fun createSearchField(comp: mxGraphComponent, fixBounds: () -> Unit): JT
                 var scrolled = false
 
                 for (cell in vertices) {
-                    cell as mxCell
-                    if (cell.style == LINE_NUMBER_STYLE) {
-                        continue
-                    }
+                    val flow = (cell as mxCell).value as? FlowNode ?: continue
                     val texts = listOf(
                         graph.convertValueToString(cell),
                         graph.getToolTipForCell(cell),
                     )
 
                     if (searchText.isNotEmpty() && texts.any { searchText in it.lowercase() }) {
-                        graph.setCellStyle(HIGHLIGHT_STYLE, arrayOf(cell))
+                        flow.searchHighlight = true
                         if (!scrolled) {
                             comp.scrollCellToVisible(cell, true)
                             comp.zoomTo(1.2, true)
@@ -182,7 +225,7 @@ private fun createSearchField(comp: mxGraphComponent, fixBounds: () -> Unit): JT
                             scrolled = true
                         }
                     } else {
-                        graph.model.setStyle(cell, null)
+                        flow.searchHighlight = false
                     }
                 }
             }
@@ -202,6 +245,24 @@ private class MxFlowGraph : mxGraph() {
     override fun convertValueToString(cell: Any?): String {
         val flow = (cell as? mxCell)?.value as? FlowNode ?: return super.convertValueToString(cell)
         return flow.shortText
+    }
+
+    override fun getCellStyle(cell: Any?): MutableMap<String, Any> {
+        val defaultStyle = super.getCellStyle(cell)
+        val flow = (cell as? mxCell)?.value as? FlowNode ?: return defaultStyle
+        val styles = buildList {
+            when (flow.currentMatchStatus) {
+                MatchStatus.IGNORED -> add(IGNORED_STYLE)
+                MatchStatus.FAIL -> add(FAILED_STYLE)
+                MatchStatus.PARTIAL -> add(PARTIAL_STYLE)
+                MatchStatus.SUCCESS -> add(SUCCESS_STYLE)
+                null -> {}
+            }
+            if (flow.searchHighlight) {
+                add(HIGHLIGHT_STYLE)
+            }
+        }
+        return styles.fold(defaultStyle) { acc, style -> stylesheet.getCellStyle(style, acc) }
     }
 }
 
@@ -316,9 +377,39 @@ private fun setupStyles(graph: mxGraph) {
             mxConstants.STYLE_STROKEWIDTH to "2",
         )
     )
+    graph.stylesheet.putCellStyle(
+        IGNORED_STYLE,
+        mapOf(
+            mxConstants.STYLE_OPACITY to 20,
+            mxConstants.STYLE_TEXT_OPACITY to 20,
+            mxConstants.STYLE_STROKE_OPACITY to 20,
+            mxConstants.STYLE_FILL_OPACITY to 20,
+        )
+    )
+    graph.stylesheet.putCellStyle(
+        FAILED_STYLE,
+        mapOf(
+            mxConstants.STYLE_STROKECOLOR to JBColor.red.hexString,
+            mxConstants.STYLE_STROKEWIDTH to "2",
+        )
+    )
+    graph.stylesheet.putCellStyle(
+        PARTIAL_STYLE,
+        mapOf(
+            mxConstants.STYLE_STROKECOLOR to JBColor.orange.hexString,
+            mxConstants.STYLE_STROKEWIDTH to "2",
+        )
+    )
+    graph.stylesheet.putCellStyle(
+        SUCCESS_STYLE,
+        mapOf(
+            mxConstants.STYLE_STROKECOLOR to JBColor.green.hexString,
+            mxConstants.STYLE_STROKEWIDTH to "2",
+        )
+    )
 }
 
-private fun configureGraphComponent(comp: mxGraphComponent) {
+private fun configureGraphComponent(comp: mxGraphComponent, flowGraph: FlowGraph) {
     val graph = comp.graph
     graph.isCellsSelectable = false
     graph.isCellsEditable = false
@@ -333,6 +424,28 @@ private fun configureGraphComponent(comp: mxGraphComponent) {
     comp.graphControl.setOpaque(false)
     comp.verticalScrollBar.setUnitIncrement(16)
     comp.horizontalScrollBar.setUnitIncrement(16)
+
+    configureMouseListeners(comp, flowGraph)
+}
+
+private fun configureMouseListeners(comp: mxGraphComponent, flowGraph: FlowGraph) {
+    fun highlight(e: MouseEvent, soft: Boolean) {
+        val node = (comp.getCellAt(e.x, e.y) as mxCell?)?.value as? FlowNode
+        flowGraph.highlightMatches(node, soft)
+        comp.refresh()
+        e.consume()
+    }
+
+    comp.graphControl.addMouseListener(object : MouseAdapter() {
+        override fun mousePressed(e: MouseEvent) {
+            highlight(e, false)
+        }
+    })
+    comp.graphControl.addMouseMotionListener(object : MouseAdapter() {
+        override fun mouseMoved(e: MouseEvent) {
+            highlight(e, true)
+        }
+    })
 }
 
 private val Color.hexString get() = "#%06X".format(rgb)
