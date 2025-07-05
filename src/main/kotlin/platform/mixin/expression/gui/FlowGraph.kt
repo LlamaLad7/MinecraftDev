@@ -110,8 +110,10 @@ class FlowGroup(val root: FlowNode, method: MethodNode) : Comparable<FlowGroup> 
 }
 
 class FlowGraph(val groups: SortedSet<FlowGroup>, val flowMap: FlowMap, val allNodes: Map<FlowValue, FlowNode>) {
-    private var highlightRoot: FlowNode? = null
+    var highlightRoot: FlowNode? = null
+        private set
     private var hardHighlight = false
+    private var hasMatchData = false
 
     operator fun iterator() = groups.iterator()
 
@@ -135,13 +137,22 @@ class FlowGraph(val groups: SortedSet<FlowGroup>, val flowMap: FlowMap, val allN
     }
 
     fun resetMatches() {
+        hasMatchData = false
         highlightRoot = null
+        hardHighlight = false
         for (node in allNodes.values) {
             node.resetMatches()
         }
     }
 
+    fun markHasMatchData() {
+        hasMatchData = true
+    }
+
     fun highlightMatches(root: FlowNode?, soft: Boolean) {
+        if (!hasMatchData) {
+            return
+        }
         if (hardHighlight && soft) {
             return
         }

@@ -21,14 +21,21 @@
 package com.demonwav.mcdev.platform.mixin.expression.gui
 
 import com.demonwav.mcdev.platform.mixin.expression.MEExpressionMatchUtil
+import com.demonwav.mcdev.util.constantStringValue
+import com.intellij.icons.AllIcons
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.progress.checkCanceled
 import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiModifierList
-import com.llamalad7.mixinextras.expression.impl.ast.expressions.Expression
+import com.intellij.psi.SmartPointerManager
+import com.intellij.ui.components.JBLayeredPane
+import com.intellij.util.ui.JBUI
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import com.mxgraph.layout.hierarchical.mxHierarchicalLayout
 import com.mxgraph.model.mxCell
@@ -37,16 +44,25 @@ import com.mxgraph.util.mxEvent
 import com.mxgraph.util.mxRectangle
 import com.mxgraph.view.mxGraph
 import java.awt.BorderLayout
+import java.awt.Component
 import java.awt.Dimension
+import java.awt.FlowLayout
 import java.awt.Rectangle
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.util.SortedMap
+import java.util.concurrent.Callable
+import javax.swing.Icon
 import javax.swing.JButton
+import javax.swing.JComponent
 import javax.swing.JLabel
+import javax.swing.JLayeredPane
 import javax.swing.JPanel
 import javax.swing.JTextField
 import javax.swing.JToolBar
+import javax.swing.SwingUtilities
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import kotlinx.coroutines.Dispatchers
@@ -65,7 +81,7 @@ class FlowDiagram(
     private val clazz: ClassNode,
     val method: MethodNode,
     val panel: JPanel,
-    val scrollToLine: (Int) -> Unit,
+    val callbacks: FlowDiagramCallbacks,
 ) {
     companion object {
         suspend fun create(project: Project, clazz: ClassNode, method: MethodNode): FlowDiagram? {
@@ -74,22 +90,50 @@ class FlowDiagram(
         }
     }
 
-    fun populateMatchStatuses(module: Module, expression: Expression, modifierList: PsiModifierList) {
-        flowGraph.resetMatches()
-        ReadAction.run<Nothing> {
-            val pool = MEExpressionMatchUtil.createIdentifierPoolFactory(module, clazz, modifierList)(method)
-            for ((virtualInsn, root) in flowGraph.flowMap) {
-                val node = flowGraph.allNodes.getValue(root)
-                MEExpressionMatchUtil.findMatchingInstructions(
-                    clazz, method, pool, flowGraph.flowMap, expression, listOf(virtualInsn),
-                    ExpressionContext.Type.MODIFY_EXPRESSION_VALUE, // most permissive
-                    false,
-                    node::reportMatchStatus,
-                    node::reportPartialMatch
-                ) {}
-            }
+    var matchExpression: ((jump: Boolean) -> Unit) = {}
+        private set
+
+    fun populateMatchStatuses(
+        module: Module,
+        currentStringLit: PsiLiteralExpression,
+        currentModifierList: PsiModifierList
+    ) {
+        val stringRef = SmartPointerManager.getInstance(module.project).createSmartPsiElementPointer(currentStringLit)
+        val modifierListRef =
+            SmartPointerManager.getInstance(module.project).createSmartPsiElementPointer(currentModifierList)
+        this.matchExpression = { jump ->
+            val oldHighlightRoot = flowGraph.highlightRoot
+            callbacks.setButtonsVisible(false)
+            flowGraph.resetMatches()
+            ReadAction.nonBlocking(Callable run@{
+                val stringLit = stringRef.element ?: return@run
+                val modifierList = modifierListRef.element ?: return@run
+                val expression = stringLit.constantStringValue?.let(MEExpressionMatchUtil::createExpression)
+                    ?: return@run
+                val pool = MEExpressionMatchUtil.createIdentifierPoolFactory(module, clazz, modifierList)(method)
+                for ((virtualInsn, root) in flowGraph.flowMap) {
+                    val node = flowGraph.allNodes.getValue(root)
+                    MEExpressionMatchUtil.findMatchingInstructions(
+                        clazz, method, pool, flowGraph.flowMap, expression, listOf(virtualInsn),
+                        ExpressionContext.Type.MODIFY_EXPRESSION_VALUE, // most permissive
+                        false,
+                        node::reportMatchStatus,
+                        node::reportPartialMatch
+                    ) {}
+                }
+                flowGraph.markHasMatchData()
+                flowGraph.highlightMatches(oldHighlightRoot, false)
+            })
+                .finishOnUiThread(ModalityState.nonModal()) {
+                    if (jump) {
+                        showBestNode()
+                    }
+                    comp.refresh()
+                    callbacks.setButtonsVisible(true)
+                }
+                .submit(ApplicationManager.getApplication()::executeOnPooledThread)
         }
-        showBestNode()
+        matchExpression(true)
     }
 
     private fun showBestNode() {
@@ -100,11 +144,28 @@ class FlowDiagram(
             ?: return
         flowGraph.highlightMatches(bestNode, false)
         comp.scrollCellToVisible(bestCell, true)
+    }
+
+    fun clearExpression() {
+        callbacks.setButtonsVisible(false)
+        flowGraph.resetMatches()
         comp.refresh()
     }
 }
 
+class FlowDiagramCallbacks(val scrollToLine: (Int) -> Unit, val setButtonsVisible: (Boolean) -> Unit)
+
+private class FlowDiagramRef {
+    lateinit var diagram: FlowDiagram
+        private set
+
+    fun bind(newDiagram: FlowDiagram) {
+        diagram = newDiagram
+    }
+}
+
 private suspend fun buildDiagram(flowGraph: FlowGraph, clazz: ClassNode, method: MethodNode): FlowDiagram {
+    val diagramRef = FlowDiagramRef()
     val graph = MxFlowGraph()
     setupStyles(graph)
     val groupedCells = addGraphContent(graph, flowGraph)
@@ -112,20 +173,21 @@ private suspend fun buildDiagram(flowGraph: FlowGraph, clazz: ClassNode, method:
     val calculateBounds = layOutGraph(graph, groupedCells, lineNumberNodes)
 
     val panel: JPanel
-    val (comp, scrollToLine) = withContext(Dispatchers.EDT) {
+    val (comp, callbacks) = withContext(Dispatchers.EDT) {
         panel = JPanel(BorderLayout())
-        displayGraphComponent(flowGraph, graph, panel, calculateBounds, lineNumberNodes)
+        displayGraphComponent(diagramRef, flowGraph, graph, panel, calculateBounds, lineNumberNodes)
     }
-    return FlowDiagram(comp, flowGraph, clazz, method, panel, scrollToLine)
+    return FlowDiagram(comp, flowGraph, clazz, method, panel, callbacks).also(diagramRef::bind)
 }
 
 private fun displayGraphComponent(
+    diagramRef: FlowDiagramRef,
     flowGraph: FlowGraph,
     graph: mxGraph,
     panel: JPanel,
     calculateBounds: () -> Dimension,
     lineNumberNodes: SortedMap<Int, mxCell>
-): Pair<mxGraphComponent, (Int) -> Unit> {
+): Pair<mxGraphComponent, FlowDiagramCallbacks> {
     val comp = mxGraphComponent(graph)
     fun fixBounds() {
         comp.graphControl.preferredSize = calculateBounds()
@@ -139,14 +201,70 @@ private fun displayGraphComponent(
 
     val toolbar = createToolbar(comp, ::fixBounds)
     panel.add(toolbar, BorderLayout.NORTH)
-    panel.add(comp, BorderLayout.CENTER)
 
-    return comp to { lineNumber ->
-        lineNumberNodes.tailMap(lineNumber).firstEntry()?.let { (_, node) ->
-            scrollCellToVisible(comp, node)
+    val container = JBLayeredPane().apply {
+        add(comp, JLayeredPane.DEFAULT_LAYER as Any)
+    }
+
+    val buttonWrapper = setupFloatingButtons(diagramRef, comp, container)
+    panel.add(container, BorderLayout.CENTER)
+
+    return comp to FlowDiagramCallbacks(
+        scrollToLine = { lineNumber ->
+            lineNumberNodes.tailMap(lineNumber).firstEntry()?.let { (_, node) ->
+                scrollCellToVisible(comp, node)
+            }
+        },
+        setButtonsVisible = { visible ->
+            buttonWrapper.isVisible = visible
+        },
+    )
+}
+
+private fun setupFloatingButtons(diagramRef: FlowDiagramRef, comp: mxGraphComponent, container: JBLayeredPane): JComponent {
+    val refreshButton = makeButton(AllIcons.Actions.Refresh, "Re-match Expression") {
+        diagramRef.diagram.matchExpression(false)
+    }
+
+    val closeButton = makeButton(AllIcons.Actions.CloseDarkGrey, "Clear Match Data") {
+        diagramRef.diagram.clearExpression()
+    }
+
+    val buttonWrapper = JPanel().apply {
+        isVisible = false
+        layout = FlowLayout(FlowLayout.RIGHT, 3, 5)
+        alignmentX = Component.RIGHT_ALIGNMENT
+        alignmentY = Component.TOP_ALIGNMENT
+        border = JBUI.Borders.empty(4)
+        add(refreshButton)
+        add(closeButton)
+    }
+
+    container.add(buttonWrapper, JLayeredPane.PALETTE_LAYER as Any)
+
+    container.addComponentListener(object : ComponentAdapter() {
+        override fun componentResized(e: ComponentEvent) {
+            comp.setBounds(0, 0, container.width, container.height)
+
+            val parentWidth = container.width
+            val childWidth = buttonWrapper.preferredSize.width
+            val childHeight = buttonWrapper.preferredSize.height
+            val margin = 20
+
+            buttonWrapper.setBounds(parentWidth - childWidth - margin, margin, childWidth, childHeight)
+        }
+    })
+    return buttonWrapper
+}
+
+private fun makeButton(icon: Icon, tooltip: String, action: () -> Unit): JButton =
+    JButton(icon).apply {
+        toolTipText = tooltip
+        preferredSize = Dimension(32, 32)
+        addActionListener {
+            action()
         }
     }
-}
 
 private fun scrollCellToVisible(comp: mxGraphComponent, node: mxCell) {
     // Scrolls the cell to the top of the screen if possible

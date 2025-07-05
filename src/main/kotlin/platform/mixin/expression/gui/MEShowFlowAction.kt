@@ -96,14 +96,13 @@ class MEShowFlowAction : AnAction() {
                     .any { it.line == lineNumber }
             } ?: return null
             return Resolved(clazz, method) {
-                it.scrollToLine(lineNumber)
+                it.callbacks.scrollToLine(lineNumber)
             }
         }
 
         fun resolveExpressionTarget(): Resolved? {
             val module = e.getData(LangDataKeys.MODULE) ?: return null
             val string = element.parentOfType<PsiLiteralExpression>() ?: return null
-            val expression = string.constantStringValue?.let(MEExpressionMatchUtil::createExpression) ?: return null
             val modifierList = string.parentOfType<PsiMethod>()?.modifierList ?: return null
             if (InjectedLanguageManager.getInstance(project).getInjectedPsiFiles(string).orEmpty()
                     .none { it.first is MEExpressionFile }
@@ -119,7 +118,7 @@ class MEShowFlowAction : AnAction() {
             val target = injector.resolveTarget(injectorAnnotation, targetClass).singleOrNull()
                 as? MethodTargetMember ?: return null
             return Resolved(target.classAndMethod.clazz, target.classAndMethod.method) {
-                it.populateMatchStatuses(module, expression, modifierList)
+                it.populateMatchStatuses(module, string, modifierList)
             }
         }
 
