@@ -28,15 +28,15 @@ import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.editor.colors.EditorFontType
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.progress.checkCanceled
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
+import com.intellij.pom.Navigatable
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiModifierList
 import com.intellij.psi.SmartPointerManager
-import com.intellij.ui.components.JBLayeredPane
-import com.intellij.util.ui.JBUI
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import com.mxgraph.layout.hierarchical.mxHierarchicalLayout
 import com.mxgraph.model.mxCell
@@ -45,21 +45,18 @@ import com.mxgraph.util.mxEvent
 import com.mxgraph.util.mxRectangle
 import com.mxgraph.view.mxGraph
 import java.awt.BorderLayout
-import java.awt.Component
 import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.Rectangle
-import java.awt.event.ComponentAdapter
-import java.awt.event.ComponentEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.util.SortedMap
 import java.util.concurrent.Callable
+import javax.swing.BorderFactory
+import javax.swing.BoxLayout
 import javax.swing.Icon
 import javax.swing.JButton
-import javax.swing.JComponent
 import javax.swing.JLabel
-import javax.swing.JLayeredPane
 import javax.swing.JPanel
 import javax.swing.JTextField
 import javax.swing.JToolBar
@@ -92,6 +89,8 @@ class FlowDiagram(
 
     var matchExpression: ((jump: Boolean) -> Unit) = {}
         private set
+    var jumpToExpression: () -> Unit = {}
+        private set
 
     fun populateMatchStatuses(
         module: Module,
@@ -103,13 +102,13 @@ class FlowDiagram(
             SmartPointerManager.getInstance(module.project).createSmartPsiElementPointer(currentModifierList)
         this.matchExpression = { jump ->
             val oldHighlightRoot = flowGraph.highlightRoot
-            callbacks.setButtonsVisible(false)
+            callbacks.setMatchToolbarVisible(false)
             flowGraph.resetMatches()
-            ReadAction.nonBlocking(Callable run@{
-                val stringLit = stringRef.element ?: return@run
-                val modifierList = modifierListRef.element ?: return@run
+            ReadAction.nonBlocking(Callable<String?> run@{
+                val stringLit = stringRef.element ?: return@run null
+                val modifierList = modifierListRef.element ?: return@run null
                 val expression = stringLit.constantStringValue?.let(MEExpressionMatchUtil::createExpression)
-                    ?: return@run
+                    ?: return@run null
                 val pool = MEExpressionMatchUtil.createIdentifierPoolFactory(module, clazz, modifierList)(method)
                 for ((virtualInsn, root) in flowGraph.flowMap) {
                     val node = flowGraph.allNodes.getValue(root)
@@ -123,15 +122,26 @@ class FlowDiagram(
                 }
                 flowGraph.markHasMatchData()
                 flowGraph.highlightMatches(oldHighlightRoot, false)
+                StringUtil.escapeStringCharacters(expression.src.toString())
             })
-                .finishOnUiThread(ModalityState.nonModal()) {
+                .finishOnUiThread(ModalityState.nonModal()) { exprText ->
+                    exprText ?: return@finishOnUiThread
                     if (jump) {
                         showBestNode()
                     }
                     comp.refresh()
-                    callbacks.setButtonsVisible(true)
+                    callbacks.setExprText(exprText)
+                    callbacks.setMatchToolbarVisible(true)
                 }
                 .submit(ApplicationManager.getApplication()::executeOnPooledThread)
+        }
+        this.jumpToExpression = {
+            ReadAction.run<Nothing> {
+                val target = stringRef.element
+                if (target is Navigatable && target.isValid && target.canNavigate()) {
+                    target.navigate(true)
+                }
+            }
         }
         matchExpression(true)
     }
@@ -147,13 +157,19 @@ class FlowDiagram(
     }
 
     fun clearExpression() {
-        callbacks.setButtonsVisible(false)
+        callbacks.setMatchToolbarVisible(false)
         flowGraph.resetMatches()
         comp.refresh()
+        matchExpression = {}
+        jumpToExpression = {}
     }
 }
 
-class FlowDiagramCallbacks(val scrollToLine: (Int) -> Unit, val setButtonsVisible: (Boolean) -> Unit)
+class FlowDiagramCallbacks(
+    val scrollToLine: (Int) -> Unit,
+    val setMatchToolbarVisible: (Boolean) -> Unit,
+    val setExprText: (String) -> Unit
+)
 
 private class FlowDiagramRef {
     lateinit var diagram: FlowDiagram
@@ -199,15 +215,8 @@ private fun displayGraphComponent(
     fixBounds()
     configureGraphComponent(comp, flowGraph)
 
-    val toolbar = createToolbar(comp, ::fixBounds)
-    panel.add(toolbar, BorderLayout.NORTH)
-
-    val container = JBLayeredPane().apply {
-        add(comp, JLayeredPane.DEFAULT_LAYER as Any)
-    }
-
-    val buttonWrapper = setupFloatingButtons(diagramRef, comp, container)
-    panel.add(container, BorderLayout.CENTER)
+    val (matchToolbar, setExprText) = createToolbars(diagramRef, comp, panel, ::fixBounds)
+    panel.add(comp, BorderLayout.CENTER)
 
     return comp to FlowDiagramCallbacks(
         scrollToLine = { lineNumber ->
@@ -215,46 +224,11 @@ private fun displayGraphComponent(
                 scrollCellToVisible(comp, node)
             }
         },
-        setButtonsVisible = { visible ->
-            buttonWrapper.isVisible = visible
+        setMatchToolbarVisible = { visible ->
+            matchToolbar.isVisible = visible
         },
+        setExprText = setExprText,
     )
-}
-
-private fun setupFloatingButtons(diagramRef: FlowDiagramRef, comp: mxGraphComponent, container: JBLayeredPane): JComponent {
-    val refreshButton = makeButton(AllIcons.Actions.Refresh, "Re-match Expression") {
-        diagramRef.diagram.matchExpression(false)
-    }
-
-    val closeButton = makeButton(AllIcons.Actions.CloseDarkGrey, "Clear Match Data") {
-        diagramRef.diagram.clearExpression()
-    }
-
-    val buttonWrapper = JPanel().apply {
-        isVisible = false
-        layout = FlowLayout(FlowLayout.RIGHT, 3, 5)
-        alignmentX = Component.RIGHT_ALIGNMENT
-        alignmentY = Component.TOP_ALIGNMENT
-        border = JBUI.Borders.empty(4)
-        add(refreshButton)
-        add(closeButton)
-    }
-
-    container.add(buttonWrapper, JLayeredPane.PALETTE_LAYER as Any)
-
-    container.addComponentListener(object : ComponentAdapter() {
-        override fun componentResized(e: ComponentEvent) {
-            comp.setBounds(0, 0, container.width, container.height)
-
-            val parentWidth = container.width
-            val childWidth = buttonWrapper.preferredSize.width
-            val childHeight = buttonWrapper.preferredSize.height
-            val margin = 20
-
-            buttonWrapper.setBounds(parentWidth - childWidth - margin, margin, childWidth, childHeight)
-        }
-    })
-    return buttonWrapper
 }
 
 private fun makeButton(icon: Icon, tooltip: String, action: () -> Unit): JButton =
@@ -279,7 +253,24 @@ private fun scrollCellToVisible(comp: mxGraphComponent, node: mxCell) {
     comp.graphControl.scrollRectToVisible(targetRect)
 }
 
-private fun createToolbar(comp: mxGraphComponent, fixBounds: () -> Unit): JToolBar {
+private fun createToolbars(
+    diagramRef: FlowDiagramRef,
+    comp: mxGraphComponent,
+    panel: JPanel,
+    fixBounds: () -> Unit
+): Pair<JToolBar, (String) -> Unit> {
+    val container = JPanel().apply {
+        layout = BoxLayout(this, BoxLayout.Y_AXIS)
+    }
+    container.add(createViewToolbar(comp, fixBounds))
+    val (matchToolbar, setExprText) = createMatchToolbar(diagramRef)
+    container.add(matchToolbar)
+
+    panel.add(container, BorderLayout.NORTH)
+    return matchToolbar to setExprText
+}
+
+private fun createViewToolbar(comp: mxGraphComponent, fixBounds: () -> Unit): JToolBar {
     val toolbar = JToolBar()
     toolbar.isFloatable = false
     val zoomInButton = JButton("+")
@@ -298,6 +289,49 @@ private fun createToolbar(comp: mxGraphComponent, fixBounds: () -> Unit): JToolB
     toolbar.add(JLabel("Search: "))
     toolbar.add(createSearchField(comp, fixBounds))
     return toolbar
+}
+
+private fun createMatchToolbar(diagramRef: FlowDiagramRef): Pair<JToolBar, (String) -> Unit> {
+    val helpLabel = JLabel("Showing matches for:").apply {
+        border = BorderFactory.createEmptyBorder(0, 6, 0, 0)
+    }
+
+    val exprText = JLabel(" ").apply {
+        font = EditorColorsManager.getInstance().globalScheme.getFont(EditorFontType.PLAIN)
+        border = BorderFactory.createEmptyBorder(0, 15, 0, 5)
+        this.addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                if (e.clickCount == 2) {
+                    diagramRef.diagram.jumpToExpression()
+                }
+            }
+        })
+    }
+
+    val refreshButton = makeButton(AllIcons.Actions.Refresh, "Re-match Expression") {
+        diagramRef.diagram.matchExpression(false)
+    }
+    val closeButton = makeButton(AllIcons.Actions.CloseDarkGrey, "Clear Match Data") {
+        diagramRef.diagram.clearExpression()
+    }
+    val buttonPanel = JPanel().apply {
+        layout = FlowLayout(FlowLayout.RIGHT, 3, 3)
+        isOpaque = false
+        add(refreshButton)
+        add(closeButton)
+    }
+
+    return JToolBar().apply {
+        isVisible = false
+        isFloatable = false
+        layout = BorderLayout()
+        add(helpLabel, BorderLayout.WEST)
+        add(exprText, BorderLayout.CENTER)
+        add(buttonPanel, BorderLayout.EAST)
+    } to {
+        exprText.text = it
+        exprText.toolTipText = it
+    }
 }
 
 private fun createSearchField(comp: mxGraphComponent, fixBounds: () -> Unit): JTextField {
