@@ -352,8 +352,8 @@ private fun createSearchField(comp: mxGraphComponent, fixBounds: () -> Unit): JT
                 for (cell in vertices) {
                     val flow = (cell as mxCell).value as? FlowNode ?: continue
                     val texts = listOf(
-                        graph.convertValueToString(cell),
-                        graph.getToolTipForCell(cell),
+                        flow.shortText,
+                        flow.longText,
                     )
 
                     if (searchText.isNotEmpty() && texts.any { searchText in it.lowercase() }) {
@@ -379,16 +379,15 @@ private fun createSearchField(comp: mxGraphComponent, fixBounds: () -> Unit): JT
 private class MxFlowGraph(private val flowGraph: FlowGraph) : mxGraph() {
     override fun getToolTipForCell(cell: Any?): String? {
         val flow = (cell as? mxCell)?.value as? FlowNode ?: return super.getToolTipForCell(cell)
-        if (!flowGraph.shouldShowTooltips()) {
-            return null
-        }
         val lines = mutableListOf<String>()
-        flow.currentMatchResult?.let { match ->
-            lines += match.toString(
-                prefix = "`<span style='font-family: ${DiagramStyles.CURRENT_EDITOR_FONT};'>",
-                suffix = "</span>`",
-                transform = StringUtil::escapeXmlEntities
-            )
+        if (flowGraph.shouldShowTooltips()) {
+            flow.currentMatchResult?.let { match ->
+                lines += match.toString(
+                    prefix = "`<span style='font-family: ${DiagramStyles.CURRENT_EDITOR_FONT};'>",
+                    suffix = "</span>`",
+                    transform = StringUtil::escapeXmlEntities
+                )
+            }
         }
         lines += StringUtil.escapeXmlEntities(flow.longText).replace("\n", "<br>")
         return lines.joinToString(
