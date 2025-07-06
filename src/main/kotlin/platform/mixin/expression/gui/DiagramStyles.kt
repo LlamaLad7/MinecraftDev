@@ -11,7 +11,7 @@ import java.awt.Color
 object DiagramStyles {
     val DEFAULT_NODE
         get() = mapOf(
-            mxConstants.STYLE_FONTFAMILY to EditorColorsManager.getInstance().globalScheme.getFont(EditorFontType.PLAIN).family,
+            mxConstants.STYLE_FONTFAMILY to CURRENT_EDITOR_FONT.family,
             mxConstants.STYLE_ROUNDED to true,
             mxConstants.STYLE_FILLCOLOR to JBUI.CurrentTheme.Button.buttonColorStart().hexString,
             mxConstants.STYLE_FONTCOLOR to UIUtil.getLabelForeground().hexString,
@@ -57,6 +57,8 @@ object DiagramStyles {
             mxConstants.STYLE_STROKECOLOR to JBColor.green.hexString,
             mxConstants.STYLE_STROKEWIDTH to "1.5",
         )
+    val CURRENT_EDITOR_FONT
+        get() = EditorColorsManager.getInstance().globalScheme.getFont(EditorFontType.PLAIN)
 }
 
 private val Color.hexString get() = "#%06X".format(rgb)

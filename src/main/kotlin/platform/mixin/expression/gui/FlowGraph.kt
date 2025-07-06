@@ -41,8 +41,8 @@ enum class FlowMatchStatus {
 data class FlowMatchResult(val status: FlowMatchStatus, val attempted: String?) : Comparable<FlowMatchResult> {
     override fun compareTo(other: FlowMatchResult) = status.compareTo(other.status)
 
-    override fun toString(): String {
-        val attempted = '`' + StringUtil.escapeStringCharacters(attempted.toString()) + '`'
+    fun toString(prefix: String, suffix: String, transform: (String) -> String): String {
+        val attempted = prefix + transform(StringUtil.escapeStringCharacters(attempted.toString())) + suffix
         return when (status) {
             FlowMatchStatus.IGNORED -> "Ignored"
             FlowMatchStatus.FAIL -> "Failed to match $attempted"

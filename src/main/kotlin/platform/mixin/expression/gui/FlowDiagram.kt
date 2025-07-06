@@ -28,7 +28,6 @@ import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.editor.colors.EditorColorsManager
-import com.intellij.openapi.editor.colors.EditorFontType
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.progress.checkCanceled
 import com.intellij.openapi.project.Project
@@ -297,7 +296,7 @@ private fun createMatchToolbar(diagramRef: FlowDiagramRef): Pair<JToolBar, (Stri
     }
 
     val exprText = JLabel(" ").apply {
-        font = EditorColorsManager.getInstance().globalScheme.getFont(EditorFontType.PLAIN)
+        font = DiagramStyles.CURRENT_EDITOR_FONT
         border = BorderFactory.createEmptyBorder(0, 15, 0, 5)
         this.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
@@ -385,16 +384,18 @@ private class MxFlowGraph(private val flowGraph: FlowGraph) : mxGraph() {
         }
         val lines = mutableListOf<String>()
         flow.currentMatchResult?.let { match ->
-            lines += match.toString()
+            lines += match.toString(
+                prefix = "`<span style='font-family: ${DiagramStyles.CURRENT_EDITOR_FONT};'>",
+                suffix = "</span>`",
+                transform = StringUtil::escapeXmlEntities
+            )
         }
-        lines += flow.longText
+        lines += StringUtil.escapeXmlEntities(flow.longText).replace("\n", "<br>")
         return lines.joinToString(
             prefix = "<html>",
             separator = "<br><br>",
             postfix = "</html>"
-        ) {
-            StringUtil.escapeXmlEntities(it).replace("\n", "<br>")
-        }
+        )
     }
 
     override fun convertValueToString(cell: Any?): String {
