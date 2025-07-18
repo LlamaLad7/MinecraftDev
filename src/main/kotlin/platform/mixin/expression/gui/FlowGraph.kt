@@ -138,6 +138,8 @@ class FlowGraph(val groups: SortedSet<FlowGroup>, val flowMap: FlowMap, val allN
     private var hardHighlight = false
     private var hasMatchData = false
 
+    val orderedNodes get() = groups.asSequence().flatMap { it.root.dfs() }
+
     operator fun iterator() = groups.iterator()
 
     companion object {

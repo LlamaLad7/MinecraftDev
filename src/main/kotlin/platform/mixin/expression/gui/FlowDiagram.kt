@@ -147,7 +147,7 @@ class FlowDiagram(
     }
 
     private fun showBestNode() {
-        val bestNode = flowGraph.allNodes.values.maxBy { it.matchScore }
+        val bestNode = flowGraph.orderedNodes.maxBy { it.matchScore }
         flowGraph.highlightMatches(bestNode, false)
         ui.scrollToNode(bestNode)
     }
