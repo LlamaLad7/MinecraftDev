@@ -90,7 +90,7 @@ class MEFlowWindowService(private val project: Project, private val scope: Corou
                 FlowDiagram.create(project, clazz, method)
             } ?: return@compute null
             val container = JPanel(BorderLayout())
-            container.add(diagram.panel, BorderLayout.CENTER)
+            container.add(diagram.ui, BorderLayout.CENTER)
             val content = ContentFactory.getInstance().createContent(container, getTabName(clazz, method), false)
             content.putUserData(FLOW_DIAGRAM_KEY, diagram)
             content

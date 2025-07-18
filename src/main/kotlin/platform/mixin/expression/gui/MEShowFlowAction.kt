@@ -118,7 +118,7 @@ class MEShowFlowAction : AnAction() {
             }
             return methods.map { method ->
                 Resolved(clazz, method) {
-                    it.callbacks.scrollToLine(lineNumber)
+                    it.ui.scrollToLine(lineNumber)
                 }
             }
         }
