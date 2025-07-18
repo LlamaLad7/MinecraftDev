@@ -20,6 +20,7 @@
 
 package com.demonwav.mcdev.platform.mixin.expression.gui
 
+import com.demonwav.mcdev.platform.mixin.util.shortName
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project

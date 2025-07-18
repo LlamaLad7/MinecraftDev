@@ -183,6 +183,12 @@ fun internalNameToShortName(internalName: String) = internalName.substringAfterL
 val ClassNode.shortName
     get() = internalNameToShortName(name)
 
+val Type.shortName get() = className.substringAfterLast('.').replace('$', '.')
+
+fun shortDescString(desc: String) = Type.getArgumentTypes(desc).joinToString(prefix = "(", postfix = ")") {
+    it.shortName
+}
+
 private val LOAD_CLASS_FILE_BYTES: Method? = runCatching {
     com.intellij.byteCodeViewer.ByteCodeViewerManager::class.java
         .getDeclaredMethod("loadClassFileBytes", PsiClass::class.java)

@@ -21,6 +21,8 @@
 package com.demonwav.mcdev.platform.mixin.expression.gui
 
 import com.demonwav.mcdev.platform.mixin.util.LocalVariables
+import com.demonwav.mcdev.platform.mixin.util.shortDescString
+import com.demonwav.mcdev.platform.mixin.util.shortName
 import com.demonwav.mcdev.platform.mixin.util.textify
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.Project
@@ -81,13 +83,7 @@ fun FlowValue.longString(): String =
         insn.textify()
     }
 
-val Type.shortName get() = className.substringAfterLast('.').replace('$', '.')
-
 private fun shortOwner(owner: String) = Type.getObjectType(owner).shortName
-
-private fun shortParams(desc: String) = Type.getArgumentTypes(desc).joinToString(prefix = "(", postfix = ")") {
-    it.shortName
-}
 
 private fun constantString(cst: Any): String {
     if (cst is Int) {
@@ -115,7 +111,7 @@ private fun instantiationString(info: InstantiationInfo): String {
         return start
     }
     val call = insn.insn as? MethodInsnNode ?: return start
-    return start + shortParams(call.desc)
+    return start + shortDescString(call.desc)
 }
 
 private fun lmfString(info: LMFInfo): String {
@@ -154,7 +150,7 @@ private fun methodString(insn: MethodInsnNode, methodCallType: MethodCallType): 
         MethodCallType.SUPER -> "super"
         MethodCallType.STATIC -> shortOwner(insn.owner)
     }
-    return "$owner.${insn.name}${shortParams(insn.desc)}"
+    return "$owner.${insn.name}${shortDescString(insn.desc)}"
 }
 
 private fun castString(type: Type): String = "(${type.shortName})"
