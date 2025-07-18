@@ -34,7 +34,7 @@ changelog-plugin = { module = "org.jetbrains.changelog:org.jetbrains.changelog.g
 coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines" }
 
 mappingIo = "net.fabricmc:mapping-io:0.2.1"
-mixinExtras-expressions = "io.github.llamalad7:mixinextras-expressions:0.0.5"
+mixinExtras-expressions = "io.github.llamalad7:mixinextras-expressions:0.0.6"
 jgraphx = "com.github.vlsi.mxgraph:jgraphx:4.2.2"
 
 # GrammarKit
