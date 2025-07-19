@@ -46,8 +46,6 @@
 
 package com.demonwav.mcdev.platform.mixin.util
 
-import com.demonwav.mcdev.facet.MinecraftFacet
-import com.demonwav.mcdev.platform.mixin.MixinModuleType
 import com.demonwav.mcdev.platform.mixin.handlers.desugar.DesugarUtil
 import com.demonwav.mcdev.util.SemanticVersion
 import com.demonwav.mcdev.util.cached
@@ -66,7 +64,6 @@ import com.intellij.psi.PsiForeachStatement
 import com.intellij.psi.PsiLambdaExpression
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifier
-import com.intellij.psi.PsiParameter
 import com.intellij.psi.PsiStatement
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypes
@@ -412,7 +409,7 @@ object LocalVariables {
 
     private val resurrectLocalsChange = SemanticVersion.release(0, 8, 3)
     private fun detectCurrentSettings(module: Module): Settings? {
-        val mixinVersion = MinecraftFacet.getInstance(module, MixinModuleType)?.mixinVersion ?: return null
+        val mixinVersion = module.mixinVersion ?: return null
         return if (mixinVersion < resurrectLocalsChange) {
             Settings.NO_RESURRECT
         } else {
