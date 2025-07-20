@@ -89,5 +89,7 @@ class ModifyVariableHandler : InjectorAnnotationHandler() {
         return result
     }
 
+    override val isShiftAlwaysDiscouraged = false
+
     override val mixinExtrasExpressionContextType = ExpressionContext.Type.MODIFY_VARIABLE
 }

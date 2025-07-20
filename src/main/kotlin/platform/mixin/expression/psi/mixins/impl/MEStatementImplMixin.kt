@@ -35,4 +35,9 @@ abstract class MEStatementImplMixin(node: ASTNode) : ASTWrapperPsiElement(node),
     override fun getInputExprs(): List<MEExpression> {
         throw UnsupportedOperationException("Please implement getInputExprs for your statement type")
     }
+
+    override val isShiftDiscouraged: Boolean
+        get() {
+            throw UnsupportedOperationException("Please implement isShiftDiscouraged for your statement type")
+        }
 }

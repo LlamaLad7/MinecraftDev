@@ -33,4 +33,6 @@ abstract class METhisExpressionImplMixin(node: ASTNode) : MEExpressionImpl(node)
     }
 
     override fun getInputExprs() = emptyList<MEExpression>()
+
+    override val isShiftDiscouraged = true
 }

@@ -95,6 +95,8 @@ abstract class MEBinaryExpressionImplMixin(node: ASTNode) : MEExpressionImpl(nod
         listOfNotNull(leftExpr, rightExpr)
     }
 
+    override val isShiftDiscouraged = true
+
     protected abstract val leftExpr: MEExpression
     protected abstract val rightExpr: MEExpression?
 

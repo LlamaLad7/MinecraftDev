@@ -90,6 +90,7 @@ dependencies {
         exclude(group = "org.ow2.asm", module = "asm-debug-all")
     }
     testLibs(libs.mixinExtras.common)
+    implementation(libs.jgraphx)
 
     implementation(libs.mappingIo)
     implementation(libs.bundles.asm)

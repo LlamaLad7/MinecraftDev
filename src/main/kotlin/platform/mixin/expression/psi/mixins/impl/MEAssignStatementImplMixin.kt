@@ -51,6 +51,8 @@ abstract class MEAssignStatementImplMixin(node: ASTNode) : MEStatementImpl(node)
 
     override fun getInputExprs() = targetExpr.getInputExprs() + listOfNotNull(rightExpr)
 
+    override val isShiftDiscouraged = false
+
     protected abstract val targetExpr: MEExpression
     protected abstract val rightExpr: MEExpression?
 }

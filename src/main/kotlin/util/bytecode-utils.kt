@@ -25,12 +25,15 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiArrayType
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiClassType
+import com.intellij.psi.PsiDisjunctionType
 import com.intellij.psi.PsiField
+import com.intellij.psi.PsiIntersectionType
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiPrimitiveType
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypes
+import com.intellij.psi.PsiWildcardType
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.TypeConversionUtil
 import org.jetbrains.plugins.groovy.lang.resolve.processors.inference.type
@@ -91,6 +94,9 @@ private fun PsiType.appendDescriptor(builder: StringBuilder): StringBuilder {
         is PsiPrimitiveType -> builder.append(internalName)
         is PsiArrayType -> componentType.appendDescriptor(builder.append('['))
         is PsiClassType -> appendInternalName(builder.append('L')).append(';')
+        is PsiWildcardType -> extendsBound.appendDescriptor(builder)
+        is PsiIntersectionType -> conjuncts.first().appendDescriptor(builder)
+        is PsiDisjunctionType -> leastUpperBound.appendDescriptor(builder)
         else -> throw IllegalArgumentException("Unsupported PsiType: $this")
     }
 }

@@ -59,7 +59,7 @@ class FieldInjectionPoint : QualifiedInjectionPoint<PsiField>() {
         completeExtraStringAtAttribute(editor, reference, "target")
     }
 
-    override fun isShiftDiscouraged(shift: Int): Boolean {
+    override fun isShiftDiscouraged(shift: Int, at: PsiAnnotation): Boolean {
         // allow shift after the field access
         return shift != 0 && shift != 1
     }

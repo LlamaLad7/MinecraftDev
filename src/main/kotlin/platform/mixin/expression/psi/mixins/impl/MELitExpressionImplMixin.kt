@@ -115,6 +115,8 @@ abstract class MELitExpressionImplMixin(node: ASTNode) : MEExpressionImpl(node),
 
     override fun getInputExprs() = emptyList<MEExpression>()
 
+    override val isShiftDiscouraged = true
+
     private val Any?.widened: Any? get() = when (this) {
         is Int -> toLong()
         is Float -> toDouble()

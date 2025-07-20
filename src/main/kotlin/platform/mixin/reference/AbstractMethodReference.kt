@@ -105,7 +105,7 @@ abstract class AbstractMethodReference : PolyReferenceResolver(), MixinReference
         return targets.any { it.findMethods(MemberReference(targetReference.name)).count() > 1 }
     }
 
-    private fun resolve(context: PsiElement): Sequence<ClassAndMethodNode>? {
+    fun resolve(context: PsiElement): Sequence<ClassAndMethodNode>? {
         val targets = getTargets(context) ?: return null
         val targetedMethods = when (context) {
             is PsiArrayInitializerMemberValue -> context.initializers.mapNotNull { it.constantStringValue }

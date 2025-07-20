@@ -33,5 +33,7 @@ abstract class MEParenthesizedExpressionImplMixin(node: ASTNode) : MEExpressionI
 
     override fun getInputExprs() = listOfNotNull(expression)
 
+    override val isShiftDiscouraged get() = expression?.isShiftDiscouraged == true
+
     protected abstract val expression: MEExpression?
 }

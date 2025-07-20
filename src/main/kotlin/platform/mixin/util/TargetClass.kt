@@ -120,6 +120,7 @@ private fun findShadowTargetsDeep(psiClass: PsiClass, start: PsiClass): Sequence
 
 sealed class MixinTargetMember(val mixin: PsiClass?) {
     abstract val access: Int
+    abstract val name: String
 
     abstract fun findSourceElement(
         project: Project,
@@ -138,6 +139,7 @@ class FieldTargetMember(val classAndField: ClassAndFieldNode, mixin: PsiClass? =
     constructor(clazz: ClassNode, field: FieldNode) : this(ClassAndFieldNode(clazz, field))
 
     override val access = classAndField.field.access
+    override val name: String = classAndField.field.name
 
     override fun findSourceElement(project: Project, scope: GlobalSearchScope, canDecompile: Boolean) =
         classAndField.field.findSourceField(classAndField.clazz, project, scope, canDecompile)
@@ -153,6 +155,7 @@ class MethodTargetMember(val classAndMethod: ClassAndMethodNode, mixin: PsiClass
     constructor(clazz: ClassNode, method: MethodNode) : this(ClassAndMethodNode(clazz, method))
 
     override val access = classAndMethod.method.access
+    override val name: String = classAndMethod.method.name
 
     override fun findSourceElement(project: Project, scope: GlobalSearchScope, canDecompile: Boolean) =
         classAndMethod.method.findSourceElement(classAndMethod.clazz, project, scope, canDecompile)

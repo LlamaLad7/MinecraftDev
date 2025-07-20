@@ -20,6 +20,8 @@
 
 package com.demonwav.mcdev.platform.mixin.inspection.injector
 
+import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
+import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.AtResolver
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InjectionPoint
 import com.demonwav.mcdev.platform.mixin.inspection.MixinInspection
@@ -38,13 +40,24 @@ class DiscouragedShiftInspection : MixinInspection() {
             if (!annotation.hasQualifiedName(MixinConstants.Annotations.AT)) {
                 return
             }
+            val injectorAnnotation = AtResolver.findInjectorAnnotation(annotation) ?: return
+            val injector = MixinAnnotationHandler.forMixinAnnotation(injectorAnnotation, holder.project) as? InjectorAnnotationHandler
+                ?: return
             val atValue = annotation.findDeclaredAttributeValue("value") ?: return
             val atCode = atValue.constantStringValue ?: return
             val shift = AtResolver.getShift(annotation)
-            if (InjectionPoint.byAtCode(atCode)?.isShiftDiscouraged(shift) == true) {
+            if (isShiftDiscouraged(shift, annotation, injector, atCode)) {
                 val shiftElement = annotation.findDeclaredAttributeValue("shift") ?: return
                 holder.registerProblem(shiftElement, "Shifting like this is discouraged because it's brittle")
             }
         }
+    }
+
+    private fun isShiftDiscouraged(shift: Int, at: PsiAnnotation, injector: InjectorAnnotationHandler, atCode: String): Boolean {
+        if (injector.isShiftAlwaysDiscouraged) {
+            return shift != 0
+        }
+
+        return InjectionPoint.byAtCode(atCode)?.isShiftDiscouraged(shift, at) == true
     }
 }

@@ -105,6 +105,9 @@ interface MixinSelector {
     fun matchMethod(owner: String, name: String, desc: String): Boolean
 
     fun matchField(field: PsiField, qualifier: PsiClass): Boolean {
+        if (!canEverMatch(field.name)) {
+            return false
+        }
         val fqn = qualifier.fullQualifiedName ?: return false
         val desc = field.descriptor ?: return false
         return matchField(fqn.replace('.', '/'), field.name, desc)
@@ -115,6 +118,9 @@ interface MixinSelector {
     }
 
     fun matchMethod(method: PsiMethod, qualifier: PsiClass): Boolean {
+        if (!canEverMatch(method.name)) {
+            return false
+        }
         val fqn = qualifier.fullQualifiedName ?: return false
         val desc = method.descriptor ?: return false
         return matchMethod(fqn.replace('.', '/'), method.internalName, desc)

@@ -67,7 +67,7 @@ abstract class AbstractLoadInjectionPoint(private val store: Boolean) : Injectio
         return LocalInfo.fromAnnotation(localType, modifyVariable)
     }
 
-    override fun isShiftDiscouraged(shift: Int): Boolean {
+    override fun isShiftDiscouraged(shift: Int, at: PsiAnnotation): Boolean {
         if (shift == 0) {
             return false
         }

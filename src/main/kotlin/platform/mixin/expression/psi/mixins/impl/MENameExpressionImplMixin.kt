@@ -24,6 +24,7 @@ import com.demonwav.mcdev.platform.mixin.expression.MESourceMatchContext
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEExpression
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEName
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.impl.MEExpressionImpl
+import com.demonwav.mcdev.platform.mixin.expression.psi.MEPsiUtil
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.QualifiedMember
 import com.demonwav.mcdev.platform.mixin.util.LocalVariables
 import com.intellij.lang.ASTNode
@@ -72,6 +73,8 @@ abstract class MENameExpressionImplMixin(node: ASTNode) : MEExpressionImpl(node)
     }
 
     override fun getInputExprs() = emptyList<MEExpression>()
+
+    override val isShiftDiscouraged get() = !MEPsiUtil.isAccessedForWriting(this)
 
     @Suppress("PropertyName")
     protected abstract val MEName: MEName
