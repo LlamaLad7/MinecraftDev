@@ -55,6 +55,8 @@ abstract class MESuperCallExpressionImplMixin(node: ASTNode) : MEExpressionImpl(
 
     override fun getInputExprs() = arguments?.expressionList ?: emptyList()
 
+    override val isShiftDiscouraged = false
+
     protected abstract val memberName: MEName?
     protected abstract val arguments: MEArguments?
 }

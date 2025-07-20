@@ -46,6 +46,7 @@ object MixinConstants {
         const val SELECTOR_ID = "org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorDynamic.SelectorId"
         const val SHIFT = "org.spongepowered.asm.mixin.injection.At.Shift"
         const val LOCAL_CAPTURE = "org.spongepowered.asm.mixin.injection.callback.LocalCapture"
+        const val MIXIN_BOOTSTRAP = "org.spongepowered.asm.launch.MixinBootstrap"
 
         const val SERIALIZED_NAME = "com.google.gson.annotations.SerializedName"
         const val MIXIN_SERIALIZED_NAME = "org.spongepowered.include.$SERIALIZED_NAME"

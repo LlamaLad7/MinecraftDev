@@ -183,6 +183,12 @@ fun internalNameToShortName(internalName: String) = internalName.substringAfterL
 val ClassNode.shortName
     get() = internalNameToShortName(name)
 
+val Type.shortName get() = className.substringAfterLast('.').replace('$', '.')
+
+fun shortDescString(desc: String) = Type.getArgumentTypes(desc).joinToString(prefix = "(", postfix = ")") {
+    it.shortName
+}
+
 private val INNER_CLASS_NODES_KEY = Key.create<CachedValue<ConcurrentMap<String, ClassNode?>>>("mcdev.innerClassNodes")
 
 /**
@@ -776,7 +782,7 @@ private fun findAssociatedLambda(project: Project, scope: GlobalSearchScope, cla
                         // walk inside the reference first, visits the qualifier first (it's first in the bytecode)
                         super.visitMethodReferenceExpression(expression)
 
-                        if (expression.hasSyntheticMethod) {
+                        if (expression.hasSyntheticMethod(clazz.version)) {
                             if (matcher.accept(expression)) {
                                 stopWalking()
                             }
@@ -1093,6 +1099,26 @@ fun MethodInsnNode.fakeResolve(): ClassAndMethodNode {
     addConstructorToFakeClass(clazz)
     return ClassAndMethodNode(clazz, method)
 }
+
+// AbstractInsnNode
+
+val AbstractInsnNode.nextRealInsn: AbstractInsnNode?
+    get() {
+        var insn = next
+        while (insn != null && insn.opcode < 0) {
+            insn = insn.next
+        }
+        return insn
+    }
+
+val AbstractInsnNode.previousRealInsn: AbstractInsnNode?
+    get() {
+        var insn = previous
+        while (insn != null && insn.opcode < 0) {
+            insn = insn.previous
+        }
+        return insn
+    }
 
 // Textifier
 

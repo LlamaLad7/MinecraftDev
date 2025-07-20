@@ -39,5 +39,7 @@ abstract class MEReturnStatementImplMixin(node: ASTNode) : MEStatementImpl(node)
 
     override fun getInputExprs() = listOfNotNull(valueExpr)
 
+    override val isShiftDiscouraged = true
+
     protected abstract val valueExpr: MEExpression?
 }

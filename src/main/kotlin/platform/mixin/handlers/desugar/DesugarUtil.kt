@@ -22,6 +22,8 @@ package com.demonwav.mcdev.platform.mixin.handlers.desugar
 
 import com.demonwav.mcdev.util.cached
 import com.demonwav.mcdev.util.childrenOfType
+import com.demonwav.mcdev.util.findContainingClass
+import com.demonwav.mcdev.util.packageName
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.TextRange
@@ -30,25 +32,31 @@ import com.intellij.psi.JavaRecursiveElementWalkingVisitor
 import com.intellij.psi.PsiAnonymousClass
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiJavaCodeReferenceElement
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiLambdaExpression
 import com.intellij.psi.PsiMember
 import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiMethodReferenceExpression
+import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiNameIdentifierOwner
 import com.intellij.psi.PsiReference
 import com.intellij.psi.PsiSubstitutor
+import com.intellij.psi.PsiSuperExpression
 import com.intellij.psi.PsiTypeParameter
 import com.intellij.psi.PsiVariable
 import com.intellij.psi.impl.light.LightMemberReference
 import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.util.PsiUtil
 import com.intellij.psi.util.parents
 import com.intellij.refactoring.util.LambdaRefactoringUtil
 import com.intellij.util.JavaPsiConstructorUtil
 import com.intellij.util.Processor
 import org.jetbrains.annotations.VisibleForTesting
+import org.objectweb.asm.Opcodes
 
 object DesugarUtil {
     private val ORIGINAL_ELEMENT_KEY = Key.create<PsiElement>("mcdev.desugar.originalElement")
@@ -209,5 +217,37 @@ object DesugarUtil {
             setUnnamedVariable(parameter, true)
         }
         return lambda
+    }
+
+    // see com.sun.tools.javac.comp.Lower.access, accReq
+    fun needsBridgeMethod(expression: PsiJavaCodeReferenceElement, classVersion: Int): Boolean {
+        // method calls with qualified super need bridge methods
+        if (expression is PsiMethodCallExpression) {
+            val qualifier = PsiUtil.skipParenthesizedExprDown(expression.methodExpression.qualifierExpression)
+            if (qualifier is PsiSuperExpression && qualifier.qualifier != null) {
+                return true
+            }
+        }
+
+        val resolved = expression.resolve() as? PsiMember ?: return false
+        val resolvedClass = resolved.containingClass ?: return false
+        val fromClass = expression.findContainingClass() ?: return false
+
+        if (resolvedClass == fromClass) {
+            return false
+        }
+
+        if (classVersion <= Opcodes.V1_8 && resolved.hasModifierProperty(PsiModifier.PRIVATE)) {
+            return true
+        }
+
+        if (resolved.hasModifierProperty(PsiModifier.PROTECTED) &&
+            fromClass.packageName != resolvedClass.packageName &&
+            !fromClass.isInheritor(resolvedClass, true)
+        ) {
+            return true
+        }
+
+        return false
     }
 }

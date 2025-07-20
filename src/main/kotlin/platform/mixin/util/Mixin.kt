@@ -28,10 +28,12 @@ import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.MIXIN
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Classes.CALLBACK_INFO
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Classes.CALLBACK_INFO_RETURNABLE
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.MixinExtras.OPERATION
+import com.demonwav.mcdev.util.SemanticVersion
 import com.demonwav.mcdev.util.cached
 import com.demonwav.mcdev.util.computeStringArray
 import com.demonwav.mcdev.util.findModule
 import com.demonwav.mcdev.util.resolveClassArray
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
@@ -41,6 +43,7 @@ import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiDisjunctionType
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiIntersectionType
+import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiParameter
 import com.intellij.psi.PsiPrimitiveType
@@ -249,3 +252,13 @@ fun isMixinEntryPoint(element: PsiElement?): Boolean {
 
 val PsiElement.isFabricMixin: Boolean get() =
     JavaPsiFacade.getInstance(project).findClass(MixinConstants.Classes.FABRIC_UTIL, resolveScope) != null
+
+val Module.mixinVersion: SemanticVersion?
+    get() {
+        val facade = JavaPsiFacade.getInstance(project)
+        val bootstrap = facade.findClass(MixinConstants.Classes.MIXIN_BOOTSTRAP, moduleWithLibrariesScope)
+            ?: return null
+        val versionField = bootstrap.findFieldByName("VERSION", false) ?: return null
+        val version = (versionField.initializer as? PsiLiteralExpression)?.value as? String ?: return null
+        return SemanticVersion.tryParse(version)
+    }

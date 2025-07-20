@@ -18,20 +18,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.demonwav.mcdev.platform.mixin.expression.psi
+package com.demonwav.mcdev.platform.mixin.expression.gui
 
-import com.demonwav.mcdev.platform.mixin.expression.MESourceMatchContext
-import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEExpression
-import com.intellij.psi.PsiElement
+import com.mxgraph.view.mxGraph
 
-interface MEMatchableElement : PsiElement {
-    fun matchesJava(java: PsiElement, context: MESourceMatchContext): Boolean
-
-    fun getInputExprs(): List<MEExpression>
-
-    /**
-     * Whether an injector shifting after this expression should be discouraged. Generally implemented as whether the
-     * expression could have (non-exceptional) side effects.
-     */
-    val isShiftDiscouraged: Boolean
+inline fun <T> mxGraph.update(routine: () -> T): T {
+    model.beginUpdate()
+    try {
+        return routine()
+    } finally {
+        model.endUpdate()
+    }
 }

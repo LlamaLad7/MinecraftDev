@@ -53,6 +53,8 @@ abstract class MEArrayAccessExpressionImplMixin(node: ASTNode) : MEExpressionImp
 
     override fun getInputExprs() = listOfNotNull(arrayExpr, indexExpr)
 
+    override val isShiftDiscouraged get() = !MEPsiUtil.isAccessedForWriting(this)
+
     protected abstract val arrayExpr: MEExpression
     protected abstract val indexExpr: MEExpression?
 }

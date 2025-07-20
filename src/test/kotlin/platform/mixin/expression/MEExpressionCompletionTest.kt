@@ -25,7 +25,7 @@ import com.demonwav.mcdev.framework.EdtInterceptor
 import com.demonwav.mcdev.platform.mixin.BaseMixinTest
 import com.demonwav.mcdev.util.BeforeOrAfter
 import com.demonwav.mcdev.util.invokeDeclaredMethod
-import com.intellij.codeInsight.lookup.impl.LookupImpl
+import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.PsiFile
 import com.intellij.testFramework.fixtures.impl.CodeInsightTestFixtureImpl
@@ -93,7 +93,8 @@ class MEExpressionCompletionTest : BaseMixinTest() {
                 val itemToComplete = possibleItems.firstOrNull { it.lookupString == lookupString }
                 if (expectedAfter != null) {
                     assertNotNull(itemToComplete, "Expected a completion matching \"$lookupString\"")
-                    (fixture.lookup as LookupImpl).finishLookup('\n', itemToComplete)
+                    fixture.lookup.currentItem = itemToComplete
+                    fixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
                 } else {
                     assertNull(itemToComplete, "Expected no completions matching \"$lookupString\"")
                     return

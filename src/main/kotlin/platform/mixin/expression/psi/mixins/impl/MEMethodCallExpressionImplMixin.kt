@@ -71,6 +71,8 @@ abstract class MEMethodCallExpressionImplMixin(node: ASTNode) : MEExpressionImpl
 
     override fun getInputExprs() = listOf(receiverExpr) + (arguments?.expressionList ?: emptyList())
 
+    override val isShiftDiscouraged = false
+
     protected abstract val receiverExpr: MEExpression
     protected abstract val memberName: MEName
     protected abstract val arguments: MEArguments?

@@ -61,5 +61,7 @@ abstract class MEUnaryExpressionImplMixin(node: ASTNode) : MEExpressionImpl(node
 
     override fun getInputExprs() = listOfNotNull(expression)
 
+    override val isShiftDiscouraged = true
+
     protected abstract val expression: MEExpression?
 }

@@ -263,6 +263,8 @@ object MEExpressionMatchUtil {
         insns: Iterable<VirtualInsn>,
         contextType: ExpressionContext.Type,
         forCompletion: Boolean,
+        crossinline reportMatchStatus: (FlowValue, Expression, Boolean) -> Unit = { _, _, _ -> },
+        crossinline reportPartialMatch: (FlowValue, Expression) -> Unit = { _, _ -> },
         callback: (ExpressionMatch) -> Unit
     ) {
         for (insn in insns) {
@@ -282,6 +284,14 @@ object MEExpressionMatchUtil {
                 override fun decorateInjectorSpecific(insn: AbstractInsnNode, key: String, value: Any?) {
                     // Our maps are per-injector anyway, so this is just a normal decoration.
                     decorations.getOrPut(VirtualInsn(insn), ::mutableMapOf)[key] = value
+                }
+
+                override fun reportMatchStatus(node: FlowValue, expr: Expression, matched: Boolean) {
+                    reportMatchStatus.invoke(node, expr, matched)
+                }
+
+                override fun reportPartialMatch(node: FlowValue, expr: Expression) {
+                    reportPartialMatch.invoke(node, expr)
                 }
             }
 

@@ -44,7 +44,7 @@ class InvokeInjectionPoint : AbstractMethodInjectionPoint() {
         completeExtraStringAtAttribute(editor, reference, "target")
     }
 
-    override fun isShiftDiscouraged(shift: Int): Boolean {
+    override fun isShiftDiscouraged(shift: Int, at: PsiAnnotation): Boolean {
         // Allow shifting after INVOKE
         return shift != 0 && shift != 1
     }
