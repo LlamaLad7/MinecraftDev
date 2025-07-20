@@ -781,6 +781,7 @@
                                  implementationClass="com.demonwav.mcdev.platform.mixin.expression.psi.MENameElementManipulator"/>
         <lang.findUsagesProvider language="MEExpression"
                                  implementationClass="com.demonwav.mcdev.platform.mixin.expression.reference.MEExpressionFindUsagesProvider"/>
+        <referencesSearch implementation="com.demonwav.mcdev.platform.mixin.expression.reference.MEDefinitionReferencesSearcher"/>
         <lang.refactoringSupport language="MEExpression"
                                  implementationClass="com.demonwav.mcdev.platform.mixin.expression.MEExpressionRefactoringSupport"/>
         <completion.contributor language="MEExpression"
@@ -1294,6 +1295,14 @@
                          level="WARNING"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.mixinextras.InjectLocalCaptureReplaceWithLocalInspection"/>
+        <localInspection displayName="INVOKE_ASSIGN can be replaced with expression"
+                         shortName="InvokeAssignCanReplacedWithExpression"
+                         groupName="Mixin"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.mixinextras.InvokeAssignReplaceWithExpressionInspection"/>
         <!--endregion-->
 
         <!--region Overwrite Inspections -->
@@ -1542,6 +1551,11 @@
                 text="Generate Accessor/Invoker"
                 description="Generate an accessor for the selected member">
             <add-to-group group-id="GenerateGroup" anchor="last"/>
+        </action>
+        <action class="com.demonwav.mcdev.platform.mixin.expression.gui.MEShowFlowAction"
+                text="Show MixinExtras Flow Diagram" description="Visualize MixinExtras Expression flow as a diagram"
+                popup="true">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
         </action>
         <action class="com.demonwav.mcdev.platform.mcp.actions.FindSrgMappingAction" id="FindSrgMappingAction"
                 text="Get SRG Name"

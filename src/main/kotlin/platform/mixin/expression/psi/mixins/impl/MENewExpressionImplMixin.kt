@@ -132,6 +132,8 @@ abstract class MENewExpressionImplMixin(node: ASTNode) : MEExpressionImpl(node),
 
     override fun getInputExprs() = dimExprs + (arguments?.expressionList ?: emptyList())
 
+    override val isShiftDiscouraged = false
+
     protected abstract val type: MEName
     protected abstract val dimExprs: List<MEExpression>
     protected abstract val arguments: MEArguments?

@@ -38,13 +38,13 @@ import com.intellij.util.JavaPsiConstructorUtil
 
 object FieldAssignmentDesugarer : Desugarer() {
     override fun desugar(project: Project, file: PsiJavaFile, context: DesugarContext) {
-        val staticStatementsToInsertPre = mutableListOf<PsiStatement>()
-        val staticStatementsToInsertPost = mutableListOf<PsiStatement>()
-        val nonStaticStatementsToInsert = mutableListOf<PsiStatement>()
-        var seenStaticInitializer = false
         val factory = JavaPsiFacade.getElementFactory(project)
 
         for (aClass in DesugarUtil.allClasses(file)) {
+            val staticStatementsToInsertPre = mutableListOf<PsiStatement>()
+            val staticStatementsToInsertPost = mutableListOf<PsiStatement>()
+            val nonStaticStatementsToInsert = mutableListOf<PsiStatement>()
+            var seenStaticInitializer = false
             for (child in aClass.children) {
                 when (child) {
                     is PsiField -> {

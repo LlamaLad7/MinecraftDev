@@ -86,7 +86,7 @@ class ConstantStringMethodInjectionPoint : AbstractMethodInjectionPoint() {
         editor.caretModel.moveToOffset(cursorElement.textRange.endOffset - 1)
     }
 
-    override fun isShiftDiscouraged(shift: Int): Boolean {
+    override fun isShiftDiscouraged(shift: Int, at: PsiAnnotation): Boolean {
         // allow shifting after the INVOKE_STRING
         return shift != 0 && shift != 1
     }

@@ -24,6 +24,7 @@ import com.demonwav.mcdev.platform.mixin.expression.IdentifierPoolFactory
 import com.demonwav.mcdev.platform.mixin.expression.MEExpressionMatchUtil
 import com.demonwav.mcdev.platform.mixin.expression.MESourceMatchContext
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MECapturingExpression
+import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEExpressionStatement
 import com.demonwav.mcdev.platform.mixin.expression.gen.psi.MEStatement
 import com.demonwav.mcdev.platform.mixin.expression.meExpressionElementFactory
 import com.demonwav.mcdev.platform.mixin.expression.psi.MEExpressionFile
@@ -35,13 +36,14 @@ import com.demonwav.mcdev.platform.mixin.reference.MixinSelector
 import com.demonwav.mcdev.platform.mixin.util.LocalInfo
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.util.MemberReference
+import com.demonwav.mcdev.util.cached
+import com.demonwav.mcdev.util.childrenOfType
 import com.demonwav.mcdev.util.computeStringArray
 import com.demonwav.mcdev.util.constantStringValue
 import com.demonwav.mcdev.util.descriptor
 import com.demonwav.mcdev.util.findAnnotations
 import com.demonwav.mcdev.util.findContainingModifierList
 import com.demonwav.mcdev.util.findModule
-import com.demonwav.mcdev.util.findMultiInjectionHost
 import com.demonwav.mcdev.util.ifEmpty
 import com.demonwav.mcdev.util.parseArray
 import com.demonwav.mcdev.util.resolveType
@@ -58,6 +60,7 @@ import com.intellij.psi.PsiLiteral
 import com.intellij.psi.PsiModifierList
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.codeStyle.JavaCodeStyleManager
+import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.parentOfType
 import com.llamalad7.mixinextras.expression.impl.ast.expressions.Expression
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
@@ -91,6 +94,30 @@ class ExpressionInjectionPoint : InjectionPoint<PsiElement>() {
             ?: return
         val exprLiteral = formattedExprAnnotation.findDeclaredAttributeValue(null) ?: return
         editor.caretModel.moveToOffset(exprLiteral.textRange.startOffset + 1)
+    }
+
+    override fun isShiftDiscouraged(shift: Int, at: PsiAnnotation): Boolean {
+        if (shift == 0) {
+            return false
+        }
+        if (shift != 1) {
+            return true
+        }
+
+        val atId = at.findDeclaredAttributeValue("id")?.constantStringValue ?: ""
+        val injectorAnnotation = AtResolver.findInjectorAnnotation(at) ?: return false
+        val modifierList = injectorAnnotation.parent as? PsiModifierList ?: return false
+        val parsedExprs = parseExpressions(at.project, modifierList, atId).ifEmpty { return false }
+
+        return parsedExprs.any { (_, expr) ->
+            val captures = expr.childrenOfType<MECapturingExpression>()
+            if (captures.any { it.parent !is MEExpressionStatement }) {
+                // if there is a capture that's not at the root, discourage shifting, because that shift could likely be
+                // translated into a different capture
+                return@any true
+            }
+            expr.isShiftDiscouraged
+        }
     }
 
     override fun createNavigationVisitor(
@@ -199,7 +226,12 @@ class ExpressionInjectionPoint : InjectionPoint<PsiElement>() {
                     }
                     ?: project.meExpressionElementFactory.createFile("do {$text}").statements.singleOrNull()
                     ?: project.meExpressionElementFactory.createStatement("empty")
-                MEExpressionMatchUtil.createExpression(text)?.let { it to rootStatementPsi }
+                val expr = expressionElement.cached(PsiModificationTracker.MODIFICATION_COUNT) {
+                    // re-get the text because cached doesn't like it when the text changes
+                    val exprText = expressionElement.constantStringValue ?: return@cached null
+                    MEExpressionMatchUtil.createExpression(exprText)
+                }
+                expr?.let { expr to rootStatementPsi }
             }
             .toList()
     }

@@ -138,5 +138,7 @@ class InjectAnnotationHandler : InjectorAnnotationHandler() {
 
     override val allowCoerce = true
 
+    override val isShiftAlwaysDiscouraged = false
+
     override val mixinExtrasExpressionContextType = ExpressionContext.Type.INJECT
 }

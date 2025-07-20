@@ -108,7 +108,7 @@ abstract class InjectionPoint<T : PsiElement> {
 
     open val discouragedMessage: String? = null
 
-    open fun isShiftDiscouraged(shift: Int): Boolean = shift != 0
+    open fun isShiftDiscouraged(shift: Int, at: PsiAnnotation): Boolean = shift != 0
 
     abstract fun createNavigationVisitor(
         at: PsiAnnotation,

@@ -43,5 +43,7 @@ abstract class MEConstructorReferenceExpressionImplMixin(node: ASTNode) : MEExpr
 
     override fun getInputExprs() = emptyList<MEExpression>()
 
+    override val isShiftDiscouraged = true
+
     abstract val className: METype
 }

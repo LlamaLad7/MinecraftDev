@@ -248,7 +248,7 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
             if (expectedReturnType is PsiPrimitiveType || methodReturnType is PsiPrimitiveType) {
                 return false
             }
-            return isAssignable(expectedReturnType, methodReturnType)
+            return isAssignable(methodReturnType, expectedReturnType)
         }
 
         private fun checkParameters(

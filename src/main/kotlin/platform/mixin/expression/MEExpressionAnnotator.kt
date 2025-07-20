@@ -326,9 +326,9 @@ class MEExpressionAnnotator : Annotator {
     }
 
     private fun AnnotationBuilder.withDefinitionFix(name: MEName) =
-        withFix(AddDefinitionInspection(name))
+        withFix(AddDefinitionFix(name))
 
-    private class AddDefinitionInspection(name: MEName) : LocalQuickFixAndIntentionActionOnPsiElement(name) {
+    private class AddDefinitionFix(name: MEName) : LocalQuickFixAndIntentionActionOnPsiElement(name) {
         private val id = name.text
 
         override fun getFamilyName(): String = "Add @Definition"
@@ -355,9 +355,9 @@ class MEExpressionAnnotator : Annotator {
                 project,
                 startElement,
                 id,
-                "dummy"
+                "dummy = \"\""
             ) ?: return
-            val dummy = annotation.findAttribute("dummy") as? PsiElement ?: return
+            val dummy = annotation.parameterList.attributes.firstOrNull { it.name == "dummy" } ?: return
             val hostEditor = InjectedLanguageEditorUtil.getTopLevelEditor(editor)
             hostEditor.caretModel.moveToOffset(dummy.textOffset)
             PsiDocumentManager.getInstance(project).doPostponedOperationsAndUnblockDocument(hostEditor.document)

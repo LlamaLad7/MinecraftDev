@@ -81,7 +81,7 @@ class InvokeAssignInjectionPoint : AbstractMethodInjectionPoint() {
     override fun getArgValueListDelimiter(at: PsiAnnotation, key: String) =
         SKIP_LIST_DELIMITER.takeIf { key == "skip" }
 
-    override fun isShiftDiscouraged(shift: Int): Boolean {
+    override fun isShiftDiscouraged(shift: Int, at: PsiAnnotation): Boolean {
         // Allow shifting before INVOKE_ASSIGN
         return shift != 0 && shift != -1
     }

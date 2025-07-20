@@ -61,5 +61,7 @@ abstract class MECastExpressionImplMixin(node: ASTNode) : MEExpressionImpl(node)
 
     override fun getInputExprs() = listOfNotNull(castedExpr)
 
+    override val isShiftDiscouraged = true
+
     protected abstract val expressionList: List<MEExpression>
 }

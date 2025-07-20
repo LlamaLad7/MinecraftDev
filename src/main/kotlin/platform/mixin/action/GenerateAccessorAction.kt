@@ -23,6 +23,7 @@ package com.demonwav.mcdev.platform.mixin.action
 import com.demonwav.mcdev.platform.mixin.MixinModuleType
 import com.intellij.codeInsight.FileModificationService
 import com.intellij.codeInsight.generation.actions.BaseGenerateAction
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.editor.Editor
@@ -34,11 +35,21 @@ import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.util.PsiUtilBase
 
 class GenerateAccessorAction : BaseGenerateAction(GenerateAccessorHandler()) {
+    override fun actionPerformed(e: AnActionEvent) {
+        val project = e.project ?: return
+        val editor = getEditor(e.dataContext, project, false)
+        performAction(project, editor)
+    }
+
+    override fun actionPerformedImpl(project: Project, editor: Editor?) {
+        performAction(project, editor)
+    }
+
     /**
      * Copied from [com.intellij.codeInsight.actions.CodeInsightAction.actionPerformedImpl]
      * except that it calls the [GenerateAccessorHandler.customInvoke] method instead of the normal one
      */
-    override fun actionPerformedImpl(project: Project, editor: Editor?) {
+    private fun performAction(project: Project, editor: Editor?) {
         if (editor == null) {
             return
         }

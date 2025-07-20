@@ -34,5 +34,7 @@ abstract class MECapturingExpressionImplMixin(node: ASTNode) : MEExpressionImpl(
 
     override fun getInputExprs() = listOfNotNull(expression)
 
+    override val isShiftDiscouraged get() = expression?.isShiftDiscouraged == true
+
     protected abstract val expression: MEExpression?
 }
