@@ -87,7 +87,7 @@ class MEFlowWindowService(private val project: Project, private val scope: Corou
     private suspend fun createContent(clazz: ClassNode, method: MethodNode): Content? =
         withBackgroundProgress(project, "Creating Flow Diagram") compute@{
             val diagram = withContext(Dispatchers.Default) {
-                FlowDiagram.create(project, clazz, method)
+                FlowDiagram.create(project, scope, clazz, method)
             } ?: return@compute null
             val container = JPanel(BorderLayout())
             container.add(diagram.ui, BorderLayout.CENTER)

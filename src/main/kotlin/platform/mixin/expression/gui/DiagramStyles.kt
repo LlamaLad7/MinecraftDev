@@ -64,21 +64,29 @@ object DiagramStyles {
     )
     val FAILED
         get() = mapOf(
-            mxConstants.STYLE_STROKECOLOR to JBColor.red.hexString,
+            mxConstants.STYLE_STROKECOLOR to FlowMatchStatus.FAIL.hexColor,
             mxConstants.STYLE_STROKEWIDTH to "3.5",
         )
     val PARTIAL_MATCH
         get() = mapOf(
-            mxConstants.STYLE_STROKECOLOR to JBColor.orange.hexString,
+            mxConstants.STYLE_STROKECOLOR to FlowMatchStatus.PARTIAL.hexColor,
             mxConstants.STYLE_STROKEWIDTH to "2.5",
         )
     val SUCCESS
         get() = mapOf(
-            mxConstants.STYLE_STROKECOLOR to JBColor.green.hexString,
+            mxConstants.STYLE_STROKECOLOR to FlowMatchStatus.SUCCESS.hexColor,
             mxConstants.STYLE_STROKEWIDTH to "1.5",
         )
     val CURRENT_EDITOR_FONT
         get() = EditorColorsManager.getInstance().globalScheme.getFont(EditorFontType.PLAIN)
 }
 
-private val Color.hexString get() = "#%06X".format(rgb)
+private val Color.hexString get() = "#%06X".format(rgb and 0xFFFFFF)
+
+val FlowMatchStatus.hexColor
+    get() = when (this) {
+        FlowMatchStatus.SUCCESS -> JBColor.green
+        FlowMatchStatus.PARTIAL -> JBColor.orange
+        FlowMatchStatus.FAIL -> JBColor.red
+        FlowMatchStatus.IGNORED -> UIUtil.getLabelForeground()
+    }.hexString
