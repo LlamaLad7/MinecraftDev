@@ -22,10 +22,8 @@ package com.demonwav.mcdev.platform.mixin.expression.gui
 
 import com.demonwav.mcdev.platform.mixin.expression.MEExpressionMatchUtil
 import com.demonwav.mcdev.util.constantStringValue
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
-import com.intellij.openapi.application.ModalityState
-import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.application.readAction
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.progress.checkCanceled
 import com.intellij.openapi.project.Project
@@ -41,8 +39,9 @@ import com.mxgraph.util.mxRectangle
 import com.mxgraph.view.mxGraph
 import java.awt.Dimension
 import java.util.SortedMap
-import java.util.concurrent.Callable
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
@@ -53,15 +52,21 @@ private const val INTRA_GROUP_SPACING = 75
 private const val LINE_NUMBER_STYLE = "LINE_NUMBER"
 
 class FlowDiagram(
+    private val scope: CoroutineScope,
     val ui: FlowDiagramUi,
     private val flowGraph: FlowGraph,
     private val clazz: ClassNode,
     val method: MethodNode,
 ) {
     companion object {
-        suspend fun create(project: Project, clazz: ClassNode, method: MethodNode): FlowDiagram? {
+        suspend fun create(
+            project: Project,
+            scope: CoroutineScope,
+            clazz: ClassNode,
+            method: MethodNode
+        ): FlowDiagram? {
             val flowGraph = FlowGraph.parse(project, clazz, method) ?: return null
-            return buildDiagram(flowGraph, clazz, method)
+            return buildDiagram(scope, flowGraph, clazz, method)
         }
     }
 
@@ -91,6 +96,12 @@ class FlowDiagram(
             flowGraph.highlightMatches(node, soft)
             ui.refresh()
         }
+
+        flowGraph.onHighlightChanged { exprText, node ->
+            scope.launch(Dispatchers.EDT) {
+                ui.showExpr(exprText, node)
+            }
+        }
     }
 
     fun populateMatchStatuses(
@@ -105,41 +116,42 @@ class FlowDiagram(
             val oldHighlightRoot = flowGraph.highlightRoot
             ui.setMatchToolbarVisible(false)
             flowGraph.resetMatches()
-            ReadAction.nonBlocking(Callable<String?> run@{
-                val stringLit = stringRef.element ?: return@run null
-                val modifierList = modifierListRef.element ?: return@run null
-                val expression = stringLit.constantStringValue?.let(MEExpressionMatchUtil::createExpression)
-                    ?: return@run null
-                val pool = MEExpressionMatchUtil.createIdentifierPoolFactory(module, clazz, modifierList)(method)
-                for ((virtualInsn, root) in flowGraph.flowMap) {
-                    val node = flowGraph.allNodes.getValue(root)
-                    MEExpressionMatchUtil.findMatchingInstructions(
-                        clazz, method, pool, flowGraph.flowMap, expression, listOf(virtualInsn),
-                        ExpressionContext.Type.MODIFY_EXPRESSION_VALUE, // most permissive
-                        false,
-                        node::reportMatchStatus,
-                        node::reportPartialMatch
-                    ) {}
+            scope.launch(Dispatchers.Default) {
+                val success = readAction run@{
+                    val stringLit = stringRef.element ?: return@run false
+                    val modifierList = modifierListRef.element ?: return@run false
+                    val expression = stringLit.constantStringValue?.let(MEExpressionMatchUtil::createExpression)
+                        ?: return@run false
+                    val pool = MEExpressionMatchUtil.createIdentifierPoolFactory(module, clazz, modifierList)(method)
+                    for ((virtualInsn, root) in flowGraph.flowMap) {
+                        val node = flowGraph.allNodes.getValue(root)
+                        MEExpressionMatchUtil.findMatchingInstructions(
+                            clazz, method, pool, flowGraph.flowMap, expression, listOf(virtualInsn),
+                            ExpressionContext.Type.MODIFY_EXPRESSION_VALUE, // most permissive
+                            false,
+                            node::reportMatchStatus,
+                            node::reportPartialMatch
+                        ) {}
+                    }
+                    flowGraph.setExprText(expression.src.toString())
+                    flowGraph.highlightMatches(oldHighlightRoot, false)
+                    true
                 }
-                flowGraph.markHasMatchData()
-                flowGraph.highlightMatches(oldHighlightRoot, false)
-                StringUtil.escapeStringCharacters(expression.src.toString())
-            })
-                .finishOnUiThread(ModalityState.nonModal()) { exprText ->
-                    exprText ?: return@finishOnUiThread
+                if (success) {
                     if (jump) {
                         showBestNode()
                     }
-                    ui.refresh()
-                    ui.setExprText(exprText)
                 }
-                .submit(ApplicationManager.getApplication()::executeOnPooledThread)
+                ui.refresh()
+            }
         }
         this.jumpToExpression = {
-            ReadAction.run<Nothing> {
-                val target = stringRef.element
-                if (target is Navigatable && target.isValid && target.canNavigate()) {
-                    target.navigate(true)
+            scope.launch {
+                readAction {
+                    val target = stringRef.element
+                    if (target is Navigatable && target.isValid && target.canNavigate()) {
+                        target.navigate(true)
+                    }
                 }
             }
         }
@@ -161,7 +173,12 @@ class FlowDiagram(
     }
 }
 
-private suspend fun buildDiagram(flowGraph: FlowGraph, clazz: ClassNode, method: MethodNode): FlowDiagram {
+private suspend fun buildDiagram(
+    scope: CoroutineScope,
+    flowGraph: FlowGraph,
+    clazz: ClassNode,
+    method: MethodNode
+): FlowDiagram {
     val graph = MxFlowGraph(flowGraph)
     setupStyles(graph)
     val groupedCells = addGraphContent(graph, flowGraph)
@@ -171,7 +188,7 @@ private suspend fun buildDiagram(flowGraph: FlowGraph, clazz: ClassNode, method:
     val ui = withContext(Dispatchers.EDT) {
         FlowDiagramUi(graph, calculateBounds, lineNumberNodes)
     }
-    return FlowDiagram(ui, flowGraph, clazz, method)
+    return FlowDiagram(scope, ui, flowGraph, clazz, method)
 }
 
 private class MxFlowGraph(private val flowGraph: FlowGraph) : mxGraph() {
