@@ -1,5 +1,43 @@
 # Minecraft Development for IntelliJ
 
+## [1.8.6]
+
+## Added
+
+- Debug flow diagrams for MixinExtras expressions.
+- An inspection to replace `INVOKE_ASSIGN` with MixinExtras expressions where possible.
+  - Expressions are preferred because `INVOKE_ASSIGN` doesn't fail if there's no assignment.
+
+## Changed
+
+- Performance improvements for shadow completions.
+- Smarter warnings for discouraged shifting
+  - Shifting is now always discouraged on injectors that can't inject on any instruction in the method (such as `@Redirect`).
+  - When MixinExtras expressions are being used, the discourage shifting logic now takes into account the type of expression.
+- Mixin navigation to lambdas has been improved. MinecraftDev will now properly detect that a synthetic method will be
+  generated for method references in the following additional cases:
+  - All array method references.
+  - Method references to a superclass method (`super::foo`).
+  - Constructor method references for a non-static inner class.
+    - Previously, all constructor method references were incorrectly assumed to generate a synthetic method.
+  - Varargs parameter expansions.
+  - Access to private methods in an outer or inner class before Java 9.
+  - Access to protected methods in the superclass of an outer class, if the superclass is in a different package.
+  - Cases where the functional interface method being implemented has a parameter which is an intersection type (a type
+    parameter extending multiple things).
+
+## Fixed
+
+- Fixed "generate accessor/invoker" action not doing anything.
+- Fixed Mixin version detection in legacy/non-standard Minecraft environments. The Mixin version is now taken from the
+  `MixinBootstrap` class, rather than attempting to decipher it from the library artifact.
+- Fixed `@Coerce` on return type wanting subtypes not supertypes.
+- Fixed the "add definition" quick-fix for MixinExtras expressions creating a "dummy" definition since 2025.1
+- Fixed incorrect unused warnings on MixinExtras expression definitions
+- Fixed "find usages" on MixinExtras expression definitions
+- Fixed IDE error that sometimes occurs when navigating to mixin target
+- Fixed mixin navigation to field assignments.
+
 ## [1.8.5]
 
 ### Added
