@@ -2,13 +2,13 @@
 
 ## [1.8.6]
 
-## Added
+### Added
 
 - Debug flow diagrams for MixinExtras expressions.
 - An inspection to replace `INVOKE_ASSIGN` with MixinExtras expressions where possible.
   - Expressions are preferred because `INVOKE_ASSIGN` doesn't fail if there's no assignment.
 
-## Changed
+### Changed
 
 - Performance improvements for shadow completions.
 - Smarter warnings for discouraged shifting
@@ -26,7 +26,7 @@
   - Cases where the functional interface method being implemented has a parameter which is an intersection type (a type
     parameter extending multiple things).
 
-## Fixed
+### Fixed
 
 - Fixed "generate accessor/invoker" action not doing anything.
 - Fixed Mixin version detection in legacy/non-standard Minecraft environments. The Mixin version is now taken from the
