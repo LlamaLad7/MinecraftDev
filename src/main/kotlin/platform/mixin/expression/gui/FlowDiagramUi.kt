@@ -22,6 +22,7 @@ package com.demonwav.mcdev.platform.mixin.expression.gui
 
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.util.text.StringUtil
 import com.intellij.ui.DocumentAdapter
 import com.mxgraph.model.mxCell
 import com.mxgraph.swing.mxGraphComponent
@@ -83,8 +84,8 @@ class FlowDiagramUi(
         fixBounds()
     }
 
-    fun setExprText(text: String) {
-        matchToolbar.setExprTest(text)
+    fun showExpr(text: String, highlightRoot: FlowNode?) {
+        matchToolbar.setExprText("<html>" + makeExprString(text, highlightRoot) + "</html>")
         matchToolbar.isVisible = true
     }
 
@@ -243,7 +244,7 @@ class FlowDiagramUi(
             add(buttonPanel, BorderLayout.EAST)
         }
 
-        fun setExprTest(text: String) {
+        fun setExprText(text: String) {
             exprText.text = text
             exprText.toolTipText = text
         }
@@ -277,3 +278,54 @@ private fun makeButton(icon: Icon, tooltip: String): JButton =
         toolTipText = tooltip
         preferredSize = Dimension(32, 32)
     }
+
+private sealed class HighlightChange : Comparable<HighlightChange> {
+    abstract val pos: Int
+
+    data class Start(override val pos: Int, val length: Int, val status: FlowMatchStatus) : HighlightChange()
+    data class End(override val pos: Int) : HighlightChange()
+
+    override fun compareTo(other: HighlightChange): Int =
+        compareValuesBy(
+            this, other,
+            { it.pos },
+            { if (it is Start) 1 else -1 },
+            { -((it as? Start)?.length ?: 0) },
+        )
+}
+
+private fun makeExprString(text: String, highlightRoot: FlowNode?): String {
+    fun escape(str: String) = StringUtil.escapeXmlEntities(StringUtil.escapeStringCharacters(str))
+
+    if (highlightRoot == null) {
+        return escape(text)
+    }
+
+    val changes = mutableListOf<HighlightChange>()
+    for ((status, src) in highlightRoot.matches) {
+        if (src == null) {
+            continue
+        }
+        changes.add(HighlightChange.Start(src.startIndex, src.endIndex - src.startIndex, status))
+        changes.add(HighlightChange.End(src.endIndex + 1))
+    }
+    changes.sort()
+
+    val result = StringBuilder()
+    var pos = 0
+    for (change in changes) {
+        result.append(escape(text.substring(pos, change.pos)))
+        pos = change.pos
+        when (change) {
+            is HighlightChange.Start -> {
+                result.append("<span style='color: ${change.status.hexColor}'>")
+            }
+            is HighlightChange.End -> {
+                result.append("</span>")
+            }
+        }
+    }
+    result.append(escape(text.substring(pos)))
+
+    return result.toString()
+}
