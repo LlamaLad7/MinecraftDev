@@ -12,10 +12,6 @@ Minecraft Development for IntelliJ
         <td colspan="2"><a href="https://ci.mcdev.io/viewType.html?buildTypeId=MinecraftDev_Build"><img src="https://ci.mcdev.io/app/rest/builds/buildType:(id:MinecraftDev_Build)/statusIcon.svg" alt="Teamcity Build Status" /></a></td>
     </tr>
     <tr>
-        <td align="left">2024.2</td>
-        <td align="left"><a href="https://ci.mcdev.io/viewType.html?buildTypeId=MinecraftDev_Nightly_20242"><img src="https://ci.mcdev.io/app/rest/builds/buildType:(id:MinecraftDev_Nightly_20242)/statusIcon.svg" alt="2024.2 Nightly Status" /></a></td>
-    </tr>
-    <tr>
         <td align="left">2024.3</td>
         <td align="left"><a href="https://ci.mcdev.io/viewType.html?buildTypeId=MinecraftDev_Nightly_20243"><img src="https://ci.mcdev.io/app/rest/builds/buildType:(id:MinecraftDev_Nightly_20243)/statusIcon.svg" alt="2024.3 Nightly Status" /></a></td>
     </tr>
@@ -35,7 +31,7 @@ Minecraft Development for IntelliJ
     </tr>
 </table>
 
-Info and Documentation [![Current Release](https://img.shields.io/badge/release-1.8.5-orange.svg?style=flat-square)](https://plugins.jetbrains.com/plugin/8327)
+Info and Documentation [![Current Release](https://img.shields.io/badge/release-1.8.6-orange.svg?style=flat-square)](https://plugins.jetbrains.com/plugin/8327)
 ----------------------
 
 <a href="https://discord.gg/j6UNcfr"><img src="https://i.imgur.com/JXu9C1G.png" height="48px"></img></a>
