@@ -22,6 +22,7 @@ package com.demonwav.mcdev.translations.identification
 
 import com.demonwav.mcdev.platform.mcp.mappings.getMappedClass
 import com.demonwav.mcdev.platform.mcp.mappings.getMappedMethod
+import com.demonwav.mcdev.translations.DeprecatedTranslations
 import com.demonwav.mcdev.translations.TranslationConstants
 import com.demonwav.mcdev.translations.identification.TranslationInstance.FormattingError
 import com.demonwav.mcdev.translations.index.TranslationIndex
@@ -89,10 +90,13 @@ object TranslationIdentifier {
             else -> element.evaluateString()
         }?.replace(CompletionUtilCore.DUMMY_IDENTIFIER_TRIMMED, "") ?: return null
 
-        val shouldFold = element is ULiteralExpression && element.isString
+        val deprecations = DeprecatedTranslations.getInstance(project)
+        val key = prefix + translationKey + suffix
+
+        val shouldFold = element is ULiteralExpression && element.isString && key !in deprecations.removed && key !in deprecations.renamed
 
         val entries = TranslationIndex.getAllDefaultEntries(project).merge("")
-        val translation = entries[prefix + translationKey + suffix]?.text
+        val translation = entries[deprecations.inverseRenamed[key] ?: key]?.text
             ?: return TranslationInstance( // translation doesn't exist
                 null,
                 index,

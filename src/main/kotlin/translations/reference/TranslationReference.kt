@@ -21,12 +21,14 @@
 package com.demonwav.mcdev.translations.reference
 
 import com.demonwav.mcdev.asset.PlatformAssets
+import com.demonwav.mcdev.translations.DeprecatedTranslations
 import com.demonwav.mcdev.translations.TranslationConstants
 import com.demonwav.mcdev.translations.TranslationFiles
 import com.demonwav.mcdev.translations.identification.TranslationInstance
 import com.demonwav.mcdev.translations.index.TranslationIndex
 import com.demonwav.mcdev.translations.index.TranslationInverseIndex
 import com.demonwav.mcdev.translations.lang.gen.psi.LangEntry
+import com.demonwav.mcdev.util.filterNotNull
 import com.demonwav.mcdev.util.mapToArray
 import com.demonwav.mcdev.util.toTypedArray
 import com.intellij.codeInsight.lookup.LookupElementBuilder
@@ -52,8 +54,9 @@ class TranslationReference(
 ) : PsiReferenceBase.Poly<PsiElement>(element, textRange, false), PsiPolyVariantReference {
     override fun multiResolve(incompleteCode: Boolean): Array<ResolveResult> {
         val project = myElement.project
+        val deprecations = DeprecatedTranslations.getInstance(project)
         val entries = TranslationInverseIndex.findElements(
-            key.full,
+            deprecations.inverseRenamed[key.full] ?: key.full,
             GlobalSearchScope.allScope(project),
             TranslationConstants.DEFAULT_LOCALE,
         )
@@ -63,16 +66,18 @@ class TranslationReference(
     override fun getVariants(): Array<Any?> {
         val project = myElement.project
         val defaultTranslations = TranslationIndex.getAllDefaultTranslations(project)
+        val deprecations = DeprecatedTranslations.getInstance(project)
         val pattern = Regex("${Regex.escape(key.prefix)}(.*?)${Regex.escape(key.suffix)}")
         return defaultTranslations
-            .filter { it.key.isNotEmpty() }
-            .mapNotNull { entry -> pattern.matchEntire(entry.key)?.let { entry to it } }
-            .map { (entry, match) ->
+            .map { it.key }
+            .filter { it.isNotEmpty() && it !in deprecations.removed && it !in deprecations.renamed }
+            .mapNotNull { key -> pattern.matchEntire(key)?.let { key to it } }
+            .map { (key, match) ->
                 LookupElementBuilder
-                    .create(if (match.groups.size <= 1) entry.key else match.groupValues[1])
+                    .create(if (match.groups.size <= 1) key else match.groupValues[1])
                     .withIcon(PlatformAssets.MINECRAFT_ICON)
                     .withTypeText(TranslationConstants.DEFAULT_LOCALE)
-                    .withPresentableText(entry.key)
+                    .withPresentableText(key)
             }
             .toTypedArray()
     }
