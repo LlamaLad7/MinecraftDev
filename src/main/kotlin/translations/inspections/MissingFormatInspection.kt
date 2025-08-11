@@ -20,8 +20,8 @@
 
 package com.demonwav.mcdev.translations.inspections
 
-import com.demonwav.mcdev.translations.identification.TranslationInstance
-import com.demonwav.mcdev.translations.identification.TranslationInstance.Companion.FormattingError
+import com.demonwav.mcdev.translations.identification.TranslationIdentifier
+import com.demonwav.mcdev.translations.identification.TranslationInstance.FormattingError
 import com.intellij.codeInspection.LocalQuickFix
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.PsiElementVisitor
@@ -52,7 +52,7 @@ class MissingFormatInspection : TranslationInspection() {
         }
 
         private fun visit(expression: UExpression, vararg quickFixes: LocalQuickFix) {
-            val result = TranslationInstance.find(expression)
+            val result = TranslationIdentifier.identify(expression)
             if (result != null && result.required && result.formattingError == FormattingError.MISSING) {
                 holder.registerProblem(
                     expression.sourcePsi!!,

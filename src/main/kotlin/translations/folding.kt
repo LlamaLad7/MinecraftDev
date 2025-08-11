@@ -35,7 +35,7 @@ import com.intellij.openapi.editor.FoldingGroup
 import com.intellij.openapi.options.BeanConfigurable
 import com.intellij.psi.PsiElement
 import org.jetbrains.uast.UCallExpression
-import org.jetbrains.uast.UElement
+import org.jetbrains.uast.UExpression
 import org.jetbrains.uast.textRange
 import org.jetbrains.uast.toUElement
 import org.jetbrains.uast.visitor.AbstractUastVisitor
@@ -45,7 +45,7 @@ class TranslationCodeFoldingOptionsProvider :
     init {
         title = "Minecraft"
         checkBox(
-            "Translation Strings",
+            "Translation strings",
             TranslationFoldingSettings.instance::shouldFoldTranslations,
         ) {
             TranslationFoldingSettings.instance.shouldFoldTranslations = it
@@ -86,50 +86,51 @@ class TranslationFoldingSettings : PersistentStateComponent<TranslationFoldingSe
 class TranslationFoldingBuilder : FoldingBuilderEx() {
     override fun buildFoldRegions(root: PsiElement, document: Document, quick: Boolean): Array<FoldingDescriptor> {
         if (ApplicationManager.getApplication().isDispatchThread) {
-            return emptyArray()
+            return FoldingDescriptor.EMPTY_ARRAY
         }
 
         val descriptors = mutableListOf<FoldingDescriptor>()
-        for (identifier in TranslationIdentifier.INSTANCES) {
-            val uElement = root.toUElement() ?: continue
-            val children = mutableListOf<UElement>()
-            uElement.accept(object : AbstractUastVisitor() {
-                override fun visitElement(node: UElement): Boolean {
-                    if (identifier.elementClass().isAssignableFrom(node.javaClass)) {
-                        children.add(node)
-                    }
+        val uElement = root.toUElement() ?: return FoldingDescriptor.EMPTY_ARRAY
+        val translations = mutableListOf<TranslationInstance>()
+        uElement.accept(object : AbstractUastVisitor() {
+            override fun visitExpression(node: UExpression): Boolean {
+                val translation = TranslationIdentifier.identify(node)
+                if (translation != null) {
+                    translations += translation
+                }
 
-                    return super.visitElement(node)
-                }
-            })
-            for (element in children) {
-                val translation = identifier.identifyUnsafe(element)
-                val foldingElement = translation?.foldingElement ?: continue
-                val range =
-                    if (foldingElement is UCallExpression && translation.foldStart != 0) {
-                        val args = foldingElement.valueArguments.drop(translation.foldStart)
-                        val startRange = args.first().textRange ?: continue
-                        val endRange = args.last().textRange ?: continue
-                        startRange.union(endRange)
-                    } else {
-                        foldingElement.textRange ?: continue
-                    }
-                if (!translation.required && translation.formattingError != null) {
-                    continue
-                }
-                descriptors.add(
-                    FoldingDescriptor(
-                        translation.foldingElement.sourcePsi?.node!!,
-                        range,
-                        FoldingGroup.newGroup("mc.translation." + translation.key),
-                        if (translation.formattingError == TranslationInstance.Companion.FormattingError.MISSING) {
-                            "\"Insufficient parameters for formatting '${translation.text}'\""
-                        } else {
-                            "\"${translation.text}\""
-                        },
-                    ),
-                )
+                return super.visitElement(node)
             }
+        })
+        for (translation in translations) {
+            if (!translation.shouldFold) {
+                continue
+            }
+            val foldingElement = translation.foldingElement ?: continue
+            val range =
+                if (foldingElement is UCallExpression && translation.foldStart != 0) {
+                    val args = foldingElement.valueArguments.drop(translation.foldStart)
+                    val startRange = args.first().textRange ?: continue
+                    val endRange = args.last().textRange ?: continue
+                    startRange.union(endRange)
+                } else {
+                    foldingElement.textRange ?: continue
+                }
+            if (!translation.required && translation.formattingError != null) {
+                continue
+            }
+            descriptors.add(
+                FoldingDescriptor(
+                    translation.foldingElement.sourcePsi?.node!!,
+                    range,
+                    FoldingGroup.newGroup("mc.translation." + translation.key),
+                    if (translation.formattingError == TranslationInstance.FormattingError.MISSING) {
+                        "\"Insufficient parameters for formatting '${translation.text}'\""
+                    } else {
+                        "\"${translation.text}\""
+                    },
+                ),
+            )
         }
         return descriptors.toTypedArray()
     }

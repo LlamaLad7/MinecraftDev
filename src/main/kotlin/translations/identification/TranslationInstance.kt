@@ -32,6 +32,7 @@ data class TranslationInstance(
     val allowArbitraryArgs: Boolean,
     val formattingError: FormattingError? = null,
     val superfluousVarargStart: Int = -1,
+    val shouldFold: Boolean = true,
 ) {
     data class Key(val prefix: String, val infix: String, val suffix: String) {
         constructor(infix: String) : this("", infix, "")
@@ -39,14 +40,7 @@ data class TranslationInstance(
         val full = (prefix + infix + suffix).trim()
     }
 
-    companion object {
-        enum class FormattingError {
-            MISSING, SUPERFLUOUS
-        }
-
-        fun find(element: UElement): TranslationInstance? =
-            TranslationIdentifier.INSTANCES
-                .firstOrNull { it.elementClass().isAssignableFrom(element.javaClass) }
-                ?.identifyUnsafe(element)
+    enum class FormattingError {
+        MISSING, SUPERFLUOUS
     }
 }

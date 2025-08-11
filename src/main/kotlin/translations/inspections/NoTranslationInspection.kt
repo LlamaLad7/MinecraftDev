@@ -21,7 +21,7 @@
 package com.demonwav.mcdev.translations.inspections
 
 import com.demonwav.mcdev.translations.TranslationFiles
-import com.demonwav.mcdev.translations.identification.LiteralTranslationIdentifier
+import com.demonwav.mcdev.translations.identification.TranslationIdentifier
 import com.intellij.codeInspection.LocalQuickFix
 import com.intellij.codeInspection.ProblemDescriptor
 import com.intellij.codeInspection.ProblemsHolder
@@ -33,6 +33,7 @@ import com.intellij.psi.PsiElementVisitor
 import com.intellij.uast.UastHintedVisitorAdapter
 import com.intellij.util.IncorrectOperationException
 import org.jetbrains.uast.UElement
+import org.jetbrains.uast.UExpression
 import org.jetbrains.uast.ULiteralExpression
 import org.jetbrains.uast.toUElementOfType
 import org.jetbrains.uast.visitor.AbstractUastNonRecursiveVisitor
@@ -49,8 +50,8 @@ class NoTranslationInspection : TranslationInspection() {
 
     private class Visitor(private val holder: ProblemsHolder) : AbstractUastNonRecursiveVisitor() {
 
-        override fun visitLiteralExpression(node: ULiteralExpression): Boolean {
-            val result = LiteralTranslationIdentifier().identify(node)
+        override fun visitExpression(node: UExpression): Boolean {
+            val result = TranslationIdentifier.identify(node)
             if (result != null && result.required && result.text == null) {
                 holder.registerProblem(
                     node.sourcePsi!!,
@@ -70,7 +71,7 @@ class NoTranslationInspection : TranslationInspection() {
         override fun applyFix(project: Project, descriptor: ProblemDescriptor) {
             try {
                 val literal = descriptor.psiElement.toUElementOfType<ULiteralExpression>() ?: return
-                val translation = LiteralTranslationIdentifier().identify(literal)
+                val translation = TranslationIdentifier.identify(literal)
                 val literalValue = literal.value as String
                 val key = translation?.key?.copy(infix = literalValue)?.full ?: literalValue
                 val result = Messages.showInputDialog(
@@ -82,7 +83,7 @@ class NoTranslationInspection : TranslationInspection() {
                 if (result != null) {
                     TranslationFiles.add(literal.sourcePsi!!, key, result)
                 }
-            } catch (ignored: IncorrectOperationException) {
+            } catch (_: IncorrectOperationException) {
             } catch (e: Exception) {
                 Notification(
                     "Translation support error",
