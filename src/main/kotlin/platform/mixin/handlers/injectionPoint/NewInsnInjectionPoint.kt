@@ -27,10 +27,8 @@ import com.demonwav.mcdev.platform.mixin.util.MethodTargetMember
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.AT
 import com.demonwav.mcdev.platform.mixin.util.findClassNodeByPsiClass
 import com.demonwav.mcdev.platform.mixin.util.findMethod
-import com.demonwav.mcdev.platform.mixin.util.shortName
 import com.demonwav.mcdev.util.MemberReference
 import com.demonwav.mcdev.util.constantStringValue
-import com.demonwav.mcdev.util.descriptor
 import com.demonwav.mcdev.util.fullQualifiedName
 import com.demonwav.mcdev.util.internalName
 import com.demonwav.mcdev.util.shortName
@@ -110,18 +108,19 @@ class NewInsnInjectionPoint : InjectionPoint<PsiMember>() {
     }
 
     override fun createLookup(targetClass: ClassNode, result: CollectVisitor.Result<PsiMember>): LookupElementBuilder? {
+        val newInsn = result.originalInsn as? TypeInsnNode ?: return null
+        val methodInsn = findInitCall(newInsn) ?: return null
         when (val target = result.target) {
             is PsiClass -> {
                 return JavaLookupElementBuilder.forClass(target, target.internalName)
                     .withPresentableText(target.shortName ?: return null)
             }
             is PsiMethod -> {
-                val ownerName = result.qualifier?.substringAfterLast('.')?.replace('$', '.') ?: targetClass.shortName
-                val descriptorArgs = target.descriptor?.dropLast(1) ?: return null
-                val qualifierInternalName = result.qualifier?.replace('.', '/')
+                val ownerName = methodInsn.owner.substringAfterLast('/').replace('$', '.')
+                val descriptorArgs = methodInsn.desc.dropLast(1)
                 return JavaLookupElementBuilder.forMethod(
                     target,
-                    "${descriptorArgs}L$qualifierInternalName;",
+                    "${descriptorArgs}L${methodInsn.owner};",
                     PsiSubstitutor.EMPTY,
                     null,
                 )

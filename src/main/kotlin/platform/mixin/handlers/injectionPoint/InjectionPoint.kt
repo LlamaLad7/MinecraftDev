@@ -21,7 +21,6 @@
 package com.demonwav.mcdev.platform.mixin.handlers.injectionPoint
 
 import com.demonwav.mcdev.platform.mixin.reference.MixinSelector
-import com.demonwav.mcdev.platform.mixin.reference.toMixinString
 import com.demonwav.mcdev.platform.mixin.util.InjectionPointSpecifier
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.SLICE
 import com.demonwav.mcdev.platform.mixin.util.SourceCodeLocationInfo
@@ -32,7 +31,6 @@ import com.demonwav.mcdev.util.constantValue
 import com.demonwav.mcdev.util.createLiteralExpression
 import com.demonwav.mcdev.util.findAnnotations
 import com.demonwav.mcdev.util.fullQualifiedName
-import com.demonwav.mcdev.util.getQualifiedMemberReference
 import com.demonwav.mcdev.util.internalName
 import com.demonwav.mcdev.util.memoized
 import com.demonwav.mcdev.util.realName
@@ -262,7 +260,7 @@ abstract class QualifiedInjectionPoint<T : PsiMember> : InjectionPoint<T>() {
 
     final override fun usesMemberReference() = true
 
-    protected abstract fun createLookup(targetClass: ClassNode, m: T, owner: String): LookupElementBuilder
+    protected abstract fun createLookup(targetClass: ClassNode, m: T, insn: AbstractInsnNode): LookupElementBuilder
 
     protected open fun getInternalName(m: T): String {
         return m.realName ?: m.name!!
@@ -273,7 +271,7 @@ abstract class QualifiedInjectionPoint<T : PsiMember> : InjectionPoint<T>() {
         result: CollectVisitor.Result<T>,
     ): LookupElementBuilder {
         return qualifyLookup(
-            createLookup(targetClass, result.target, result.qualifier ?: targetClass.name),
+            createLookup(targetClass, result.target, result.originalInsn),
             targetClass,
             result.target,
         )
@@ -296,10 +294,11 @@ abstract class QualifiedInjectionPoint<T : PsiMember> : InjectionPoint<T>() {
 
 abstract class AbstractMethodInjectionPoint : QualifiedInjectionPoint<PsiMethod>() {
 
-    override fun createLookup(targetClass: ClassNode, m: PsiMethod, owner: String): LookupElementBuilder {
+    override fun createLookup(targetClass: ClassNode, m: PsiMethod, insn: AbstractInsnNode): LookupElementBuilder {
+        insn as MethodInsnNode
         return JavaLookupElementBuilder.forMethod(
             m,
-            m.getQualifiedMemberReference(owner).toMixinString(),
+            "L${insn.owner};${insn.name}${insn.desc}",
             PsiSubstitutor.EMPTY,
             null,
         )
