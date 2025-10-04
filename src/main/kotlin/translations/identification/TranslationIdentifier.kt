@@ -37,6 +37,7 @@ import com.intellij.codeInsight.AnnotationUtil
 import com.intellij.codeInsight.completion.CompletionUtilCore
 import com.intellij.codeInspection.dataFlow.CommonDataflow
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.RecursionManager
 import com.intellij.psi.CommonClassNames
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiElement
@@ -86,7 +87,11 @@ object TranslationIdentifier {
         )?.constantValue as? Boolean ?: false
 
         val translationKey = when (val javaPsi = element.javaPsi) {
-            is PsiExpression -> CommonDataflow.computeValue(javaPsi) as? String
+            is PsiExpression -> {
+                RecursionManager.doPreventingRecursion(javaPsi, false) {
+                    CommonDataflow.computeValue(javaPsi) as? String
+                }
+            }
             else -> element.evaluateString()
         }?.replace(CompletionUtilCore.DUMMY_IDENTIFIER_TRIMMED, "") ?: return null
 
