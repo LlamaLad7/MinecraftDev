@@ -48,6 +48,14 @@ Because of this, you can install the plugin through IntelliJ's internal plugin b
 `File -> Settings -> Plugins` and click the `Browse Repositories...` button at the bottom of the window. In the search
 box, simply search for `Minecraft`. You can install it from there and restart IntelliJ to activate the plugin.
 
+Dependencies
+------------
+
+Gradle will download all necessary dependencies to build the project, but you do need JDK 21 installed and available to
+Gradle in order to build.
+
+You can easily install JDK 21 from [Adoptium](https://adoptium.net/temurin/releases). 
+
 Building
 --------
 
@@ -105,21 +113,6 @@ IntelliJ:
 ```
 
 If you're curious about that task, it is implemented in `buildSrc`.
-
-Developers
-----------
-
-- Project Owner - [**@DenWav** - Kyle Wood](https://github.com/DenWav)
-- [**@Minecrell**](https://github.com/Minecrell)
-- [**@PaleoCrafter** - Marvin Rösch](https://github.com/PaleoCrafter)
-- [**@RedNesto**](https://github.com/RedNesto)
-- [**@Earthcomputer** - Joseph Burton](https://github.com/Earthcomputer)
-
-#### **Significant Contributors**
-
-- [**@gabizou** - Gabriel Harris-Rouquette](https://github.com/gabizou)
-- [**@kashike** - Riley Park](https://github.com/kashike)
-- [**@jamierocks** - Jamie Mansfield](https://github.com/jamierocks)
 
 License
 -------

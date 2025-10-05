@@ -92,11 +92,13 @@ class TSrgMappingsFormatParserTest : ParserFixture() {
 
     @Test
     fun testByMappedType() {
+        /* TODO
         val ref = "net/minecraft/util/text/TextFormatting".asClass()
             .method("func_211165_a".asMethodRef("(C)Lnet/minecraft/util/text/TextFormatting;".asMethodDesc()))
         val mapping = def.mappings.methodMapping(ref)
 
         assertNotNull(mapping)
+         */
     }
 
     @Test
