@@ -1,9 +1,0 @@
-base_path: .
-base_url: https://api.crowdin.com
-"project_id": 835596
-api_token_env: CROWDIN_PERSONAL_TOKEN
-preserve_hierarchy: true
-
-files:
-  - source: "/src/main/resources/messages/MinecraftDevelopment.properties",
-    translation: "/src/main/resources/messages/MinecraftDevelopment_%two_letters_code%.properties"
