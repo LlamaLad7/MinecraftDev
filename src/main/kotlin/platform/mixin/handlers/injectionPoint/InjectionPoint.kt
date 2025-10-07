@@ -130,7 +130,7 @@ abstract class InjectionPoint<T : PsiElement> {
         return doCreateCollectVisitor(at, target, targetClass, mode)?.also {
             val isInsideSlice = at.parentOfType<PsiAnnotation>()?.hasQualifiedName(SLICE) == true
             val defaultSpecifier = if (isInsideSlice) InjectionPointSpecifier.FIRST else InjectionPointSpecifier.ALL
-            addFilters(at, targetClass, it, defaultSpecifier)
+            addFilters(at, targetClass, it, defaultSpecifier, mode)
         }
     }
 
@@ -138,22 +138,24 @@ abstract class InjectionPoint<T : PsiElement> {
         at: PsiAnnotation,
         targetClass: ClassNode,
         collectVisitor: CollectVisitor<T>,
-        defaultSpecifier: InjectionPointSpecifier
+        defaultSpecifier: InjectionPointSpecifier,
+        mode: CollectVisitor.Mode,
     ) {
-        addStandardFilters(at, targetClass, collectVisitor, defaultSpecifier)
+        addStandardFilters(at, targetClass, collectVisitor, defaultSpecifier, mode)
     }
 
     fun addStandardFilters(
         at: PsiAnnotation,
         targetClass: ClassNode,
         collectVisitor: CollectVisitor<T>,
-        defaultSpecifier: InjectionPointSpecifier
+        defaultSpecifier: InjectionPointSpecifier,
+        mode: CollectVisitor.Mode,
     ) {
         addShiftSupport(at, targetClass, collectVisitor)
         addSliceFilter(at, targetClass, collectVisitor)
         // make sure the ordinal filter is last, so that the ordinal only increments once the other filters have passed
         addOrdinalFilter(at, targetClass, collectVisitor)
-        addSpecifierFilter(at, targetClass, collectVisitor, defaultSpecifier)
+        addSpecifierFilter(at, targetClass, collectVisitor, defaultSpecifier, mode)
     }
 
     protected open fun addShiftSupport(at: PsiAnnotation, targetClass: ClassNode, collectVisitor: CollectVisitor<*>) {
@@ -213,8 +215,13 @@ abstract class InjectionPoint<T : PsiElement> {
         at: PsiAnnotation,
         targetClass: ClassNode,
         collectVisitor: CollectVisitor<T>,
-        defaultSpecifier: InjectionPointSpecifier
+        defaultSpecifier: InjectionPointSpecifier,
+        mode: CollectVisitor.Mode,
     ) {
+        if (mode == CollectVisitor.Mode.COMPLETION) {
+            // Ignore the specifier, we want to show all results
+            return
+        }
         val point = at.findDeclaredAttributeValue("value")?.constantStringValue ?: return
         val specifier = InjectionPointSpecifier.entries.firstOrNull { point.endsWith(":$it") } ?: defaultSpecifier
         collectVisitor.addResultFilter("specifier") { results, _ ->
