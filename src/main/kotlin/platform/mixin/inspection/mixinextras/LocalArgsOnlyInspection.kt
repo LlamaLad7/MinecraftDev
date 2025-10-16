@@ -29,7 +29,7 @@ import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.MixinExtras.unwrapLocalRef
 import com.demonwav.mcdev.util.constantValue
 import com.demonwav.mcdev.util.findContainingMethod
-import com.demonwav.mcdev.util.mapFirstNotNull
+import com.demonwav.mcdev.util.ifEmpty
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.PsiAnnotation
@@ -52,15 +52,15 @@ class LocalArgsOnlyInspection : MixinInspection() {
             val parameter = localAnnotation.parentOfType<PsiParameter>() ?: return
             val method = parameter.findContainingMethod() ?: return
 
-            val targets = method.annotations.mapFirstNotNull { annotation ->
+            val targets = method.annotations.flatMap { annotation ->
                 MixinAnnotationHandler.resolveTarget(annotation).asSequence()
                     .filterIsInstance<MethodTargetMember>()
                     .map { it.classAndMethod }
-            } ?: return
+            }.ifEmpty { return }
 
             val localType = parameter.type.unwrapLocalRef()
 
-            if (ModifyVariableArgsOnlyInspection.shouldReport(localAnnotation, localType, targets)) {
+            if (ModifyVariableArgsOnlyInspection.shouldReport(localAnnotation, localType, targets.asSequence())) {
                 holder.registerProblem(
                     localAnnotation.nameReferenceElement ?: localAnnotation,
                     "@Local may be argsOnly = true",
