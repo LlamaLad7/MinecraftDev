@@ -31,7 +31,7 @@ import com.intellij.psi.util.elementType
 class MEExpressionTypedHandlerDelegate : TypedHandlerDelegate() {
     override fun checkAutoPopup(charTyped: Char, project: Project, editor: Editor, file: PsiFile): Result {
         if (charTyped == ':' && file.language == MEExpressionLanguage) {
-            AutoPopupController.getInstance(project).autoPopupMemberLookup(editor) {
+            AutoPopupController.getInstance(project).scheduleAutoPopup(editor) {
                 val offset = editor.caretModel.offset
                 it.findElementAt(offset - 1).elementType == MEExpressionTypes.TOKEN_METHOD_REF
             }

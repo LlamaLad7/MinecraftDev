@@ -38,7 +38,9 @@ intellijPlatform {
 
 dependencies {
     intellijPlatform {
-        intellijIdeaCommunity(libs.versions.intellij.ide, useInstaller = false)
+        intellijIdea(libs.versions.intellij.ide) {
+            useInstaller = false
+        }
 
         plugin(libs.versions.psiPlugin.map { "PsiViewer:$it" })
 

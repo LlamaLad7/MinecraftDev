@@ -68,7 +68,7 @@ class VanillaGradleDecompileSourceProvider : AttachSourcesProvider {
             val taskCallback = object : TaskCallback {
                 override fun onSuccess() {
                     val importSpec = ImportSpecBuilder(project, GradleConstants.SYSTEM_ID)
-                        .callback(
+                        .withCallback(
                             object : ExternalProjectRefreshCallback {
                                 override fun onSuccess(externalProject: DataNode<ProjectData>?) = callback.setDone()
 

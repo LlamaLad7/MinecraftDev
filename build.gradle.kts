@@ -101,7 +101,9 @@ dependencies {
     }
 
     intellijPlatform {
-        intellijIdeaCommunity(libs.versions.intellij.ide, useInstaller = false)
+        intellijIdea(libs.versions.intellij.ide) {
+            useInstaller = false
+        }
 
         // Bundled plugin dependencies
         bundledPlugin("com.intellij.java")
@@ -109,7 +111,7 @@ dependencies {
         bundledPlugin("com.intellij.gradle")
         bundledPlugin("org.intellij.groovy")
         bundledPlugin("ByteCodeViewer")
-        bundledPlugin("org.intellij.intelliLang")
+        bundledModule("intellij.platform.langInjection")
         bundledPlugin("com.intellij.properties")
         bundledPlugin("Git4Idea")
         bundledPlugin("com.intellij.modules.json")

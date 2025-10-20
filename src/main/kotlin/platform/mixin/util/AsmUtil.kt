@@ -42,6 +42,7 @@ import com.demonwav.mcdev.util.toJavaIdentifier
 import com.intellij.byteCodeViewer.ByteCodeViewerManager
 import com.intellij.codeEditor.JavaEditorFileSwapper
 import com.intellij.ide.highlighter.JavaFileType
+import com.intellij.java.syntax.parser.JavaKeywords
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
@@ -64,7 +65,6 @@ import com.intellij.psi.PsiEnumConstant
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.PsiJavaFile
-import com.intellij.psi.PsiKeyword
 import com.intellij.psi.PsiLambdaExpression
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethod
@@ -224,7 +224,7 @@ private val NODE_BY_PSI_CLASS_KEY = Key.create<CachedValue<ClassNode?>>("mcdev.n
 fun findClassNodeByPsiClass(psiClass: PsiClass, module: Module? = psiClass.findModule()): ClassNode? {
     return psiClass.lockedCached(NODE_BY_PSI_CLASS_KEY) {
         try {
-            val bytes = ByteCodeViewerManager.loadClassFileBytes(psiClass)
+            val bytes = ByteCodeViewerManager.findClassFile(psiClass)?.contentsToByteArray(false)
             if (bytes == null) {
                 // find compiler output
                 if (module == null) return@lockedCached null
@@ -1050,7 +1050,7 @@ fun MethodNode.findBodyElements(clazz: ClassNode, project: Project, scope: Globa
         if (body != null) {
             val children = body.children
             val superCtorIndex = children.indexOfFirst {
-                it is PsiMethodCallExpression && it.methodExpression.text == PsiKeyword.SUPER
+                it is PsiMethodCallExpression && it.methodExpression.text == JavaKeywords.SUPER
             }
             result += children.take(superCtorIndex + 1)
             sourceMethod.containingClass?.children?.forEach { element ->

@@ -1,17 +1,24 @@
 [versions]
-kotlin = "2.1.21"
+# https://github.com/JetBrains/intellij-community/blob/<version>/.idea/libraries/kotlin_stdlib.xml
+kotlin = "2.2.20"
+# https://github.com/JetBrains/intellij-community/blob/<version>/.idea/libraries/kotlinx_coroutines_core.xml
 coroutines = "1.10.2"
 junit = "5.10.2"
 junit-platform = "1.10.2"
-asm = "9.6"
+asm = "9.9"
 fuel = "2.3.1"
 licenser = "0.6.1"
 changelog = "2.2.0"
-intellij-plugin = "2.6.0"
-intellij-plugin-repository-rest-client = "2.0.46"
-intellij-ide = "2025.2"
-idea-ext = "1.1.10"
-psiPlugin = "251.175"
+# https://github.com/JetBrains/intellij-platform-gradle-plugin
+intellij-plugin = "2.10.1"
+# https://search.maven.org/artifact/org.jetbrains.intellij/plugin-repository-rest-client
+intellij-plugin-repository-rest-client = "2.0.47"
+# https://www.jetbrains.com/intellij-repository/snapshots or https://www.jetbrains.com/intellij-repository/releases/
+intellij-ide = "253.27642.30-EAP-SNAPSHOT"
+# https://github.com/JetBrains/gradle-idea-ext-plugin
+idea-ext = "1.3"
+# https://plugins.jetbrains.com/plugin/227-psiviewer/versions
+psiPlugin = "253.7181"
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

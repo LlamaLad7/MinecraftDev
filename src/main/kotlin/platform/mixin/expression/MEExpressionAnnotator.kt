@@ -362,7 +362,7 @@ class MEExpressionAnnotator : Annotator {
             hostEditor.caretModel.moveToOffset(dummy.textOffset)
             PsiDocumentManager.getInstance(project).doPostponedOperationsAndUnblockDocument(hostEditor.document)
             hostEditor.document.replaceString(dummy.textRange.startOffset, dummy.textRange.endOffset, "")
-            AutoPopupController.getInstance(project).autoPopupMemberLookup(hostEditor, null)
+            AutoPopupController.getInstance(project).scheduleAutoPopup(hostEditor, null)
         }
     }
 }

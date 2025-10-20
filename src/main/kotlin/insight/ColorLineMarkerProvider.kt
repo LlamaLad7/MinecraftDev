@@ -149,7 +149,7 @@ class ColorLineMarkerProvider : LineMarkerProvider {
             }
 
             val actionText = MCDevBundle("generate.color.choose_action")
-            val c = ColorChooserService.instance.showDialog(psiElement.project, editor.component, actionText, color)
+            val c = ColorChooserService.getInstance().showDialog(psiElement.project, editor.component, actionText, color)
                 ?: return@handler
             when (workElement) {
                 is ULiteralExpression -> {

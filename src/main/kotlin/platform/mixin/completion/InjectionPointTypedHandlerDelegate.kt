@@ -34,7 +34,7 @@ class InjectionPointTypedHandlerDelegate : TypedHandlerDelegate() {
         if (charTyped != ':' || !file.language.isKindOf(JavaLanguage.INSTANCE)) {
             return Result.CONTINUE
         }
-        AutoPopupController.getInstance(project).autoPopupMemberLookup(editor) {
+        AutoPopupController.getInstance(project).scheduleAutoPopup(editor) {
             val offset = editor.caretModel.offset
             val element = it.findElementAt(offset)?.findContextElement()
             InjectionPointReference.ELEMENT_PATTERN.accepts(element)
