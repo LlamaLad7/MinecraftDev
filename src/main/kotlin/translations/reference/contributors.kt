@@ -21,6 +21,7 @@
 package com.demonwav.mcdev.translations.reference
 
 import com.demonwav.mcdev.translations.TranslationFiles
+import com.demonwav.mcdev.translations.identification.TranslationIdentifier
 import com.demonwav.mcdev.translations.identification.TranslationInstance
 import com.demonwav.mcdev.translations.lang.gen.psi.LangEntry
 import com.demonwav.mcdev.translations.lang.gen.psi.LangTypes
@@ -36,14 +37,14 @@ import com.intellij.psi.PsiReferenceRegistrar
 import com.intellij.psi.registerUastReferenceProvider
 import com.intellij.psi.uastReferenceProvider
 import com.intellij.util.ProcessingContext
-import org.jetbrains.uast.UElement
+import org.jetbrains.uast.UExpression
 
 class UastReferenceContributor : PsiReferenceContributor() {
     override fun registerReferenceProviders(registrar: PsiReferenceRegistrar) {
         registrar.registerUastReferenceProvider(
             { _, _ -> true },
-            uastReferenceProvider<UElement> { uExpr, psi ->
-                val translation = TranslationInstance.find(uExpr)
+            uastReferenceProvider<UExpression> { uExpr, psi ->
+                val translation = TranslationIdentifier.identify(uExpr)
                     ?: return@uastReferenceProvider emptyArray()
                 val referenceElement = translation.referenceElement
                     ?: return@uastReferenceProvider emptyArray()

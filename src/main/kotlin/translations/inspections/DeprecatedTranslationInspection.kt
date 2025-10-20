@@ -20,19 +20,17 @@
 
 package com.demonwav.mcdev.translations.inspections
 
+import com.demonwav.mcdev.translations.DeprecatedTranslations
 import com.demonwav.mcdev.translations.identification.TranslationIdentifier
-import com.demonwav.mcdev.translations.identification.TranslationInstance.FormattingError
-import com.intellij.codeInspection.LocalQuickFix
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.uast.UastHintedVisitorAdapter
 import org.jetbrains.uast.UElement
 import org.jetbrains.uast.UExpression
-import org.jetbrains.uast.ULiteralExpression
 import org.jetbrains.uast.visitor.AbstractUastNonRecursiveVisitor
 
-class MissingFormatInspection : TranslationInspection() {
-    override fun getStaticDescription() = "Detects missing format arguments for translations"
+class DeprecatedTranslationInspection : TranslationInspection() {
+    override fun getStaticDescription() = "Detects usage of translations that are removed or renamed in deprecated.json"
 
     private val typesHint: Array<Class<out UElement>> = arrayOf(UExpression::class.java)
 
@@ -40,26 +38,23 @@ class MissingFormatInspection : TranslationInspection() {
         UastHintedVisitorAdapter.create(holder.file.language, Visitor(holder), typesHint)
 
     private class Visitor(private val holder: ProblemsHolder) : AbstractUastNonRecursiveVisitor() {
+        val deprecations = DeprecatedTranslations.getInstance(holder.project)
 
         override fun visitExpression(node: UExpression): Boolean {
-            visit(node)
-            return super.visitElement(node)
-        }
-
-        override fun visitLiteralExpression(node: ULiteralExpression): Boolean {
-            visit(node, ChangeTranslationQuickFix("Use a different translation"))
-            return true
-        }
-
-        private fun visit(expression: UExpression, vararg quickFixes: LocalQuickFix) {
-            val result = TranslationIdentifier.identify(expression)
-            if (result != null && result.required && result.formattingError == FormattingError.MISSING) {
-                holder.registerProblem(
-                    expression.sourcePsi!!,
-                    "There are missing formatting arguments to satisfy '${result.text}'",
-                    *quickFixes,
-                )
+            val result = TranslationIdentifier.identify(node)
+            if (result != null && result.text != null) {
+                val isRemoved = result.key.full in deprecations.removed
+                val isRenamed = result.key.full in deprecations.renamed
+                if (isRemoved || isRenamed) {
+                    val type = if (isRemoved) "removed" else "renamed"
+                    holder.registerProblem(
+                        node.sourcePsi!!,
+                        "Usage of $type translation in deprecated.json"
+                    )
+                }
             }
+
+            return super.visitExpression(node)
         }
     }
 }
