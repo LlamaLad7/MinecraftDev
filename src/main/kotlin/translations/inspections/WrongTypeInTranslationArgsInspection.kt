@@ -22,7 +22,7 @@ package com.demonwav.mcdev.translations.inspections
 
 import com.demonwav.mcdev.platform.mcp.mappings.getMappedClass
 import com.demonwav.mcdev.platform.mcp.mappings.getMappedMethod
-import com.demonwav.mcdev.translations.identification.TranslationInstance
+import com.demonwav.mcdev.translations.identification.TranslationIdentifier
 import com.demonwav.mcdev.util.findModule
 import com.intellij.codeInsight.intention.FileModifier
 import com.intellij.codeInspection.LocalQuickFix
@@ -45,6 +45,7 @@ import com.siyeh.ig.psiutils.CommentTracker
 import com.siyeh.ig.psiutils.MethodCallUtils
 import org.jetbrains.uast.UCallExpression
 import org.jetbrains.uast.UElement
+import org.jetbrains.uast.UExpression
 import org.jetbrains.uast.UIdentifier
 import org.jetbrains.uast.ULiteralExpression
 import org.jetbrains.uast.UMethod
@@ -66,21 +67,13 @@ class WrongTypeInTranslationArgsInspection : TranslationInspection() {
 
     private class Visitor(private val holder: ProblemsHolder) : AbstractUastNonRecursiveVisitor() {
 
-        override fun visitElement(node: UElement): Boolean {
-            if (node is UReferenceExpression) {
-                doCheck(node)
-            }
-
-            return super.visitElement(node)
-        }
-
-        override fun visitLiteralExpression(node: ULiteralExpression): Boolean {
+        override fun visitExpression(node: UExpression): Boolean {
             doCheck(node)
-            return super.visitLiteralExpression(node)
+            return super.visitExpression(node)
         }
 
-        private fun doCheck(element: UElement) {
-            val result = TranslationInstance.find(element)
+        private fun doCheck(element: UExpression) {
+            val result = TranslationIdentifier.identify(element)
             if (result == null || result.foldingElement !is UCallExpression || result.allowArbitraryArgs) {
                 return
             }

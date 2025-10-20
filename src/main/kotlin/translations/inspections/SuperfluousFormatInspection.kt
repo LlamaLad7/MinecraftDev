@@ -20,8 +20,9 @@
 
 package com.demonwav.mcdev.translations.inspections
 
+import com.demonwav.mcdev.translations.identification.TranslationIdentifier
 import com.demonwav.mcdev.translations.identification.TranslationInstance
-import com.demonwav.mcdev.translations.identification.TranslationInstance.Companion.FormattingError
+import com.demonwav.mcdev.translations.identification.TranslationInstance.FormattingError
 import com.demonwav.mcdev.util.runWriteAction
 import com.intellij.codeInspection.LocalQuickFix
 import com.intellij.codeInspection.ProblemDescriptor
@@ -51,19 +52,7 @@ class SuperfluousFormatInspection : TranslationInspection() {
     private class Visitor(private val holder: ProblemsHolder) : AbstractUastNonRecursiveVisitor() {
 
         override fun visitExpression(node: UExpression): Boolean {
-            val result = TranslationInstance.find(node)
-            if (
-                result != null && result.foldingElement is UCallExpression &&
-                result.formattingError == FormattingError.SUPERFLUOUS
-            ) {
-                registerProblem(node, result)
-            }
-
-            return super.visitExpression(node)
-        }
-
-        override fun visitLiteralExpression(node: ULiteralExpression): Boolean {
-            val result = TranslationInstance.find(node)
+            val result = TranslationIdentifier.identify(node)
             if (
                 result != null && result.required && result.foldingElement is UCallExpression &&
                 result.formattingError == FormattingError.SUPERFLUOUS
@@ -79,7 +68,7 @@ class SuperfluousFormatInspection : TranslationInspection() {
                 )
             }
 
-            return super.visitLiteralExpression(node)
+            return super.visitExpression(node)
         }
 
         private fun registerProblem(
@@ -106,7 +95,7 @@ class SuperfluousFormatInspection : TranslationInspection() {
                 descriptor.psiElement.containingFile.runWriteAction {
                     call.element?.valueArguments?.drop(position)?.forEach { it.sourcePsi?.delete() }
                 }
-            } catch (ignored: IncorrectOperationException) {
+            } catch (_: IncorrectOperationException) {
             }
         }
 

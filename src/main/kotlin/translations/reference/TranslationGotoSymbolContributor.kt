@@ -20,6 +20,7 @@
 
 package com.demonwav.mcdev.translations.reference
 
+import com.demonwav.mcdev.translations.DeprecatedTranslations
 import com.demonwav.mcdev.translations.index.TranslationIndex
 import com.demonwav.mcdev.translations.index.TranslationInverseIndex
 import com.demonwav.mcdev.translations.index.merge
@@ -57,7 +58,8 @@ class TranslationGotoSymbolContributor : ChooseByNameContributor {
         } else {
             GlobalSearchScope.projectScope(project)
         }
-        val elements = TranslationInverseIndex.findElements(name, scope)
+        val deprecations = DeprecatedTranslations.getInstance(project)
+        val elements = TranslationInverseIndex.findElements(deprecations.inverseRenamed[name] ?: name, scope)
 
         return elements.mapToArray { it as NavigationItem }
     }

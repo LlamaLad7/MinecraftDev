@@ -855,6 +855,13 @@
                          level="WARNING"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.translations.inspections.WrongTypeInTranslationArgsInspection"/>
+        <localInspection displayName="Usage of deprecated translation"
+                         groupName="Minecraft"
+                         language="UAST"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.translations.inspections.DeprecatedTranslationInspection"/>
         <localInspection displayName="Entity class does not match this entity class"
                          groupName="Minecraft"
                          language="JAVA"

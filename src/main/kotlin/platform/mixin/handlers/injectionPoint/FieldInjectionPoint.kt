@@ -21,12 +21,10 @@
 package com.demonwav.mcdev.platform.mixin.handlers.injectionPoint
 
 import com.demonwav.mcdev.platform.mixin.reference.MixinSelector
-import com.demonwav.mcdev.platform.mixin.reference.toMixinString
 import com.demonwav.mcdev.platform.mixin.util.fakeResolve
 import com.demonwav.mcdev.platform.mixin.util.findOrConstructSourceField
 import com.demonwav.mcdev.util.MemberReference
 import com.demonwav.mcdev.util.constantValue
-import com.demonwav.mcdev.util.getQualifiedMemberReference
 import com.intellij.codeInsight.completion.JavaLookupElementBuilder
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.openapi.editor.Editor
@@ -107,10 +105,11 @@ class FieldInjectionPoint : QualifiedInjectionPoint<PsiField>() {
         return target?.let { MyCollectVisitor(mode, at.project, it, opcode, arrayAccess, fuzz) }
     }
 
-    override fun createLookup(targetClass: ClassNode, m: PsiField, owner: String): LookupElementBuilder {
+    override fun createLookup(targetClass: ClassNode, m: PsiField, insn: AbstractInsnNode): LookupElementBuilder {
+        insn as FieldInsnNode
         return JavaLookupElementBuilder.forField(
             m,
-            m.getQualifiedMemberReference(owner).toMixinString(),
+            "L${insn.owner};.${insn.name}:${insn.desc}",
             null,
         )
             .setBoldIfInClass(m, targetClass)

@@ -20,7 +20,7 @@
 
 package com.demonwav.mcdev.translations.inspections
 
-import com.demonwav.mcdev.translations.identification.LiteralTranslationIdentifier
+import com.demonwav.mcdev.translations.identification.TranslationIdentifier
 import com.demonwav.mcdev.translations.reference.TranslationGotoModel
 import com.demonwav.mcdev.util.runWriteAction
 import com.intellij.codeInspection.LocalQuickFix
@@ -42,7 +42,7 @@ class ChangeTranslationQuickFix(private val name: String) : LocalQuickFix {
     override fun applyFix(project: Project, descriptor: ProblemDescriptor) {
         try {
             val literal = descriptor.psiElement.toUElementOfType<ULiteralExpression>() ?: return
-            val key = LiteralTranslationIdentifier().identify(literal)?.key ?: return
+            val key = TranslationIdentifier.identify(literal)?.key ?: return
             val popup = ChooseByNamePopup.createPopup(
                 project,
                 TranslationGotoModel(project, key.prefix, key.suffix),
