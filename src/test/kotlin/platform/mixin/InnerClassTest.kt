@@ -53,13 +53,18 @@ class InnerClassTest : BaseMixinTest() {
                         private static void stuffInsideAnonymousClassBad() {
                             new Object() {
                                 public void foo() {
-                                    new <error descr="Double nested anonymous classes are not allowed in a @Mixin class">Object() {
-                                    }</error>;
+                                    new <error descr="Double nested anonymous classes are not allowed in a @Mixin class">Object</error>() {
+                                    };
                                 }
 
-                                <error descr="Inner class not allowed inside anonymous classes inside mixins">class ClassInsideAnonymousClass {
-                                }</error>
+                                class <error descr="Inner class not allowed inside anonymous classes inside mixins">ClassInsideAnonymousClass</error> {
+                                }
                             };
+                        }
+                        
+                        private static void localClassBad() {
+                            class <error descr="Local classes are not allowed inside mixins">Local</error> {
+                            }
                         }
                     
                         @Mixin
@@ -72,9 +77,9 @@ class InnerClassTest : BaseMixinTest() {
 
                         }
 
-                        <error descr="Inner classes are only allowed if they are also @Mixin classes">class VeryBadInnerClass {
+                        class <error descr="Inner classes are only allowed if they are also @Mixin classes">VeryBadInnerClass</error> {
 
-                        }</error>
+                        }
 
                     }
                     """,

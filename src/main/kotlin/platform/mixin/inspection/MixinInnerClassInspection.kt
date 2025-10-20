@@ -41,7 +41,7 @@ class MixinInnerClassInspection : MixinInspection() {
     private class Visitor(private val holder: ProblemsHolder) : JavaElementVisitor() {
 
         override fun visitClass(psiClass: PsiClass) {
-            if (PsiUtil.isLocalClass(psiClass)) {
+            if (psiClass.containingClass == null && PsiUtil.isLocalClass(psiClass)) {
                 holder.registerProblem(
                     psiClass.nameIdentifier ?: psiClass,
                     "Local classes are not allowed inside mixins"
@@ -73,7 +73,10 @@ class MixinInnerClassInspection : MixinInspection() {
                     )
                 }
             } else {
-                holder.registerProblem(psiClass, "Inner classes are only allowed if they are also @Mixin classes")
+                holder.registerProblem(
+                    psiClass.nameIdentifier ?: psiClass,
+                    "Inner classes are only allowed if they are also @Mixin classes"
+                )
             }
         }
 
