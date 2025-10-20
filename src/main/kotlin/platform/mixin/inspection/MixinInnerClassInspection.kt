@@ -29,6 +29,7 @@ import com.intellij.psi.PsiAnonymousClass
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiModifier
+import com.intellij.psi.util.PsiUtil
 import com.intellij.psi.util.parentOfType
 
 class MixinInnerClassInspection : MixinInspection() {
@@ -40,11 +41,20 @@ class MixinInnerClassInspection : MixinInspection() {
     private class Visitor(private val holder: ProblemsHolder) : JavaElementVisitor() {
 
         override fun visitClass(psiClass: PsiClass) {
+            if (PsiUtil.isLocalClass(psiClass)) {
+                holder.registerProblem(
+                    psiClass.nameIdentifier ?: psiClass,
+                    "Local classes are not allowed inside mixins"
+                )
+
+                return
+            }
+
             val outerClass = psiClass.containingClass ?: return
             if (!outerClass.isMixin) {
                 if (outerClass is PsiAnonymousClass && outerClass.parentOfType<PsiClass>()?.isMixin == true) {
                     holder.registerProblem(
-                        psiClass,
+                        psiClass.nameIdentifier ?: psiClass,
                         "Inner class not allowed inside anonymous classes inside mixins",
                     )
                 }
@@ -76,7 +86,10 @@ class MixinInnerClassInspection : MixinInspection() {
                 return
             }
 
-            holder.registerProblem(psiClass, "Double nested anonymous classes are not allowed in a @Mixin class")
+            holder.registerProblem(
+                psiClass.baseClassReference,
+                "Double nested anonymous classes are not allowed in a @Mixin class"
+            )
         }
     }
 }
