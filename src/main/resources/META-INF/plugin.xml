@@ -629,21 +629,21 @@
         <gotoDeclarationHandler implementation="com.demonwav.mcdev.platform.mcp.at.AtGotoDeclarationHandler"/>
         <annotator language="Access Transformers" implementationClass="com.demonwav.mcdev.platform.mcp.at.AtAnnotator"/>
 
-        <!-- access widener file type -->
-        <fileType name="Access Widener" language="Access Widener"
-                  implementationClass="com.demonwav.mcdev.platform.mcp.aw.AwFileType" fieldName="INSTANCE"
-                  patterns="*.accesswidener;*.aw"/>
-        <lang.parserDefinition language="Access Widener"
-                               implementationClass="com.demonwav.mcdev.platform.mcp.aw.AwParserDefinition"/>
-        <lang.syntaxHighlighterFactory language="Access Widener"
-                                       implementationClass="com.demonwav.mcdev.platform.mcp.aw.AwSyntaxHighlighterFactory"/>
-        <colorSettingsPage implementation="com.demonwav.mcdev.platform.mcp.aw.AwColorSettingsPage"/>
-        <lang.commenter language="Access Widener" implementationClass="com.demonwav.mcdev.platform.mcp.aw.AwCommenter"/>
-        <annotator language="Access Widener" implementationClass="com.demonwav.mcdev.platform.mcp.aw.AwAnnotator"/>
-        <completion.contributor language="Access Widener"
-                                implementationClass="com.demonwav.mcdev.platform.mcp.aw.AwCompletionContributor"/>
+        <!-- class tweaker file type -->
+        <fileType name="Class Tweaker" language="Class Tweaker"
+                  implementationClass="com.demonwav.mcdev.platform.mcp.ct.CtFileType" fieldName="INSTANCE"
+                  patterns="*.accesswidener;*.aw;*.classtweaker;*.ct"/>
+        <lang.parserDefinition language="Class Tweaker"
+                               implementationClass="com.demonwav.mcdev.platform.mcp.ct.CtParserDefinition"/>
+        <lang.syntaxHighlighterFactory language="Class Tweaker"
+                                       implementationClass="com.demonwav.mcdev.platform.mcp.ct.CtSyntaxHighlighterFactory"/>
+        <colorSettingsPage implementation="com.demonwav.mcdev.platform.mcp.ct.CtColorSettingsPage"/>
+        <lang.commenter language="Class Tweaker" implementationClass="com.demonwav.mcdev.platform.mcp.ct.CtCommenter"/>
+        <annotator language="Class Tweaker" implementationClass="com.demonwav.mcdev.platform.mcp.ct.CtAnnotator"/>
+        <completion.contributor language="Class Tweaker"
+                                implementationClass="com.demonwav.mcdev.platform.mcp.ct.CtCompletionContributor"/>
         <codeInsight.unresolvedReferenceQuickFixProvider
-            implementation="com.demonwav.mcdev.platform.mcp.aw.fixes.CopyAwAccessibleEntryFix$Provider"/>
+            implementation="com.demonwav.mcdev.platform.mcp.ct.fixes.CopyAwAccessibleEntryFix$Provider"/>
 
         <moduleService serviceImplementation="com.demonwav.mcdev.platform.mcp.McpModuleSettings"/>
 
@@ -1017,11 +1017,11 @@
                          implementationClass="com.demonwav.mcdev.platform.mcp.inspections.StackEmptyInspection"/>
         <localInspection displayName="Duplicate access widener"
                          groupName="MCP"
-                         language="Access Widener"
+                         language="Class Tweaker"
                          enabledByDefault="true"
                          level="WARNING"
                          hasStaticDescription="true"
-                         implementationClass="com.demonwav.mcdev.platform.mcp.aw.inspections.DuplicateAwEntryInspection"/>
+                         implementationClass="com.demonwav.mcdev.platform.mcp.ct.inspections.DuplicateAwEntryInspection"/>
         <!--endregion-->
 
         <!--region MIXIN INSPECTIONS-->

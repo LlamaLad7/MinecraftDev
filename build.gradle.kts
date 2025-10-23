@@ -263,8 +263,8 @@ license {
 val generateAtLexer by lexer("AtLexer", "com/demonwav/mcdev/platform/mcp/at/gen")
 val generateAtParser by parser("AtParser", "com/demonwav/mcdev/platform/mcp/at/gen")
 
-val generateAwLexer by lexer("AwLexer", "com/demonwav/mcdev/platform/mcp/aw/gen")
-val generateAwParser by parser("AwParser", "com/demonwav/mcdev/platform/mcp/aw/gen")
+val generateCtLexer by lexer("CtLexer", "com/demonwav/mcdev/platform/mcp/ct/gen")
+val generateCtParser by parser("CtParser", "com/demonwav/mcdev/platform/mcp/ct/gen")
 
 val generateNbttLexer by lexer("NbttLexer", "com/demonwav/mcdev/nbt/lang/gen")
 val generateNbttParser by parser("NbttParser", "com/demonwav/mcdev/nbt/lang/gen")
@@ -287,8 +287,8 @@ val generate by tasks.registering {
     dependsOn(
         generateAtLexer,
         generateAtParser,
-        generateAwLexer,
-        generateAwParser,
+        generateCtLexer,
+        generateCtParser,
         generateNbttLexer,
         generateNbttParser,
         generateLangLexer,
