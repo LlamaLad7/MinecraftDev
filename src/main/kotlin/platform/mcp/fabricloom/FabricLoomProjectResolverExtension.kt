@@ -50,7 +50,6 @@ class FabricLoomProjectResolverExtension : AbstractProjectResolverExtension() {
                 loomData.tinyMappings,
                 decompilers,
                 loomData.splitMinecraftJar,
-                loomData.modSourceSets
             )
             ideModule.createChild(FabricLoomData.KEY, data)
 
