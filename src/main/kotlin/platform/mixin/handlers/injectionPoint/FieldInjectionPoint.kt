@@ -109,7 +109,7 @@ class FieldInjectionPoint : QualifiedInjectionPoint<PsiField>() {
         insn as FieldInsnNode
         return JavaLookupElementBuilder.forField(
             m,
-            "L${insn.owner};.${insn.name}:${insn.desc}",
+            "L${insn.owner};${insn.name}:${insn.desc}",
             null,
         )
             .setBoldIfInClass(m, targetClass)
