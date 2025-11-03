@@ -1057,7 +1057,7 @@
                          enabledByDefault="true"
                          level="WARNING"
                          hasStaticDescription="true"
-                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.MixinCancellableInspection"/>
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.injector.MixinCancellableInspection"/>
         <localInspection displayName="Invalid @Mixin Target"
                          shortName="InvalidMixinTarget"
                          groupName="Mixin"
@@ -1206,6 +1206,14 @@
                          level="ERROR"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.injector.InjectIntoConstructorInspection"/>
+        <localInspection displayName="Missing or invalid use of opcode"
+                         shortName="MissingOrInvalidOpcode"
+                         groupName="Mixin"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.injector.InjectorOpcodeInspection"/>
         <localInspection displayName="Invalid injector method signature"
                          shortName="InvalidInjectorMethodSignature"
                          groupName="Mixin"

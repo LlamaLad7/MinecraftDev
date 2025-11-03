@@ -76,6 +76,8 @@ class FieldInjectionPoint : QualifiedInjectionPoint<PsiField>() {
         }
     }
 
+    override val validOpcodes = VALID_OPCODES
+
     override fun createNavigationVisitor(
         at: PsiAnnotation,
         target: MixinSelector?,

@@ -29,7 +29,9 @@ import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiAnnotationMemberValue
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.codeStyle.CodeStyleManager
+import com.intellij.psi.codeStyle.JavaCodeStyleManager
 
 open class AnnotationAttributeFix(
     annotation: PsiAnnotation,
@@ -93,8 +95,14 @@ open class AnnotationAttributeFix(
 
     override fun invoke(project: Project, file: PsiFile, startElement: PsiElement, endElement: PsiElement) {
         val annotation = startElement as? PsiAnnotation ?: return
+        var needsShortenClassReferences = false
+
         for ((key, value) in attributes) {
             annotation.setDeclaredAttributeValue(key, value)
+
+            if (value != null && value !is PsiLiteralExpression) {
+                needsShortenClassReferences = true
+            }
         }
 
         // replace single "value = foo" with "foo"
@@ -108,5 +116,9 @@ open class AnnotationAttributeFix(
         }
 
         CodeStyleManager.getInstance(project).reformat(annotation.parameterList)
+
+        if (needsShortenClassReferences) {
+            JavaCodeStyleManager.getInstance(project).shortenClassReferences(annotation)
+        }
     }
 }

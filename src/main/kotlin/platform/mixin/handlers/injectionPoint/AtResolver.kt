@@ -88,7 +88,7 @@ class AtResolver(
     private val targetMethod: MethodNode,
 ) {
     companion object {
-        private fun getInjectionPoint(at: PsiAnnotation): InjectionPoint<*>? {
+        fun getInjectionPoint(at: PsiAnnotation): InjectionPoint<*>? {
             var atCode = at.qualifiedName?.let { InjectionPointAnnotation.atCodeFor(it) }
                 ?: at.findDeclaredAttributeValue("value")?.constantStringValue ?: return null
 
