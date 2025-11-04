@@ -41,10 +41,16 @@ class ModifyExpressionValueHandler : MixinExtrasInjectorAnnotationHandler() {
         InstructionType.SIMPLE_EXPRESSION, InstructionType.STRING_CONCAT_EXPRESSION
     )
 
-    override fun extraTargetRestrictions(insn: AbstractInsnNode): Boolean {
+    override fun isInsnAllowed(insn: AbstractInsnNode, decorations: Map<String, Any?>): Boolean {
+        if (!super.isInsnAllowed(insn, decorations)) {
+            return false
+        }
+
         val returnType = getInsnReturnType(insn) ?: return false
         return returnType != Type.VOID_TYPE
     }
+
+    override val allowedInsnDescription = "instructions that return a value"
 
     override fun expectedMethodSignature(
         annotation: PsiAnnotation,

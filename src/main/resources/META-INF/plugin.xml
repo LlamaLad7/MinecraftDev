@@ -1286,6 +1286,14 @@
                          level="WARNING"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.injector.DiscouragedShiftInspection"/>
+        <localInspection displayName="Usage of disallowed injector target"
+                         shortName="DisallowedTargetInsn"
+                         groupName="Mixin"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="ERROR"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.injector.DisallowedTargetInsnInspection"/>
         <localInspection displayName="Usage of LocalCapture.CAPTURE_FAILEXCEPTION"
                          shortName="LocalCaptureFailException"
                          groupName="Mixin"

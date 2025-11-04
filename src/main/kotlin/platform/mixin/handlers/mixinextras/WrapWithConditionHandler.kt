@@ -37,7 +37,9 @@ class WrapWithConditionHandler : MixinExtrasInjectorAnnotationHandler() {
         InstructionType.METHOD_CALL, InstructionType.FIELD_SET
     )
 
-    override fun extraTargetRestrictions(insn: AbstractInsnNode) = getInsnReturnType(insn) == Type.VOID_TYPE
+    override fun isInsnAllowed(insn: AbstractInsnNode, decorations: Map<String, Any?>) = super.isInsnAllowed(insn, decorations) && getInsnReturnType(insn) == Type.VOID_TYPE
+
+    override val allowedInsnDescription = "void method invocations and field assignments"
 
     override fun expectedMethodSignature(
         annotation: PsiAnnotation,

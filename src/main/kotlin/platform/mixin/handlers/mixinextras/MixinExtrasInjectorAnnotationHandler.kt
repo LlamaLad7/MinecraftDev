@@ -95,7 +95,9 @@ abstract class MixinExtrasInjectorAnnotationHandler : InjectorAnnotationHandler(
 
     abstract val supportedInstructionTypes: Collection<InstructionType>
 
-    open fun extraTargetRestrictions(insn: AbstractInsnNode): Boolean = true
+    override fun isInsnAllowed(insn: AbstractInsnNode, decorations: Map<String, Any?>): Boolean {
+        return supportedInstructionTypes.any { it.matches(TargetInsn(insn, decorations)) }
+    }
 
     abstract fun expectedMethodSignature(
         annotation: PsiAnnotation,
@@ -118,7 +120,6 @@ abstract class MixinExtrasInjectorAnnotationHandler : InjectorAnnotationHandler(
         val insns = resolveInstructions(annotation, targetClass, targetMethod)
             .ifEmpty { return emptyList() }
             .map { TargetInsn(it.insn, it.decorations) }
-        if (insns.any { insn -> supportedInstructionTypes.none { it.matches(insn) } }) return emptyList()
         val signatures = insns.map { insn ->
             expectedMethodSignature(annotation, targetClass, targetMethod, insn)
         }
