@@ -22,10 +22,10 @@ package com.demonwav.mcdev.util
 
 import com.demonwav.mcdev.platform.mixin.handlers.desugar.DesugarUtil
 import com.intellij.codeInsight.daemon.impl.quickfix.AddMethodFix
-import com.intellij.navigation.AnonymousElementProvider
 import com.intellij.openapi.project.Project
 import com.intellij.psi.CommonClassNames
 import com.intellij.psi.JavaPsiFacade
+import com.intellij.psi.JavaRecursiveElementVisitor
 import com.intellij.psi.JavaRecursiveElementWalkingVisitor
 import com.intellij.psi.PsiAnonymousClass
 import com.intellij.psi.PsiClass
@@ -153,7 +153,7 @@ fun findQualifiedClass(
         return outerResolver(fullQualifiedName)
     }
 
-    var currentClass = outerResolver(fullQualifiedName.substring(0, innerPos)) ?: return null
+    var currentClass = outerResolver(fullQualifiedName.take(innerPos)) ?: return null
     var outerPos: Int
 
     while (true) {
@@ -183,8 +183,8 @@ private fun PsiClass.findInnerClass(name: String): PsiClass? {
                 null
             }
         } else {
-            if (innerIndex > 0 && innerIndex <= anonymousElements.size) {
-                anonymousElements[innerIndex - 1] as PsiClass
+            if (innerIndex > 0 && innerIndex <= anonymousClasses.size) {
+                anonymousClasses[innerIndex - 1]
             } else {
                 null
             }
@@ -194,9 +194,9 @@ private fun PsiClass.findInnerClass(name: String): PsiClass? {
 
 @Throws(ClassNameResolutionFailedException::class)
 @PublishedApi
-internal fun PsiElement.getAnonymousIndex(anonymousElement: PsiElement): Int {
+internal fun PsiClass.getAnonymousIndex(anonymousElement: PsiElement): Int {
     // Attempt to find name for anonymous class
-    for ((i, element) in anonymousElements.withIndex()) {
+    for ((i, element) in anonymousClasses.withIndex()) {
         if (element equivalentTo anonymousElement) {
             return i + 1
         }
@@ -205,16 +205,22 @@ internal fun PsiElement.getAnonymousIndex(anonymousElement: PsiElement): Int {
     throw ClassNameResolutionFailedException("Failed to determine anonymous class for $anonymousElement")
 }
 
-val PsiElement.anonymousElements: Array<PsiElement>
+val PsiClass.anonymousClasses: List<PsiAnonymousClass>
     get() {
-        for (provider in AnonymousElementProvider.EP_NAME.extensionList) {
-            val elements = provider.getAnonymousElements(this)
-            if (elements.isNotEmpty()) {
-                return elements
-            }
-        }
+        val list = mutableListOf<PsiAnonymousClass>()
 
-        return emptyArray()
+        acceptChildren(object : JavaRecursiveElementVisitor() {
+            override fun visitClass(aClass: PsiClass) {
+                // skip inner classes
+            }
+
+            override fun visitAnonymousClass(aClass: PsiAnonymousClass) {
+                aClass.argumentList?.accept(this)
+                list += aClass
+            }
+        })
+
+        return list
     }
 
 @Throws(ClassNameResolutionFailedException::class)
