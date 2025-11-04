@@ -118,7 +118,7 @@ interface MixinSelector {
     }
 
     fun matchMethod(method: PsiMethod, qualifier: PsiClass): Boolean {
-        if (!canEverMatch(method.name)) {
+        if (!canEverMatch(method.internalName)) {
             return false
         }
         val fqn = qualifier.fullQualifiedName ?: return false
