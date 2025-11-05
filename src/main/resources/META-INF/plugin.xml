@@ -1458,6 +1458,14 @@
                          level="WARNING"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.mixinextras.LocalArgsOnlyInspection"/>
+        <localInspection displayName="@Share has conflicting variable type"
+                         shortName="ConflictingShareType"
+                         groupName="Mixin"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="ERROR"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.mixinextras.ConflictingShareTypeInspection"/>
         <!--endregion-->
 
         <!--region Configuration -->
