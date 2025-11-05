@@ -78,9 +78,11 @@ class RedirectInjectorHandler : InjectorAnnotationHandler() {
         }
     }
 
-    override fun isInsnAllowed(insn: AbstractInsnNode): Boolean {
+    override fun isInsnAllowed(insn: AbstractInsnNode, decorations: Map<String, Any?>): Boolean {
         return getRedirectType(insn)?.isInsnAllowed(insn) ?: false
     }
+
+    override val allowedInsnDescription = "redirect targets (see docs)"
 
     override fun expectedMethodSignature(
         annotation: PsiAnnotation,

@@ -34,6 +34,7 @@ import io.mcdev.obfex.ref.VoidTypeDef
 import io.mcdev.obfex.ref.asClass
 import io.mcdev.obfex.ref.asPackage
 
+// TODO this sucks, start over from scratch
 @Suppress("MemberVisibilityCanBePrivate")
 class MappingSet(namespaceNames: Iterable<String> = emptyList()) {
 
@@ -84,9 +85,9 @@ class MappingSet(namespaceNames: Iterable<String> = emptyList()) {
     fun namespaceIndex(ns: MappingNamespace): Int = findNamespace(ns).index
 
     fun <T : ReturnTypeDef> mapType(fromNs: MappingNamespace, toNs: MappingNamespace, typeDef: T): T {
-        when (typeDef) {
-            is VoidTypeDef, is PrimitiveTypeDef -> return typeDef
-        }
+//        when (typeDef) {
+//            is VoidTypeDef, is PrimitiveTypeDef -> return typeDef
+//        }
 
         val fromNamespace = findNamespace(fromNs)
         val toNamespace = findNamespace(toNs)

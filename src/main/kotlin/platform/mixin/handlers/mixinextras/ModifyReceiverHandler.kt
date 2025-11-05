@@ -34,12 +34,14 @@ class ModifyReceiverHandler : MixinExtrasInjectorAnnotationHandler() {
         InstructionType.METHOD_CALL, InstructionType.FIELD_GET, InstructionType.FIELD_SET
     )
 
-    override fun extraTargetRestrictions(insn: AbstractInsnNode) = when (insn.opcode) {
+    override fun isInsnAllowed(insn: AbstractInsnNode, decorations: Map<String, Any?>) = when (insn.opcode) {
         Opcodes.INVOKEVIRTUAL, Opcodes.INVOKESPECIAL, Opcodes.INVOKEINTERFACE,
         Opcodes.GETFIELD, Opcodes.PUTFIELD -> true
 
         else -> false
     }
+
+    override val allowedInsnDescription = "non-static method invocations and field references"
 
     override fun expectedMethodSignature(
         annotation: PsiAnnotation,

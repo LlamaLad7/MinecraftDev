@@ -164,9 +164,11 @@ abstract class InjectorAnnotationHandler : MixinAnnotationHandler {
         targetMethod: MethodNode,
     ): List<MethodSignature>?
 
-    open fun isInsnAllowed(insn: AbstractInsnNode): Boolean {
+    open fun isInsnAllowed(insn: AbstractInsnNode, decorations: Map<String, Any?>): Boolean {
         return true
     }
+
+    open val allowedInsnDescription = "all instructions"
 
     override fun createUnresolvedMessage(annotation: PsiAnnotation): String? {
         return "Cannot resolve any target instructions in target class"

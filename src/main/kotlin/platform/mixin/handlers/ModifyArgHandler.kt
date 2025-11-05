@@ -38,9 +38,11 @@ import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
 
 class ModifyArgHandler : InjectorAnnotationHandler() {
-    override fun isInsnAllowed(insn: AbstractInsnNode): Boolean {
+    override fun isInsnAllowed(insn: AbstractInsnNode, decorations: Map<String, Any?>): Boolean {
         return insn is MethodInsnNode
     }
+
+    override val allowedInsnDescription = "method invocations"
 
     override fun expectedMethodSignature(
         annotation: PsiAnnotation,

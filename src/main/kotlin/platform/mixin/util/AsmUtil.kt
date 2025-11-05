@@ -22,7 +22,7 @@ package com.demonwav.mcdev.platform.mixin.util
 
 import com.demonwav.mcdev.platform.mixin.reference.MixinSelector
 import com.demonwav.mcdev.util.MemberReference
-import com.demonwav.mcdev.util.anonymousElements
+import com.demonwav.mcdev.util.anonymousClasses
 import com.demonwav.mcdev.util.cached
 import com.demonwav.mcdev.util.childrenOfType
 import com.demonwav.mcdev.util.findField
@@ -389,7 +389,7 @@ private fun ClassNode.constructClass(project: Project, body: String): PsiClass? 
     // find innermost PsiClass
     while (true) {
         clazz = clazz.innerClasses.firstOrNull()
-            ?: clazz.anonymousElements.lastOrNull { it !== clazz && it is PsiClass } as? PsiClass
+            ?: clazz.anonymousClasses.lastOrNull()
             ?: clazz.localClasses.lastOrNull()
             ?: break
     }
