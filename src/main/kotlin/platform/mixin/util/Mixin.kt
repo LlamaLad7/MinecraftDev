@@ -21,7 +21,6 @@
 package com.demonwav.mcdev.platform.mixin.util
 
 import com.demonwav.mcdev.platform.mixin.action.FindMixinsAction
-import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.ACCESSOR
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.INVOKER
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.MIXIN
@@ -36,7 +35,6 @@ import com.demonwav.mcdev.util.findModule
 import com.demonwav.mcdev.util.resolveClassArray
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
-import com.intellij.platform.ide.progress.ModalTaskOwner.project
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiArrayType
@@ -46,7 +44,6 @@ import com.intellij.psi.PsiDisjunctionType
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiIntersectionType
 import com.intellij.psi.PsiLiteralExpression
-import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiParameter
 import com.intellij.psi.PsiPrimitiveType
 import com.intellij.psi.PsiType
@@ -149,7 +146,7 @@ val PsiParameter.isMixinExtrasSugar: Boolean
 
 val PsiType.isLocalRef: Boolean
     get() {
-        return PsiTypesUtil.getPsiClass(this)?.qualifiedName?.startsWith(MixinConstants.MixinExtras.LOCAL_REF_PACKAGE) == true
+        return PsiTypesUtil.getPsiClass(this)?.qualifiedName?.startsWith(LOCAL_REF_PACKAGE) == true
     }
 
 fun PsiType.unwrapLocalRef(): PsiType {
@@ -288,20 +285,6 @@ private fun isClassAssignable(leftClass: PsiClass, rightClass: PsiClass): Boolea
         }
     }
     return result
-}
-
-fun isMixinEntryPoint(element: PsiElement?): Boolean {
-    if (element !is PsiMethod) {
-        return false
-    }
-    val project = element.project
-    for (annotation in element.annotations) {
-        val handler = MixinAnnotationHandler.forMixinAnnotation(annotation, project)
-        if (handler != null && handler.isEntryPoint) {
-            return true
-        }
-    }
-    return false
 }
 
 val PsiElement.isFabricMixin: Boolean get() =

@@ -41,5 +41,5 @@ class OverwriteHandler : MixinMemberAnnotationHandler {
         return "Unresolved method ${method.name} in target class"
     }
 
-    override val isEntryPoint = true
+    override val isImplicitlyUsed = true
 }
