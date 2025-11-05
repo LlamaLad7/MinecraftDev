@@ -28,7 +28,7 @@ import com.demonwav.mcdev.platform.mcp.at.gen.psi.AtEntry
 import com.demonwav.mcdev.platform.mcp.at.gen.psi.AtFieldName
 import com.demonwav.mcdev.platform.mcp.at.gen.psi.AtFunction
 import com.demonwav.mcdev.platform.mcp.at.gen.psi.AtTypes
-import com.demonwav.mcdev.util.anonymousElements
+import com.demonwav.mcdev.util.anonymousClasses
 import com.demonwav.mcdev.util.fullQualifiedName
 import com.demonwav.mcdev.util.getSimilarity
 import com.demonwav.mcdev.util.localClasses
@@ -147,9 +147,7 @@ class AtCompletionContributor : CompletionContributor() {
                 )
             }
 
-            for (anonymousElement in currentClass.anonymousElements) {
-                val anonClass = anonymousElement as? PsiClass ?: continue
-
+            for (anonClass in currentClass.anonymousClasses) {
                 val name = anonClass.fullQualifiedName ?: continue
                 result.addElement(
                     PrioritizedLookupElement.withPriority(

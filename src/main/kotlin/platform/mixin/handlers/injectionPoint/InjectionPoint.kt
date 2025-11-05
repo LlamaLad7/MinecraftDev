@@ -108,6 +108,8 @@ abstract class InjectionPoint<T : PsiElement> {
 
     open fun isShiftDiscouraged(shift: Int, at: PsiAnnotation): Boolean = shift != 0
 
+    open val validOpcodes: Set<Int> = emptySet()
+
     abstract fun createNavigationVisitor(
         at: PsiAnnotation,
         target: MixinSelector?,

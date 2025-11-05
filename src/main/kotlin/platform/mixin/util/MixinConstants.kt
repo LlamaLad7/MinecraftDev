@@ -92,6 +92,7 @@ object MixinConstants {
         const val WRAP_METHOD = "com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod"
         const val LOCAL = "com.llamalad7.mixinextras.sugar.Local"
         const val LOCAL_REF_PACKAGE = "com.llamalad7.mixinextras.sugar.ref."
+        const val SHARE = "com.llamalad7.mixinextras.sugar.Share"
         const val EXPRESSION = "com.llamalad7.mixinextras.expression.Expression"
         const val DEFINITION = "com.llamalad7.mixinextras.expression.Definition"
         const val MIXIN_EXTRAS_CONFIG = "com.llamalad7.mixinextras.config.MixinExtrasConfig"

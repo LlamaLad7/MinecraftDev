@@ -73,15 +73,8 @@ class FabricLoomModelBuilderImpl extends AbstractModelBuilderService {
             decompilers << ["single": getDecompilers(loomExtension, false)]
         }
 
-        def modSourceSets = [:]
-
-        for (def mod in loomExtension.getMods()) {
-            def modName = mod.getName()
-            modSourceSets[modName] = mod.getModSourceSets().getOrNull()?.collect { it.sourceSet().getName() }
-        }
-
         //noinspection GroovyAssignabilityCheck
-        return new FabricLoomModelImpl(minecraftVersion, tinyMappings, decompilers, splitMinecraftJar, modSourceSets)
+        return new FabricLoomModelImpl(minecraftVersion, tinyMappings, decompilers, splitMinecraftJar)
     }
 
     List<FabricLoomModelImpl.DecompilerModelImpl> getDecompilers(Object loomExtension, boolean client) {
@@ -107,7 +100,7 @@ class FabricLoomModelBuilderImpl extends AbstractModelBuilderService {
         }
 
         //noinspection GroovyAssignabilityCheck
-        return new FabricLoomModelImpl(tinyMappings, ["single": decompilers], false, [:])
+        return new FabricLoomModelImpl(tinyMappings, ["single": decompilers], false)
     }
 
     @Override

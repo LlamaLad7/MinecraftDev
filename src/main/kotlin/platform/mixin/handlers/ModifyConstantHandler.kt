@@ -129,9 +129,11 @@ class ModifyConstantHandler : InjectorAnnotationHandler() {
         }.toList()
     }
 
-    override fun isInsnAllowed(insn: AbstractInsnNode): Boolean {
+    override fun isInsnAllowed(insn: AbstractInsnNode, decorations: Map<String, Any?>): Boolean {
         return insn.opcode in allowedOpcodes
     }
+
+    override val allowedInsnDescription = "constants"
 
     override val mixinExtrasExpressionContextType = ExpressionContext.Type.MODIFY_CONSTANT
 }

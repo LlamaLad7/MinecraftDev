@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Do not check out the repository here. See https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
-      - uses: Vankka/pr-target-branch-action@v2.1
+      - uses: Vankka/pr-target-branch-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -20,4 +20,3 @@ jobs:
           comment: |
             New PRs should target the `dev` branch. The base branch of this PR has been automatically changed to `dev`.
             Please check that there are no merge conflicts.
-

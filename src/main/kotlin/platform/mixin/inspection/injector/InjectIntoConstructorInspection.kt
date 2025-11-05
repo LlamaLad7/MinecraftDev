@@ -97,21 +97,6 @@ class InjectIntoConstructorInspection : MixinInspection() {
                             )
                             return
                         }
-
-                        val delegateCtorCall = targetMethod.findDelegateConstructorCall()
-                        if (delegateCtorCall != null &&
-                            instructions.any {
-                                val insnIndex = targetMethod.instructions.indexOf(it.insn)
-                                val delegateCtorIndex = targetMethod.instructions.indexOf(delegateCtorCall)
-                                insnIndex <= delegateCtorIndex
-                            }
-                        ) {
-                            holder.registerProblem(
-                                problemElement,
-                                "Cannot inject before super() call",
-                            )
-                            return
-                        }
                     }
                 }
             }
