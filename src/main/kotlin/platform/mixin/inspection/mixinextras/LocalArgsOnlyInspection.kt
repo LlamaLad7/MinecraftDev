@@ -26,7 +26,7 @@ import com.demonwav.mcdev.platform.mixin.inspection.fix.AnnotationAttributeFix
 import com.demonwav.mcdev.platform.mixin.inspection.injector.ModifyVariableArgsOnlyInspection
 import com.demonwav.mcdev.platform.mixin.util.MethodTargetMember
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
-import com.demonwav.mcdev.platform.mixin.util.MixinConstants.MixinExtras.unwrapLocalRef
+import com.demonwav.mcdev.platform.mixin.util.unwrapLocalRef
 import com.demonwav.mcdev.util.constantValue
 import com.demonwav.mcdev.util.findContainingMethod
 import com.demonwav.mcdev.util.ifEmpty

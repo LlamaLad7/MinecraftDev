@@ -1466,6 +1466,14 @@
                          level="ERROR"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.mixinextras.ConflictingShareTypeInspection"/>
+        <localInspection displayName="@Share has non-LocalRef type"
+                         shortName="ShareNonLocalRef"
+                         groupName="Mixin"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="ERROR"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.mixinextras.ShareNonLocalRefInspection"/>
         <!--endregion-->
 
         <!--region Configuration -->

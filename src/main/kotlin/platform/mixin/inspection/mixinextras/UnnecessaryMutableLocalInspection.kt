@@ -25,7 +25,8 @@ import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.WrapOperationHandler
 import com.demonwav.mcdev.platform.mixin.inspection.MixinInspection
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
-import com.demonwav.mcdev.platform.mixin.util.MixinConstants.MixinExtras.unwrapLocalRef
+import com.demonwav.mcdev.platform.mixin.util.isLocalRef
+import com.demonwav.mcdev.platform.mixin.util.unwrapLocalRef
 import com.demonwav.mcdev.util.findContainingMethod
 import com.intellij.codeInspection.LocalQuickFixOnPsiElement
 import com.intellij.codeInspection.ProblemsHolder
@@ -42,10 +43,10 @@ import com.intellij.psi.PsiParameter
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.search.searches.OverridingMethodsSearch
 import com.intellij.psi.search.searches.ReferencesSearch
+import com.intellij.psi.util.PsiTypesUtil
 import com.intellij.psi.util.PsiUtil
 import com.intellij.psi.util.parentOfType
 import com.siyeh.ig.psiutils.MethodCallUtils
-import org.jetbrains.plugins.groovy.intentions.style.inference.resolve
 
 class UnnecessaryMutableLocalInspection : MixinInspection() {
     override fun getStaticDescription() = "Unnecessary mutable reference to captured local"
@@ -74,12 +75,13 @@ class UnnecessaryMutableLocalInspection : MixinInspection() {
                 if (!param.hasAnnotation(MixinConstants.MixinExtras.LOCAL)) {
                     continue
                 }
-                val paramType = param.type.resolve()
-                if (paramType?.qualifiedName?.startsWith(MixinConstants.MixinExtras.LOCAL_REF_PACKAGE) != true) {
+                val paramType = param.type
+                if (!param.type.isLocalRef) {
                     continue
                 }
 
-                checkParameter(holder, method, param, i, paramType)
+                val paramClass = PsiTypesUtil.getPsiClass(paramType) ?: continue
+                checkParameter(holder, method, param, i, paramClass)
             }
         }
     }

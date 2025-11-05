@@ -27,6 +27,7 @@ import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.INVOKER
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.MIXIN
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Classes.CALLBACK_INFO
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Classes.CALLBACK_INFO_RETURNABLE
+import com.demonwav.mcdev.platform.mixin.util.MixinConstants.MixinExtras.LOCAL_REF_PACKAGE
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.MixinExtras.OPERATION
 import com.demonwav.mcdev.util.SemanticVersion
 import com.demonwav.mcdev.util.cached
@@ -35,6 +36,7 @@ import com.demonwav.mcdev.util.findModule
 import com.demonwav.mcdev.util.resolveClassArray
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
+import com.intellij.platform.ide.progress.ModalTaskOwner.project
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiArrayType
@@ -52,6 +54,7 @@ import com.intellij.psi.PsiTypes
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.InheritanceUtil
 import com.intellij.psi.util.PsiModificationTracker
+import com.intellij.psi.util.PsiTypesUtil
 import com.intellij.psi.util.TypeConversionUtil
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.ClassNode
@@ -143,6 +146,57 @@ val PsiParameter.isMixinExtrasSugar: Boolean
     get() {
         return annotations.any { it.qualifiedName?.contains(".mixinextras.sugar.") == true }
     }
+
+val PsiType.isLocalRef: Boolean
+    get() {
+        return PsiTypesUtil.getPsiClass(this)?.qualifiedName?.startsWith(MixinConstants.MixinExtras.LOCAL_REF_PACKAGE) == true
+    }
+
+fun PsiType.unwrapLocalRef(): PsiType {
+    if (this !is PsiClassType) {
+        return this
+    }
+    val qName = resolve()?.qualifiedName ?: return this
+    if (!qName.startsWith(LOCAL_REF_PACKAGE)) {
+        return this
+    }
+    return when (qName.substringAfterLast('.')) {
+        "LocalBooleanRef" -> PsiTypes.booleanType()
+        "LocalCharRef" -> PsiTypes.charType()
+        "LocalDoubleRef" -> PsiTypes.doubleType()
+        "LocalFloatRef" -> PsiTypes.floatType()
+        "LocalIntRef" -> PsiTypes.intType()
+        "LocalLongRef" -> PsiTypes.longType()
+        "LocalShortRef" -> PsiTypes.shortType()
+        "LocalRef" -> parameters.getOrNull(0) ?: this
+        else -> this
+    }
+}
+
+fun PsiType.wrapLocalRef(project: Project): PsiType {
+    if (isLocalRef) {
+        return this
+    }
+
+    val elementFactory = JavaPsiFacade.getElementFactory(project)
+    return when (this) {
+        PsiTypes.booleanType() -> elementFactory.createTypeByFQClassName(LOCAL_REF_PACKAGE + "LocalBooleanRef")
+        PsiTypes.charType() -> elementFactory.createTypeByFQClassName(LOCAL_REF_PACKAGE + "LocalCharRef")
+        PsiTypes.doubleType() -> elementFactory.createTypeByFQClassName(LOCAL_REF_PACKAGE + "LocalDoubleRef")
+        PsiTypes.floatType() -> elementFactory.createTypeByFQClassName(LOCAL_REF_PACKAGE + "LocalFloatRef")
+        PsiTypes.intType() -> elementFactory.createTypeByFQClassName(LOCAL_REF_PACKAGE + "LocalIntRef")
+        PsiTypes.longType() -> elementFactory.createTypeByFQClassName(LOCAL_REF_PACKAGE + "LocalLongRef")
+        PsiTypes.shortType() -> elementFactory.createTypeByFQClassName(LOCAL_REF_PACKAGE + "LocalShortRef")
+        else -> {
+            val typeElement = elementFactory.createTypeElementFromText(LOCAL_REF_PACKAGE + "LocalRef<?>", null)
+            typeElement.innermostComponentReferenceElement!!
+                .parameterList!!
+                .typeParameterElements[0]!!
+                .replace(elementFactory.createTypeElement(this))
+            typeElement.type
+        }
+    }
+}
 
 fun callbackInfoType(project: Project): PsiType =
     PsiType.getTypeByName(CALLBACK_INFO, project, GlobalSearchScope.allScope(project))
