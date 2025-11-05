@@ -19,7 +19,7 @@ intellij-platform = { id = "org.jetbrains.intellij.platform", version.ref = "int
 idea-ext = { id = "org.jetbrains.gradle.plugin.idea-ext", version.ref = "idea-ext" }
 licenser = { id = "net.neoforged.licenser", version.ref = "licenser" }
 changelog = { id = "org.jetbrains.changelog", version.ref = "changelog" }
-sentry = "io.sentry.jvm.gradle:5.8.0"
+sentry = "io.sentry.jvm.gradle:5.12.2"
 
 [libraries]
 intellij-plugin-repository-rest-client = { module = "org.jetbrains.intellij:plugin-repository-rest-client", version.ref = "intellij-plugin-repository-rest-client" }
