@@ -629,21 +629,21 @@
         <gotoDeclarationHandler implementation="com.demonwav.mcdev.platform.mcp.at.AtGotoDeclarationHandler"/>
         <annotator language="Access Transformers" implementationClass="com.demonwav.mcdev.platform.mcp.at.AtAnnotator"/>
 
-        <!-- access widener file type -->
-        <fileType name="Access Widener" language="Access Widener"
-                  implementationClass="com.demonwav.mcdev.platform.mcp.aw.AwFileType" fieldName="INSTANCE"
-                  patterns="*.accesswidener;*.aw"/>
-        <lang.parserDefinition language="Access Widener"
-                               implementationClass="com.demonwav.mcdev.platform.mcp.aw.AwParserDefinition"/>
-        <lang.syntaxHighlighterFactory language="Access Widener"
-                                       implementationClass="com.demonwav.mcdev.platform.mcp.aw.AwSyntaxHighlighterFactory"/>
-        <colorSettingsPage implementation="com.demonwav.mcdev.platform.mcp.aw.AwColorSettingsPage"/>
-        <lang.commenter language="Access Widener" implementationClass="com.demonwav.mcdev.platform.mcp.aw.AwCommenter"/>
-        <annotator language="Access Widener" implementationClass="com.demonwav.mcdev.platform.mcp.aw.AwAnnotator"/>
-        <completion.contributor language="Access Widener"
-                                implementationClass="com.demonwav.mcdev.platform.mcp.aw.AwCompletionContributor"/>
+        <!-- class tweaker file type -->
+        <fileType name="Class Tweaker" language="Class Tweaker"
+                  implementationClass="com.demonwav.mcdev.platform.mcp.ct.CtFileType" fieldName="INSTANCE"
+                  patterns="*.accesswidener;*.aw;*.classtweaker;*.ct"/>
+        <lang.parserDefinition language="Class Tweaker"
+                               implementationClass="com.demonwav.mcdev.platform.mcp.ct.CtParserDefinition"/>
+        <lang.syntaxHighlighterFactory language="Class Tweaker"
+                                       implementationClass="com.demonwav.mcdev.platform.mcp.ct.CtSyntaxHighlighterFactory"/>
+        <colorSettingsPage implementation="com.demonwav.mcdev.platform.mcp.ct.CtColorSettingsPage"/>
+        <lang.commenter language="Class Tweaker" implementationClass="com.demonwav.mcdev.platform.mcp.ct.CtCommenter"/>
+        <annotator language="Class Tweaker" implementationClass="com.demonwav.mcdev.platform.mcp.ct.CtAnnotator"/>
+        <completion.contributor language="Class Tweaker"
+                                implementationClass="com.demonwav.mcdev.platform.mcp.ct.CtCompletionContributor"/>
         <codeInsight.unresolvedReferenceQuickFixProvider
-            implementation="com.demonwav.mcdev.platform.mcp.aw.fixes.CopyAwAccessibleEntryFix$Provider"/>
+            implementation="com.demonwav.mcdev.platform.mcp.ct.fixes.CopyAwAccessibleEntryFix$Provider"/>
 
         <moduleService serviceImplementation="com.demonwav.mcdev.platform.mcp.McpModuleSettings"/>
 
@@ -1017,11 +1017,11 @@
                          implementationClass="com.demonwav.mcdev.platform.mcp.inspections.StackEmptyInspection"/>
         <localInspection displayName="Duplicate access widener"
                          groupName="MCP"
-                         language="Access Widener"
+                         language="Class Tweaker"
                          enabledByDefault="true"
                          level="WARNING"
                          hasStaticDescription="true"
-                         implementationClass="com.demonwav.mcdev.platform.mcp.aw.inspections.DuplicateAwEntryInspection"/>
+                         implementationClass="com.demonwav.mcdev.platform.mcp.ct.inspections.DuplicateAwEntryInspection"/>
         <!--endregion-->
 
         <!--region MIXIN INSPECTIONS-->
@@ -1057,7 +1057,7 @@
                          enabledByDefault="true"
                          level="WARNING"
                          hasStaticDescription="true"
-                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.MixinCancellableInspection"/>
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.injector.MixinCancellableInspection"/>
         <localInspection displayName="Invalid @Mixin Target"
                          shortName="InvalidMixinTarget"
                          groupName="Mixin"
@@ -1206,6 +1206,14 @@
                          level="ERROR"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.injector.InjectIntoConstructorInspection"/>
+        <localInspection displayName="Missing or invalid use of opcode"
+                         shortName="MissingOrInvalidOpcode"
+                         groupName="Mixin"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.injector.InjectorOpcodeInspection"/>
         <localInspection displayName="Invalid injector method signature"
                          shortName="InvalidInjectorMethodSignature"
                          groupName="Mixin"
@@ -1278,6 +1286,14 @@
                          level="WARNING"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.injector.DiscouragedShiftInspection"/>
+        <localInspection displayName="Usage of disallowed injector target"
+                         shortName="DisallowedTargetInsn"
+                         groupName="Mixin"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="ERROR"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.injector.DisallowedTargetInsnInspection"/>
         <localInspection displayName="Usage of LocalCapture.CAPTURE_FAILEXCEPTION"
                          shortName="LocalCaptureFailException"
                          groupName="Mixin"
@@ -1442,6 +1458,14 @@
                          level="WARNING"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.mixinextras.LocalArgsOnlyInspection"/>
+        <localInspection displayName="@Share has conflicting variable type"
+                         shortName="ConflictingShareType"
+                         groupName="Mixin"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="ERROR"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.mixinextras.ConflictingShareTypeInspection"/>
         <!--endregion-->
 
         <!--region Configuration -->

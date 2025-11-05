@@ -34,8 +34,6 @@ public interface FabricLoomModel {
 
     boolean getSplitMinecraftJar();
 
-    Map<String, List<String>> getModSourceSets();
-
     interface DecompilerModel {
 
         String getName();

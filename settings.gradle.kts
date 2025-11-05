@@ -18,8 +18,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version("0.8.0")
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        maven("https://maven.neoforged.net/releases/") {
+            content {
+                includeGroupAndSubgroups("net.neoforged")
+            }
+        }
+    }
 }
 
 rootProject.name = "MinecraftDev"

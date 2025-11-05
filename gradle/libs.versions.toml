@@ -1,11 +1,11 @@
 [versions]
-kotlin = "2.1.21"
+kotlin = "2.2.20"
 coroutines = "1.10.2"
 junit = "5.10.2"
 junit-platform = "1.10.2"
 asm = "9.6"
 fuel = "2.3.1"
-licenser = "0.6.1"
+licenser = "0.7.5"
 changelog = "2.2.0"
 intellij-plugin = "2.6.0"
 intellij-plugin-repository-rest-client = "2.0.46"
@@ -17,8 +17,9 @@ psiPlugin = "251.175"
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 intellij-platform = { id = "org.jetbrains.intellij.platform", version.ref = "intellij-plugin" }
 idea-ext = { id = "org.jetbrains.gradle.plugin.idea-ext", version.ref = "idea-ext" }
-licenser = { id = "org.cadixdev.licenser", version.ref = "licenser" }
+licenser = { id = "net.neoforged.licenser", version.ref = "licenser" }
 changelog = { id = "org.jetbrains.changelog", version.ref = "changelog" }
+sentry = "io.sentry.jvm.gradle:5.12.2"
 
 [libraries]
 intellij-plugin-repository-rest-client = { module = "org.jetbrains.intellij:plugin-repository-rest-client", version.ref = "intellij-plugin-repository-rest-client" }
@@ -28,7 +29,7 @@ kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib-jdk8", version.re
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 
 intellij-plugin = { module = "org.jetbrains.intellij.platform:org.jetbrains.intellij.platform.gradle.plugin", version.ref = "intellij-plugin" }
-licenser-plugin = { module = "org.cadixdev.licenser:org.cadixdev.licenser.gradle.plugin", version.ref = "licenser" }
+licenser-plugin = { module = "net.neoforged.licenser:net.neoforged.licenser.gradle.plugin", version.ref = "licenser" }
 changelog-plugin = { module = "org.jetbrains.changelog:org.jetbrains.changelog.gradle.plugin", version.ref = "changelog" }
 
 coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines" }
@@ -56,6 +57,8 @@ gson = "com.google.code.gson:gson:2.10.1"
 
 fuel = { module = "com.github.kittinunf.fuel:fuel", version.ref = "fuel" }
 fuel-coroutines = { module = "com.github.kittinunf.fuel:fuel-coroutines", version.ref = "fuel" }
+
+sentry = "io.sentry:sentry:8.22.0"
 
 # Testing
 test-mixin = "org.spongepowered:mixin:0.8.5"

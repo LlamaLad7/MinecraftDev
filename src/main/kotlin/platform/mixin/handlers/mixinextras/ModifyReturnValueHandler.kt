@@ -32,6 +32,8 @@ import org.objectweb.asm.tree.MethodNode
 class ModifyReturnValueHandler : MixinExtrasInjectorAnnotationHandler() {
     override val supportedInstructionTypes = listOf(InstructionType.RETURN)
 
+    override val allowedInsnDescription = "return instructions"
+
     override fun expectedMethodSignature(
         annotation: PsiAnnotation,
         targetClass: ClassNode,

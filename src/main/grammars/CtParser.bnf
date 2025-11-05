@@ -1,0 +1,129 @@
+/*
+ * Minecraft Development for IntelliJ
+ *
+ * https://mcdev.io/
+ *
+ * Copyright (C) 2025 minecraft-dev
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation, version 3.0 only.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+{
+    parserClass="com.demonwav.mcdev.platform.mcp.ct.gen.parser.CtParser"
+
+    extends="com.intellij.extapi.psi.ASTWrapperPsiElement"
+
+    psiClassPrefix="Ct"
+    psiImplClassSuffix="Impl"
+    psiPackage="com.demonwav.mcdev.platform.mcp.ct.gen.psi"
+    psiImplPackage="com.demonwav.mcdev.platform.mcp.ct.gen.psi.impl"
+
+    elementTypeHolderClass="com.demonwav.mcdev.platform.mcp.ct.gen.psi.CtTypes"
+    elementTypeClass="com.demonwav.mcdev.platform.mcp.ct.psi.CtElementType"
+    tokenTypeClass="com.demonwav.mcdev.platform.mcp.ct.psi.CtTokenType"
+}
+
+aw_file ::= header_line line*
+
+private header_line ::= !<<eof>> header COMMENT? end_line
+
+private line ::= !<<eof>> entry? COMMENT? end_line
+private end_line ::= crlf | <<eof>>
+
+header ::= HEADER_NAME HEADER_VERSION_ELEMENT HEADER_NAMESPACE_ELEMENT {
+    mixin="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.impl.CtHeaderImplMixin"
+    implements="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.CtHeaderMixin"
+    pin = 1
+}
+
+private entry ::= aw_entry | itf_entry {
+    mixin="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.impl.CtEntryImplMixin"
+    implements="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.impl.CtEntryMixin"
+    recoverWhile = line_recover
+}
+
+private aw_entry ::= aw_class_entry | aw_method_entry | aw_field_entry {
+    mixin="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.impl.CtAwEntryImplMixin"
+    implements="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.CtAwEntryMixin"
+}
+
+aw_class_entry ::= access class_literal class_name {
+    mixin="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.impl.CtAwClassEntryImplMixin"
+    implements="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.CtAwClassEntryMixin"
+    pin = 2
+}
+
+aw_method_entry ::= access method_literal class_name member_name method_desc {
+    mixin="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.impl.CtAwMethodEntryImplMixin"
+    implements="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.CtAwMethodEntryMixin"
+    pin = 2
+}
+
+aw_field_entry ::= access field_literal class_name member_name field_desc {
+    mixin="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.impl.CtAwFieldEntryImplMixin"
+    implements="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.CtAwFieldEntryMixin"
+    pin = 2
+}
+
+itf_entry ::= INJECT_INTERFACE_ELEMENT class_name signature {
+    mixin="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.impl.CtItfEntryImplMixin"
+    implements="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.CtItfEntryMixin"
+    pin = 1
+}
+
+private line_recover ::= !(end_line | COMMENT)
+
+access ::= ACCESS_ELEMENT {
+    methods=[
+        accessElement="ACCESS_ELEMENT"
+    ]
+}
+
+class_literal ::= CLASS_ELEMENT
+
+method_literal ::= METHOD_ELEMENT
+
+field_literal ::= FIELD_ELEMENT
+
+class_name ::= CLASS_NAME_ELEMENT {
+    mixin="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.impl.CtAwClassNameImplMixin"
+    implements="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.CtAwClassNameMixin"
+    methods=[
+        classNameElement="CLASS_NAME_ELEMENT"
+    ]
+}
+
+member_name ::= NAME_ELEMENT {
+    mixin= "com.demonwav.mcdev.platform.mcp.ct.psi.mixins.impl.CtAwMemberNameImplMixin"
+    implements="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.CtAwMemberNameMixin"
+    methods=[
+        nameElement="NAME_ELEMENT"
+    ]
+}
+
+method_desc ::= OPEN_PAREN desc_element* CLOSE_PAREN desc_element
+
+field_desc ::= desc_element
+
+desc_element ::= OPEN_BRACKET* (PRIMITIVE | CLASS_VALUE) {
+    mixin= "com.demonwav.mcdev.platform.mcp.ct.psi.mixins.impl.CtAwDescElementImplMixin"
+    implements= "com.demonwav.mcdev.platform.mcp.ct.psi.mixins.CtAwDescElementMixin"
+    methods=[
+        primitive="PRIMITIVE"
+        classValue="CLASS_VALUE"
+    ]
+}
+
+signature ::= CLASS_NAME_ELEMENT (LESS_THAN signature_element+ GREATER_THAN)?
+signature_element ::= OPEN_BRACKET* (PRIMITIVE | TYPE_VARIABLE | signature_class_element)
+signature_class_element ::= ASTERISK | ( (PLUS | MINUS)? SIGNATURE_CLASS_VALUE_START (LESS_THAN signature_element GREATER_THAN)? SIGNATURE_CLASS_VALUE_END )

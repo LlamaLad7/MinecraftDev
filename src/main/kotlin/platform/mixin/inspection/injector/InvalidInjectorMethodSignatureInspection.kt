@@ -22,6 +22,7 @@ package com.demonwav.mcdev.platform.mixin.inspection.injector
 
 import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
+import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.AtResolver
 import com.demonwav.mcdev.platform.mixin.inspection.MixinInspection
 import com.demonwav.mcdev.platform.mixin.reference.MethodReference
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
@@ -99,6 +100,17 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
                     as? InjectorAnnotationHandler ?: continue
                 val methodAttribute = annotation.findDeclaredAttributeValue("method") ?: continue
                 val targetMethods = MethodReference.resolveAllIfNotAmbiguous(methodAttribute) ?: continue
+
+                val hasDisallowedInsns = targetMethods.any { classAndMethod ->
+                    handler.resolveInstructions(
+                        annotation,
+                        classAndMethod.clazz,
+                        classAndMethod.method
+                    ).any { !handler.isInsnAllowed(it.insn, it.decorations) }
+                }
+                if (hasDisallowedInsns) {
+                    continue
+                }
 
                 for (targetMethod in targetMethods) {
                     if (!reportedStatic) {

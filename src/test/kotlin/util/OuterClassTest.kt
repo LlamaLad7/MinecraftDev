@@ -68,10 +68,10 @@ abstract class OuterClassTest : ProjectBuilderTest() {
             ).toPsiFile<PsiJavaFile>().classes.single()
         }
 
-        this.outerAnonymousClass = outerClass.anonymousElements.single() as PsiAnonymousClass
+        this.outerAnonymousClass = outerClass.anonymousClasses.single()
 
         this.innerClass = outerClass.innerClasses.first()
-        this.innerAnonymousClass = innerClass.anonymousElements.single() as PsiAnonymousClass
+        this.innerAnonymousClass = innerClass.anonymousClasses.single()
         this.innerAnonymousInnerClass = innerAnonymousClass.innerClasses.single()
 
         this.selfReferencingGeneric = outerClass.innerClasses[1]

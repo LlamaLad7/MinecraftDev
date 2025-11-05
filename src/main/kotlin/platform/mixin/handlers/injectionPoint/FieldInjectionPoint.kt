@@ -76,6 +76,8 @@ class FieldInjectionPoint : QualifiedInjectionPoint<PsiField>() {
         }
     }
 
+    override val validOpcodes = VALID_OPCODES
+
     override fun createNavigationVisitor(
         at: PsiAnnotation,
         target: MixinSelector?,
@@ -109,7 +111,7 @@ class FieldInjectionPoint : QualifiedInjectionPoint<PsiField>() {
         insn as FieldInsnNode
         return JavaLookupElementBuilder.forField(
             m,
-            "L${insn.owner};.${insn.name}:${insn.desc}",
+            "L${insn.owner};${insn.name}:${insn.desc}",
             null,
         )
             .setBoldIfInClass(m, targetClass)

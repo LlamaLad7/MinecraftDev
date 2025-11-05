@@ -20,16 +20,17 @@
 
 import org.cadixdev.gradle.licenser.header.HeaderStyle
 import org.gradle.accessors.dm.LibrariesForLibs
+import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.tasks.CompileUsingKotlinDaemon
 
 plugins {
     java
     idea
     id("org.jetbrains.kotlin.jvm")
     id("org.jetbrains.intellij.platform")
-    id("org.cadixdev.licenser")
+    id("net.neoforged.licenser")
 }
 
 val ideaVersionName: String by project
@@ -40,7 +41,7 @@ version = "$ideaVersionName-$coreVersion"
 
 // Build numbers are used for nightlies
 if (buildNumber != null) {
-    version = "$version-$buildNumber"
+    version = "$version-nightly+$buildNumber"
 }
 
 java {
@@ -59,27 +60,29 @@ kotlin {
     jvmToolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
     }
-}
-
-tasks.withType<KotlinCompile>().configureEach {
     compilerOptions {
         jvmTarget = JvmTarget.JVM_21
-        languageVersion = KotlinVersion.KOTLIN_2_0
-        freeCompilerArgs = listOf("-Xjvm-default=all", "-Xjdk-release=21")
+        languageVersion = KotlinVersion.KOTLIN_2_2
+        jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
+        freeCompilerArgs = listOf("-Xjdk-release=21")
         optIn.add("kotlin.contracts.ExperimentalContracts")
     }
+}
+tasks.withType<CompileUsingKotlinDaemon>().configureEach {
     kotlinDaemonJvmArguments.add("-Xmx2G")
 }
 
 repositories {
-    maven("https://repo.denwav.dev/repository/maven-public/")
+    intellijPlatform {
+        defaultRepositories()
+    }
+
     maven("https://maven.fabricmc.net/") {
         content {
             includeModule("net.fabricmc", "mapping-io")
             includeModule("net.fabricmc", "fabric-loader")
         }
     }
-    mavenCentral()
     maven("https://repo.spongepowered.org/maven/") {
         content {
             includeGroup("org.spongepowered")
@@ -96,9 +99,8 @@ repositories {
         }
     }
 
-    intellijPlatform {
-        defaultRepositories()
-    }
+    mavenCentral()
+    maven("https://repo.denwav.dev/repository/maven-public/")
 }
 
 val libs = the<LibrariesForLibs>()
