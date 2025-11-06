@@ -116,12 +116,11 @@ object LocalVariables {
         }
 
         for (parameter in method.parameterList.parameters) {
-            val mixinName = if (argsOnly) "arg$argsIndex" else parameter.name
             args += SourceLocalVariable(
                 parameter.name,
                 parameter.type,
                 argsIndex,
-                mixinName = mixinName,
+                mixinName = "arg$argsIndex",
                 variable = parameter
             )
             argsIndex++
@@ -448,7 +447,7 @@ object LocalVariables {
 
         // Initialise method arguments
         for (argType in Type.getArgumentTypes(method.desc)) {
-            frame[local] = LocalVariable("arg" + index++, argType.toString(), null, null, null, local)
+            frame[local] = LocalVariable("arg" + index++, argType.toString(), null, null, null, local, isNamed = false)
             local += argType.size
         }
 
