@@ -44,7 +44,7 @@ class LocalArgsOnlyInspection : MixinInspection() {
 
     override fun buildVisitor(holder: ProblemsHolder): PsiElementVisitor = object : JavaElementVisitor() {
         override fun visitAnnotation(localAnnotation: PsiAnnotation) {
-            if (localAnnotation.qualifiedName != MixinConstants.MixinExtras.LOCAL) {
+            if (!localAnnotation.hasQualifiedName(MixinConstants.MixinExtras.LOCAL)) {
                 return
             }
             if (localAnnotation.findDeclaredAttributeValue("argsOnly")?.constantValue == true) {
