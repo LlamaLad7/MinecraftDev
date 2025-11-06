@@ -33,13 +33,27 @@ import com.demonwav.mcdev.platform.mixin.util.mixinTargets
 import com.demonwav.mcdev.util.findAnnotation
 import com.demonwav.mcdev.util.findContainingClass
 import com.demonwav.mcdev.util.findModule
+import com.intellij.codeInsight.intention.LowPriorityAction
+import com.intellij.codeInspection.LocalQuickFix
+import com.intellij.codeInspection.ProblemDescriptor
 import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.codeInspection.options.OptPane
+import com.intellij.modcommand.ModCommand
+import com.intellij.modcommand.ModCommandQuickFix
+import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiMethod
 
 class ModifyVariableMayUseNameInspection : MixinInspection() {
+    @JvmField
+    var ignoreForImplicitLocals = false
+
     override fun getStaticDescription() = "Reports @ModifyVariable injectors relying on index or ordinal that may use a name instead"
+
+    override fun getOptionsPane() = OptPane.pane(
+        OptPane.checkbox("ignoreForImplicitLocals", "Ignore for implicit locals")
+    )
 
     override fun buildVisitor(holder: ProblemsHolder) = object : JavaElementVisitor() {
         override fun visitMethod(method: PsiMethod) {
@@ -51,11 +65,22 @@ class ModifyVariableMayUseNameInspection : MixinInspection() {
                 MixinAnnotationHandler.forMixinAnnotation(MODIFY_VARIABLE) as? InjectorAnnotationHandler ?: return
             val localInfo = LocalInfo.fromAnnotation(localType, modifyVariable)
 
+            if (ignoreForImplicitLocals && localInfo.isImplicit) {
+                return
+            }
+
             val variableName = getVariableNameToIntroduce(localInfo, injector, modifyVariable) ?: return
+
+            val fixes = mutableListOf<LocalQuickFix>(ReplaceWithNameFix(modifyVariable, variableName))
+
+            if (localInfo.isImplicit) {
+                fixes += IgnoreForImplicitLocalsFix()
+            }
+
             holder.registerProblem(
                 problemElement,
                 "@ModifyVariable can use variable name",
-                ReplaceWithNameFix(modifyVariable, variableName),
+                *fixes.toTypedArray(),
             )
         }
     }
@@ -66,6 +91,16 @@ class ModifyVariableMayUseNameInspection : MixinInspection() {
     ) : AnnotationAttributeFix(annotation, "name" to variableName, "ordinal" to null, "index" to null) {
         override fun getText() = "Use variable name '$variableName'"
         override fun getFamilyName() = "Use variable name '$variableName'"
+    }
+
+    private inner class IgnoreForImplicitLocalsFix : ModCommandQuickFix(), LowPriorityAction {
+        override fun getFamilyName() = "Ignore for implicit locals"
+
+        override fun perform(project: Project, descriptor: ProblemDescriptor): ModCommand {
+            return ModCommand.updateInspectionOption(descriptor.psiElement, this@ModifyVariableMayUseNameInspection) {
+                it.ignoreForImplicitLocals = true
+            }
+        }
     }
 
     companion object {
