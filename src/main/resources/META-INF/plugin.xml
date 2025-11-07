@@ -116,6 +116,9 @@
         <extensionPoint name="injectionPointAnnotation"
                         beanClass="com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InjectionPointAnnotation"
                         dynamic="true"/>
+        <extensionPoint name="missingLVTChecker"
+                        interface="com.demonwav.mcdev.platform.mixin.util.MissingLVTChecker"
+                        dynamic="true"/>
 
         <extensionPoint name="eventGenHelper" beanClass="com.intellij.lang.LanguageExtensionPoint" dynamic="true">
             <with attribute="implementationClass" implements="com.demonwav.mcdev.insight.generation.EventGenHelper"/>
@@ -311,6 +314,8 @@
                         implementation="com.demonwav.mcdev.platform.mixin.handlers.mixinextras.ExpressionInjectionPoint"/>
 
         <injectionPointAnnotation annotation="org.spongepowered.asm.mixin.injection.Constant" atCode="CONSTANT"/>
+
+        <missingLVTChecker implementation="com.demonwav.mcdev.platform.mixin.util.MinecraftMissingLVTChecker"/>
 
         <eventGenHelper language="JAVA" implementationClass="com.demonwav.mcdev.insight.generation.JavaEventGenHelper"/>
     </extensions>

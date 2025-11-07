@@ -35,7 +35,6 @@ import com.demonwav.mcdev.util.findModule
 import com.demonwav.mcdev.util.resolveClassArray
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.registry.Registry
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiArrayType
@@ -302,10 +301,11 @@ val Module.mixinVersion: SemanticVersion?
     }
 
 fun Module.hasNamedLocalVariables(className: String): Boolean {
-    if (className.startsWith("net.minecraft.") || className.startsWith("com.mojang.blaze3d.")) {
-        // TODO: we'll be able to handle this better when we know which Minecraft version will be unobfuscated
-        return Registry.`is`("mcdev.unobfuscated.minecraft")
-    } else {
-        return true
+    for (checker in MissingLVTChecker.EP_NAME.extensionList) {
+        if (checker.hasMissingLVT(this, className)) {
+            return false
+        }
     }
+
+    return true
 }
