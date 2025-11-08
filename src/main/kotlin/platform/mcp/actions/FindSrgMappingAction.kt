@@ -30,7 +30,11 @@ import com.intellij.psi.PsiMethod
 
 class FindSrgMappingAction : SrgActionBase() {
 
-    override fun withSrgTarget(parent: PsiElement, srgMap: Mappings, e: AnActionEvent, data: ActionData) {
+    override fun withSrgTarget(parent: PsiElement, srgMap: Mappings?, e: AnActionEvent, data: ActionData) {
+        if (srgMap == null) {
+            return showBalloon("No mappings found", e)
+        }
+
         when (parent) {
             is PsiField -> {
                 val srg = srgMap.getIntermediaryField(parent) ?: return showBalloon("No SRG name found", e)

@@ -53,29 +53,39 @@ abstract class SrgActionBase : AnAction() {
             return
         }
 
-        val mcpModule = data.instance.getModuleOfType(McpModuleType) ?: return showBalloon("No mappings found", e)
+        val mcpModule = data.instance.getModuleOfType(McpModuleType)
 
-        mcpModule.mappingsManager?.mappings?.onSuccess { srgMap ->
-            var parent = data.element.parent ?: return@onSuccess showBalloon("Not a valid element", e)
-
-            if (parent is PsiMember) {
-                val shadowTarget = ShadowHandler.getInstance()?.findFirstShadowTargetForReference(parent)?.element
-                if (shadowTarget != null) {
-                    parent = shadowTarget
-                }
-            }
-
-            if (parent is PsiReference) {
-                parent = parent.resolve() ?: return@onSuccess showBalloon("Not a valid element", e)
-            }
-
-            withSrgTarget(parent, srgMap, e, data)
-        }?.onError {
+        val mappingsManager = mcpModule?.mappingsManager ?: return performWithMappings(e, data, data.element, null)
+        mappingsManager.mappings.onSuccess { srgMap ->
+            performWithMappings(e, data, data.element, srgMap)
+        }.onError {
             showBalloon(it.message ?: "No MCP data available", e)
-        } ?: showBalloon("No mappings found", e)
+        }
     }
 
-    abstract fun withSrgTarget(parent: PsiElement, srgMap: Mappings, e: AnActionEvent, data: ActionData)
+    private fun performWithMappings(
+        e: AnActionEvent,
+        data: ActionData,
+        element: PsiIdentifier,
+        srgMap: Mappings?,
+    ) {
+        var parent = element.parent ?: return showBalloon("Not a valid element", e)
+
+        if (parent is PsiMember) {
+            val shadowTarget = ShadowHandler.getInstance()?.findFirstShadowTargetForReference(parent)?.element
+            if (shadowTarget != null) {
+                parent = shadowTarget
+            }
+        }
+
+        if (parent is PsiReference) {
+            parent = parent.resolve() ?: return showBalloon("Not a valid element", e)
+        }
+
+        withSrgTarget(parent, srgMap, e, data)
+    }
+
+    abstract fun withSrgTarget(parent: PsiElement, srgMap: Mappings?, e: AnActionEvent, data: ActionData)
 
     companion object {
         fun showBalloon(message: String, e: AnActionEvent) {
