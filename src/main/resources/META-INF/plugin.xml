@@ -1027,6 +1027,13 @@
                          level="WARNING"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mcp.ct.inspections.DuplicateAwEntryInspection"/>
+        <localInspection displayName="Unknown CT namespace"
+                         groupName="MCP"
+                         language="Class Tweaker"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mcp.ct.inspections.UnknownCtNamespaceInspection"/>
         <!--endregion-->
 
         <!--region MIXIN INSPECTIONS-->

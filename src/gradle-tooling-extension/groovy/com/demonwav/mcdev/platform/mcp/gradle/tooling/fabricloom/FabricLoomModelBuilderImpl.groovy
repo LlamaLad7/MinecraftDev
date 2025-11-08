@@ -61,7 +61,7 @@ class FabricLoomModelBuilderImpl extends AbstractModelBuilderService {
 
     FabricLoomModel build(Project project, Object loomExtension) {
         def minecraftVersion = loomExtension.minecraftProvider.minecraftVersion()
-        def tinyMappings = loomExtension.mappingsFile
+        def tinyMappings = loomExtension.hasProperty("mappingsFile") ? loomExtension.mappingsFile : null
         def splitMinecraftJar = loomExtension.areEnvironmentSourceSetsSplit()
 
         def decompilers = [:]

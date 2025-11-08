@@ -20,6 +20,8 @@
 
 package com.demonwav.mcdev.platform.mcp.gradle.tooling.fabricloom;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.io.File;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +30,7 @@ public interface FabricLoomModel {
 
     String getMinecraftVersion();
 
+    @Nullable
     File getTinyMappings();
 
     Map<String, List<DecompilerModel>> getDecompilers();
