@@ -37,9 +37,10 @@ import com.demonwav.mcdev.platform.mixin.util.memberReference
 import com.demonwav.mcdev.util.computeStringArray
 import com.demonwav.mcdev.util.constantStringValue
 import com.demonwav.mcdev.util.constantValue
+import com.demonwav.mcdev.util.descriptor
 import com.demonwav.mcdev.util.equivalentTo
 import com.demonwav.mcdev.util.findMethods
-import com.demonwav.mcdev.util.fullQualifiedName
+import com.demonwav.mcdev.util.internalName
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
@@ -56,6 +57,7 @@ import com.intellij.psi.PsiParameterListOwner
 import com.intellij.psi.PsiQualifiedReference
 import com.intellij.psi.PsiReference
 import com.intellij.psi.PsiReferenceExpression
+import com.intellij.psi.PsiType
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiUtil
 import com.intellij.psi.util.parents
@@ -140,7 +142,8 @@ class AtResolver(
                 return value.initializers.map { valueToString(it) ?: return null }.joinToString(",")
             }
             return when (val constant = value.constantValue) {
-                is PsiClassType -> constant.fullQualifiedName?.replace('.', '/')
+                is PsiClassType -> constant.resolve()?.internalName
+                is PsiType -> constant.descriptor
                 null -> when (value) {
                     is PsiReferenceExpression -> value.referenceName
                     else -> null
