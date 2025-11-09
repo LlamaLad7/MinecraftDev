@@ -229,8 +229,11 @@ object LocalVariables {
                 val extraVars = extraVariables[offset]
                 if (extraVars != null) {
                     for (variable in extraVars) {
-                        val localsHere = this.locals[offset]
+                        var localsHere = this.locals[offset]
                             ?: arrayOfNulls<SourceLocalVariable>(variable.index + 1).also { this.locals[offset] = it }
+                        if (variable.index >= localsHere.size) {
+                            localsHere = localsHere.copyOf(variable.index + 1)
+                        }
                         localsHere[variable.index] = variable
                         if (variable.type == PsiTypes.longType() || variable.type == PsiTypes.doubleType()) {
                             if (variable.index + 1 < localsHere.size) {
