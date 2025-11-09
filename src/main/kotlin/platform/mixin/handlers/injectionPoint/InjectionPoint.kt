@@ -155,9 +155,15 @@ abstract class InjectionPoint<T : PsiElement> {
     ) {
         addShiftSupport(at, targetClass, collectVisitor)
         addSliceFilter(at, targetClass, collectVisitor)
-        // make sure the ordinal filter is last, so that the ordinal only increments once the other filters have passed
-        addOrdinalFilter(at, targetClass, collectVisitor)
-        addSpecifierFilter(at, targetClass, collectVisitor, defaultSpecifier, mode)
+
+        // Make sure the ordinal and specifier filters are last, so that the ordinal only increments once the other
+        // filters have passed, and the specifier acts on the result of them.
+        // Separately, these happen to also be the filters that we don't want to apply during completion, so that all
+        // results are shown.
+        if (mode != CollectVisitor.Mode.COMPLETION) {
+            addOrdinalFilter(at, targetClass, collectVisitor)
+            addSpecifierFilter(at, targetClass, collectVisitor, defaultSpecifier)
+        }
     }
 
     protected open fun addShiftSupport(at: PsiAnnotation, targetClass: ClassNode, collectVisitor: CollectVisitor<*>) {
@@ -218,12 +224,7 @@ abstract class InjectionPoint<T : PsiElement> {
         targetClass: ClassNode,
         collectVisitor: CollectVisitor<T>,
         defaultSpecifier: InjectionPointSpecifier,
-        mode: CollectVisitor.Mode,
     ) {
-        if (mode == CollectVisitor.Mode.COMPLETION) {
-            // Ignore the specifier, we want to show all results
-            return
-        }
         val point = at.findDeclaredAttributeValue("value")?.constantStringValue ?: return
         val specifier = InjectionPointSpecifier.entries.firstOrNull { point.endsWith(":$it") } ?: defaultSpecifier
         collectVisitor.addResultFilter("specifier") { results, _ ->
