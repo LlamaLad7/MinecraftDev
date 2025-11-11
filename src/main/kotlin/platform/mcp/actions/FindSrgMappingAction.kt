@@ -22,6 +22,8 @@ package com.demonwav.mcdev.platform.mcp.actions
 
 import com.demonwav.mcdev.platform.mcp.mappings.Mappings
 import com.demonwav.mcdev.util.ActionData
+import com.demonwav.mcdev.util.showBalloon
+import com.demonwav.mcdev.util.showSuccessBalloon
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
@@ -32,23 +34,23 @@ class FindSrgMappingAction : SrgActionBase() {
 
     override fun withSrgTarget(parent: PsiElement, srgMap: Mappings?, e: AnActionEvent, data: ActionData) {
         if (srgMap == null) {
-            return showBalloon("No mappings found", e)
+            return showBalloon(e, "No mappings found")
         }
 
         when (parent) {
             is PsiField -> {
-                val srg = srgMap.getIntermediaryField(parent) ?: return showBalloon("No SRG name found", e)
+                val srg = srgMap.getIntermediaryField(parent) ?: return showBalloon(e, "No SRG name found")
                 showSuccessBalloon(data.editor, data.element, "SRG name: " + srg.name)
             }
             is PsiMethod -> {
-                val srg = srgMap.getIntermediaryMethod(parent) ?: return showBalloon("No SRG name found", e)
+                val srg = srgMap.getIntermediaryMethod(parent) ?: return showBalloon(e, "No SRG name found")
                 showSuccessBalloon(data.editor, data.element, "SRG name: " + srg.name + srg.descriptor)
             }
             is PsiClass -> {
-                val classMcpToSrg = srgMap.getIntermediaryClass(parent) ?: return showBalloon("No SRG name found", e)
+                val classMcpToSrg = srgMap.getIntermediaryClass(parent) ?: return showBalloon(e, "No SRG name found")
                 showSuccessBalloon(data.editor, data.element, "SRG name: $classMcpToSrg")
             }
-            else -> showBalloon("Not a valid element", e)
+            else -> showBalloon(e, "Not a valid element")
         }
     }
 }

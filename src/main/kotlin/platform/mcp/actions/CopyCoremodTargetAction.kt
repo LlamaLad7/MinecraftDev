@@ -24,6 +24,8 @@ import com.demonwav.mcdev.platform.mcp.mappings.Mappings
 import com.demonwav.mcdev.util.ActionData
 import com.demonwav.mcdev.util.descriptor
 import com.demonwav.mcdev.util.fullQualifiedName
+import com.demonwav.mcdev.util.showBalloon
+import com.demonwav.mcdev.util.showSuccessBalloon
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiClass
@@ -39,8 +41,11 @@ class CopyCoremodTargetAction : SrgActionBase() {
     override fun withSrgTarget(parent: PsiElement, srgMap: Mappings?, e: AnActionEvent, data: ActionData) {
         when (parent) {
             is PsiField -> {
-                val containing = parent.containingClass ?: return showBalloon("No containing class", e)
-                val classSrg = srgMap?.getIntermediaryClass(containing) ?: containing.fullQualifiedName ?: return showBalloon("No containing class found", e)
+                val containing = parent.containingClass ?: return showBalloon(e, "No containing class")
+                val classSrg = srgMap?.getIntermediaryClass(containing) ?: containing.fullQualifiedName ?: return showBalloon(
+                    e,
+                    "No containing class found"
+                )
                 val srg = srgMap?.getIntermediaryField(parent)?.name ?: parent.name
                 copyToClipboard(
                     data.editor,
@@ -51,13 +56,16 @@ class CopyCoremodTargetAction : SrgActionBase() {
                 )
             }
             is PsiMethod -> {
-                val containing = parent.containingClass ?: return showBalloon("No containing class", e)
-                val classSrg = srgMap?.getIntermediaryClass(containing) ?: containing.fullQualifiedName ?: return showBalloon("No containing class found", e)
+                val containing = parent.containingClass ?: return showBalloon(e, "No containing class")
+                val classSrg = srgMap?.getIntermediaryClass(containing) ?: containing.fullQualifiedName ?: return showBalloon(
+                    e,
+                    "No containing class found"
+                )
                 val (srgName, srgDescriptor) = srgMap?.getIntermediaryMethod(parent)?.let {
                     it.name to it.descriptor
                 } ?: (parent.name to parent.descriptor)
                 if (srgDescriptor == null) {
-                    return showBalloon("No method descriptor found", e)
+                    return showBalloon(e, "No method descriptor found")
                 }
                 copyToClipboard(
                     data.editor,
@@ -69,7 +77,10 @@ class CopyCoremodTargetAction : SrgActionBase() {
                 )
             }
             is PsiClass -> {
-                val classSrg = srgMap?.getIntermediaryClass(parent) ?: parent.fullQualifiedName ?: return showBalloon("No FQN found", e)
+                val classSrg = srgMap?.getIntermediaryClass(parent) ?: parent.fullQualifiedName ?: return showBalloon(
+                    e,
+                    "No FQN found"
+                )
                 copyToClipboard(
                     data.editor,
                     data.element,
@@ -77,7 +88,7 @@ class CopyCoremodTargetAction : SrgActionBase() {
                     Pair("name", classSrg),
                 )
             }
-            else -> showBalloon("Not a valid element", e)
+            else -> showBalloon(e, "Not a valid element")
         }
     }
 

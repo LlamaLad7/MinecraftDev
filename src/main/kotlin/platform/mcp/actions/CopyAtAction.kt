@@ -24,6 +24,8 @@ import com.demonwav.mcdev.platform.mcp.mappings.Mappings
 import com.demonwav.mcdev.util.ActionData
 import com.demonwav.mcdev.util.descriptor
 import com.demonwav.mcdev.util.fullQualifiedName
+import com.demonwav.mcdev.util.showBalloon
+import com.demonwav.mcdev.util.showSuccessBalloon
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiClass
@@ -38,7 +40,10 @@ class CopyAtAction : SrgActionBase() {
         if (srgMap == null) {
             when (parent) {
                 is PsiField -> {
-                    val className = parent.containingClass?.fullQualifiedName ?: return showBalloon("No containing class found", e)
+                    val className = parent.containingClass?.fullQualifiedName ?: return showBalloon(
+                        e,
+                        "No containing class found"
+                    )
                     copyToClipboard(
                         data.editor,
                         data.element,
@@ -46,7 +51,10 @@ class CopyAtAction : SrgActionBase() {
                     )
                 }
                 is PsiMethod -> {
-                    val className = parent.containingClass?.fullQualifiedName ?: return showBalloon("No containing class found", e)
+                    val className = parent.containingClass?.fullQualifiedName ?: return showBalloon(
+                        e,
+                        "No containing class found"
+                    )
                     copyToClipboard(
                         data.editor,
                         data.element,
@@ -54,7 +62,7 @@ class CopyAtAction : SrgActionBase() {
                     )
                 }
                 is PsiClass -> {
-                    val className = parent.fullQualifiedName ?: return showBalloon("Could not get FQN", e)
+                    val className = parent.fullQualifiedName ?: return showBalloon(e, "Could not get FQN")
                     copyToClipboard(
                         data.editor,
                         data.element,
@@ -65,9 +73,9 @@ class CopyAtAction : SrgActionBase() {
         } else {
             when (parent) {
                 is PsiField -> {
-                    val containing = parent.containingClass ?: return showBalloon("No SRG name found", e)
-                    val classSrg = srgMap.getIntermediaryClass(containing) ?: return showBalloon("No SRG name found", e)
-                    val srg = srgMap.getIntermediaryField(parent) ?: return showBalloon("No SRG name found", e)
+                    val containing = parent.containingClass ?: return showBalloon(e, "No SRG name found")
+                    val classSrg = srgMap.getIntermediaryClass(containing) ?: return showBalloon(e, "No SRG name found")
+                    val srg = srgMap.getIntermediaryField(parent) ?: return showBalloon(e, "No SRG name found")
                     copyToClipboard(
                         data.editor,
                         data.element,
@@ -76,9 +84,9 @@ class CopyAtAction : SrgActionBase() {
                 }
 
                 is PsiMethod -> {
-                    val containing = parent.containingClass ?: return showBalloon("No SRG name found", e)
-                    val classSrg = srgMap.getIntermediaryClass(containing) ?: return showBalloon("No SRG name found", e)
-                    val srg = srgMap.getIntermediaryMethod(parent) ?: return showBalloon("No SRG name found", e)
+                    val containing = parent.containingClass ?: return showBalloon(e, "No SRG name found")
+                    val classSrg = srgMap.getIntermediaryClass(containing) ?: return showBalloon(e, "No SRG name found")
+                    val srg = srgMap.getIntermediaryMethod(parent) ?: return showBalloon(e, "No SRG name found")
                     copyToClipboard(
                         data.editor,
                         data.element,
@@ -88,11 +96,11 @@ class CopyAtAction : SrgActionBase() {
 
                 is PsiClass -> {
                     val classMcpToSrg =
-                        srgMap.getIntermediaryClass(parent) ?: return showBalloon("No SRG name found", e)
+                        srgMap.getIntermediaryClass(parent) ?: return showBalloon(e, "No SRG name found")
                     copyToClipboard(data.editor, data.element, classMcpToSrg)
                 }
 
-                else -> showBalloon("Not a valid element", e)
+                else -> showBalloon(e, "Not a valid element")
             }
         }
     }
