@@ -1,5 +1,76 @@
 # Minecraft Development for IntelliJ
 
+## [1.8.7]
+
+### Added
+
+- Translations inside `deprecated.json` are now properly handled.
+  - Usages of removed or renamed translations will be reported as a warning.
+  - Translations will now properly be redirected to the correct entry in the translation file if they have been renamed.
+- New error if a local class is used in a mixin.
+- Access wideners have been renamed to class tweakers, which are a new beta Fabric feature, backwards compatible with
+  access wideners. Both the new class tweaker format and the legacy access widener format are supported.
+- Added warnings related to `@At.opcode`:
+  - A warning if it is used on any injection point other than `FIELD` (it would be ignored).
+  - A warning if it is *not* used on `FIELD`.
+  - A warning if an unsupported opcode is used.
+- Added an inspection for when an injector targets an unsupported instruction. This includes:
+  - `@Redirect` and `@WrapOperation` targeting any instruction except those that can be targeted according to their docs.
+  - `@ModifyArg` and `@ModifyArgs` targeting any instruction except method invocations.
+  - `@ModifyConstant` targeting any instruction that doesn't push a constant.
+  - `@ModifyExpressionValue` targeting instructions that don't return a value (e.g. void method invocations).
+  - `@ModifyReceiver` targeting any instruction except non-static method invocations and field references.
+  - `@ModifyReturnValue` targeting any instruction except `xRETURN`.
+  - `@WrapWithCondition` targeting any instruction except void method invocations and field assignments.
+- Added an inspection for when `@Share` is used on a parameter that isn't from the `LocalRef` family.
+- Added an inspection for when two `@Share` annotations pointing to the same variable have a different type.
+- Added support for target code which has named variables in the LVT. This is enabled by default on all code except in
+  the packages `net.minecraft` and `com.mojang.blaze3d`. It can be enabled for these packages too by enabling the
+  `mcdev.unobfuscated.minecraft` registry value in the registry menu (access via ctrl+shift+A in the IDE and search for
+  "Registry"). Plugins can add further unobfuscated packages by registering to the
+  `com.demonwav.minecraft-dev.missingLVTChecker` extension point.
+  - `@Local` and `@ModifyVariable` will generate warnings if the target class has named variables in the LVT, but are
+    being targeted with `ordinal`, `index`, or in implicit mode.
+    - This is currently disabled for parameter locals (those that can have `argsOnly = true`, due to a
+      [Mixin issue](https://github.com/FabricMC/Mixin/issues/189)).
+    - There is a quick fix to convert the annotation to use `name`.
+  - MixinExtras expressions will now auto-complete to use named `@Local` targets where possible.
+  - The `@Inject` local capture migration quick fix now also uses named `@Local` targets where possible.
+
+### Changed
+
+- Simplified translation identification code and made interpolation inlining less aggressive. When folding translations,
+  MinecraftDev will no longer attempt to inline the values of variables in the substitution.
+- Removed the check for injecting before a `super()` call. This was never a correct thing to check for.
+- Switched from using entry points to implicit usage providers in mixins. This allows MixinExtras sugar parameters to be
+  reported as unused by IntelliJ if they are unused, while maintaining an implicit usage on the whole method to avoid an
+  unused warning there.
+- Changed `@Local` and `@ModifyVariable` can be `argsOnly = true` inspection to also work if the local is specified by
+  name.
+
+### Fixed
+
+- Error reporting now works again and uses Sentry. If you have had problems reporting errors to MinecraftDev, it may be
+  worth trying again after this update.
+- Fixed auto-completion for `NEW` and `FIELD` targets so they now read from the bytecode rather than the source code,
+  improving accuracy.
+- Injection point specifiers and ordinals no longer prevent completion of `@At` targets.
+- `@Local` no longer always reports as able to be `argsOnly = true` if there are other annotations on the method, which
+  was particularly noticeable when using `@Expression`.
+- Fixed `@ModifyConstant`'s expected method signature for class types. It now correctly expects two arguments, an
+  `Object` instance and a `Class<?>` type, and may return a `Class<?>` or a `boolean`.
+- MinecraftDev no longer uses the internal `loom.mods[...].modSourceSets` property when importing a Fabric project.
+- Double nested anonymous class resolving now works, so mixins targeting `Foo$1$1` should now work correctly.
+- Fixed navigation to constructors from mixins, which was broken in the previous release.
+- Class tweaker (access widener) files no longer treat unrecognized namespaces as a syntax error.
+  - A warning will be generated if the namespace is not in the current mapping file (pulled from Loom). If the current
+    mapping file does not exist, only `official` will be recognized as a valid namespace.
+- Fixed the "copy AT entry" action for unobfuscated environments.
+- Fixed an `ArrayIndexOutOfBoundsException` in `LocalVariables.guessAllLocalVariablesUncached`.
+- Override `getLanguage` in `NbttCodeStyleSettingsProvider`, preventing an IDE error.
+- Weaken the assertions in `TranslationFiles`, showing a balloon to the user instead. This prevents an IDE error from
+  occurring.
+
 ## [1.8.6]
 
 ### Added

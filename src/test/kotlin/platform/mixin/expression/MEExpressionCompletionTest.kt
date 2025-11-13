@@ -23,11 +23,14 @@ package com.demonwav.mcdev.platform.mixin.expression
 import com.demonwav.mcdev.MinecraftProjectSettings
 import com.demonwav.mcdev.framework.EdtInterceptor
 import com.demonwav.mcdev.platform.mixin.BaseMixinTest
+import com.demonwav.mcdev.platform.mixin.util.MissingLVTChecker
 import com.demonwav.mcdev.util.BeforeOrAfter
 import com.demonwav.mcdev.util.invokeDeclaredMethod
 import com.intellij.codeInsight.lookup.Lookup
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.PsiFile
+import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.fixtures.impl.CodeInsightTestFixtureImpl
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -131,8 +134,9 @@ class MEExpressionCompletionTest : BaseMixinTest() {
     }
 
     @Test
-    @DisplayName("Local Variable Implicit Completion Test")
-    fun localVariableImplicitCompletionTest() {
+    @DisplayName("Local Variable Implicit Completion Test (No LVT)")
+    fun localVariableImplicitCompletionNoLVTTest() {
+        ExtensionTestUtil.addExtensions(MissingLVTChecker.EP_NAME, listOf(AlwaysMissingLVTChecker), fixture.testRootDisposable)
         doBeforeAfterTest(
             "one",
             """
@@ -172,8 +176,50 @@ class MEExpressionCompletionTest : BaseMixinTest() {
     }
 
     @Test
-    @DisplayName("Local Variable Ordinal Completion Test")
-    fun localVariableOrdinalCompletionTest() {
+    @DisplayName("Local Variable Implicit Completion Test")
+    fun localVariableImplicitCompletionTest() {
+        doBeforeAfterTest(
+            "one",
+            """
+            package test;
+            
+            import com.demonwav.mcdev.mixintestdata.meExpression.MEExpressionTestData;
+            import com.llamalad7.mixinextras.expression.Expression;
+            import org.spongepowered.asm.mixin.Mixin;
+            import org.spongepowered.asm.mixin.injection.At;
+            import org.spongepowered.asm.mixin.injection.Inject;
+            
+            @Mixin(MEExpressionTestData.class)
+            class MEExpressionCompletionTest {
+                @Expression("<caret>")
+                @Inject(method = "complexFunction", at = @At("MIXINEXTRAS:EXPRESSION"))
+            }
+            """.trimIndent(),
+            """
+            package test;
+
+            import com.demonwav.mcdev.mixintestdata.meExpression.MEExpressionTestData;
+            import com.llamalad7.mixinextras.expression.Definition;
+            import com.llamalad7.mixinextras.expression.Expression;
+            import com.llamalad7.mixinextras.sugar.Local;
+            import org.spongepowered.asm.mixin.Mixin;
+            import org.spongepowered.asm.mixin.injection.At;
+            import org.spongepowered.asm.mixin.injection.Inject;
+            
+            @Mixin(MEExpressionTestData.class)
+            class MEExpressionCompletionTest {
+                @Definition(id = "one", local = @Local(type = int.class, name = "one"))
+                @Expression("one")
+                @Inject(method = "complexFunction", at = @At("MIXINEXTRAS:EXPRESSION"))
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    @DisplayName("Local Variable Ordinal Completion Test (No LVT)")
+    fun localVariableOrdinalCompletionNoLVTTest() {
+        ExtensionTestUtil.addExtensions(MissingLVTChecker.EP_NAME, listOf(AlwaysMissingLVTChecker), fixture.testRootDisposable)
         doBeforeAfterTest(
             "local1",
             """
@@ -206,6 +252,92 @@ class MEExpressionCompletionTest : BaseMixinTest() {
             class MEExpressionCompletionTest {
                 @Definition(id = "local1", local = @Local(type = String.class, ordinal = 0))
                 @Expression("local1")
+                @Inject(method = "complexFunction", at = @At("MIXINEXTRAS:EXPRESSION"))
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    @DisplayName("Local Variable Ordinal Completion Test")
+    fun localVariableOrdinalCompletionTest() {
+        doBeforeAfterTest(
+            "local1",
+            """
+            package test;
+            
+            import com.demonwav.mcdev.mixintestdata.meExpression.MEExpressionTestData;
+            import com.llamalad7.mixinextras.expression.Expression;
+            import org.spongepowered.asm.mixin.Mixin;
+            import org.spongepowered.asm.mixin.injection.At;
+            import org.spongepowered.asm.mixin.injection.Inject;
+            
+            @Mixin(MEExpressionTestData.class)
+            class MEExpressionCompletionTest {
+                @Expression("<caret>")
+                @Inject(method = "complexFunction", at = @At("MIXINEXTRAS:EXPRESSION"))
+            }
+            """.trimIndent(),
+            """
+            package test;
+
+            import com.demonwav.mcdev.mixintestdata.meExpression.MEExpressionTestData;
+            import com.llamalad7.mixinextras.expression.Definition;
+            import com.llamalad7.mixinextras.expression.Expression;
+            import com.llamalad7.mixinextras.sugar.Local;
+            import org.spongepowered.asm.mixin.Mixin;
+            import org.spongepowered.asm.mixin.injection.At;
+            import org.spongepowered.asm.mixin.injection.Inject;
+            
+            @Mixin(MEExpressionTestData.class)
+            class MEExpressionCompletionTest {
+                @Definition(id = "local1", local = @Local(type = String.class, name = "local1"))
+                @Expression("local1")
+                @Inject(method = "complexFunction", at = @At("MIXINEXTRAS:EXPRESSION"))
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    @DisplayName("Local Variable Inaccessible Type Completion Test (No LVT)")
+    fun localVariableInaccessibleTypeCompletionNoLVTTest() {
+        ExtensionTestUtil.addExtensions(MissingLVTChecker.EP_NAME, listOf(AlwaysMissingLVTChecker), fixture.testRootDisposable)
+        doBeforeAfterTest(
+            "varOfInaccessibleType",
+            """
+            package test;
+            
+            import com.demonwav.mcdev.mixintestdata.meExpression.MEExpressionTestData;
+            import com.llamalad7.mixinextras.expression.Definition;
+            import com.llamalad7.mixinextras.expression.Expression;
+            import org.spongepowered.asm.mixin.Mixin;
+            import org.spongepowered.asm.mixin.injection.At;
+            import org.spongepowered.asm.mixin.injection.Inject;
+            
+            @Mixin(MEExpressionTestData.class)
+            class MEExpressionCompletionTest {
+                @Definition(id = "acceptInaccessibleType", method = "Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData;acceptInaccessibleType(Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData${'$'}InaccessibleType;)V")
+                @Expression("acceptInaccessibleType(<caret>)")
+                @Inject(method = "complexFunction", at = @At("MIXINEXTRAS:EXPRESSION"))
+            }
+            """.trimIndent(),
+            """
+            package test;
+            
+            import com.demonwav.mcdev.mixintestdata.meExpression.MEExpressionTestData;
+            import com.llamalad7.mixinextras.expression.Definition;
+            import com.llamalad7.mixinextras.expression.Expression;
+            import com.llamalad7.mixinextras.sugar.Local;
+            import org.spongepowered.asm.mixin.Mixin;
+            import org.spongepowered.asm.mixin.injection.At;
+            import org.spongepowered.asm.mixin.injection.Inject;
+            
+            @Mixin(MEExpressionTestData.class)
+            class MEExpressionCompletionTest {
+                @Definition(id = "acceptInaccessibleType", method = "Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData;acceptInaccessibleType(Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData${'$'}InaccessibleType;)V")
+                @Definition(id = "varOfInaccessibleType", local = @Local(ordinal = 0))
+                @Expression("acceptInaccessibleType(varOfInaccessibleType)")
                 @Inject(method = "complexFunction", at = @At("MIXINEXTRAS:EXPRESSION"))
             }
             """.trimIndent(),
@@ -248,7 +380,7 @@ class MEExpressionCompletionTest : BaseMixinTest() {
             @Mixin(MEExpressionTestData.class)
             class MEExpressionCompletionTest {
                 @Definition(id = "acceptInaccessibleType", method = "Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData;acceptInaccessibleType(Lcom/demonwav/mcdev/mixintestdata/meExpression/MEExpressionTestData${'$'}InaccessibleType;)V")
-                @Definition(id = "varOfInaccessibleType", local = @Local(ordinal = 0))
+                @Definition(id = "varOfInaccessibleType", local = @Local(name = "varOfInaccessibleType"))
                 @Expression("acceptInaccessibleType(varOfInaccessibleType)")
                 @Inject(method = "complexFunction", at = @At("MIXINEXTRAS:EXPRESSION"))
             }
@@ -671,5 +803,9 @@ class MEExpressionCompletionTest : BaseMixinTest() {
             }
             """.trimIndent()
         )
+    }
+
+    private object AlwaysMissingLVTChecker : MissingLVTChecker {
+        override fun hasMissingLVT(module: Module, className: String) = true
     }
 }

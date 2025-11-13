@@ -26,8 +26,10 @@ import com.demonwav.mcdev.platform.mixin.inspection.MixinInspection
 import com.demonwav.mcdev.platform.mixin.inspection.fix.AnnotationAttributeFix
 import com.demonwav.mcdev.platform.mixin.inspection.injector.UnusedLocalCaptureInspection
 import com.demonwav.mcdev.platform.mixin.util.LocalVariables
+import com.demonwav.mcdev.platform.mixin.util.MethodTargetMember
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.platform.mixin.util.hasAccess
+import com.demonwav.mcdev.platform.mixin.util.hasNamedLocalVariables
 import com.demonwav.mcdev.util.addAnnotation
 import com.demonwav.mcdev.util.descriptor
 import com.demonwav.mcdev.util.findContainingMethod
@@ -36,6 +38,7 @@ import com.intellij.codeInsight.intention.FileModifier.SafeFieldForPreview
 import com.intellij.codeInspection.LocalQuickFixOnPsiElement
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
@@ -114,6 +117,11 @@ class InjectLocalCaptureReplaceWithLocalInspection : MixinInspection() {
                     locals to paramCount
                 }
 
+                val hasNamedLocalVariables = MixinAnnotationHandler.resolveTarget(annotation).all {
+                    it is MethodTargetMember &&
+                        annotation.findModule()?.hasNamedLocalVariables(it.classAndMethod.clazz.name.replace('/', '.')) != false
+                }
+
                 // based on the resolved local variables, figure out what @Local specifiers to use
                 val localSpecifiers = parameters.drop(callbackInfoIndex + 1).withIndex().map { (index, param) ->
                     val isLocalUsed = ReferencesSearch.search(param).anyMatch {
@@ -121,6 +129,33 @@ class InjectLocalCaptureReplaceWithLocalInspection : MixinInspection() {
                     }
                     if (!isLocalUsed) {
                         return@map UnusedSpecifier
+                    }
+
+                    if (hasNamedLocalVariables) {
+                        var isUnnamed = false
+                        var name: String? = null
+                        for ((localsAtTarget, paramCount) in localsAndParamCountsAtTargets) {
+                            val local = localsAtTarget.filterNotNull().getOrNull(index + paramCount) ?: run {
+                                isUnnamed = true
+                                break
+                            }
+
+                            if (!local.isNamed) {
+                                isUnnamed = true
+                                break
+                            }
+
+                            if (name != null && local.name != name) {
+                                isUnnamed = true
+                                break
+                            }
+
+                            name = local.name
+                        }
+
+                        if (!isUnnamed && name != null) {
+                            return@map NameSpecifier(name)
+                        }
                     }
 
                     val localType = param.type.descriptor
@@ -171,6 +206,7 @@ class InjectLocalCaptureReplaceWithLocalInspection : MixinInspection() {
     private sealed interface LocalSpecifier
     private data class OrdinalSpecifier(val ordinal: Int) : LocalSpecifier
     private data class IndexSpecifier(val index: Int) : LocalSpecifier
+    private data class NameSpecifier(val name: String) : LocalSpecifier
     private data object ImplicitSpecifier : LocalSpecifier
     private data object UnusedSpecifier : LocalSpecifier
 
@@ -192,6 +228,7 @@ class InjectLocalCaptureReplaceWithLocalInspection : MixinInspection() {
                     ImplicitSpecifier -> "@${MixinConstants.MixinExtras.LOCAL}"
                     is IndexSpecifier -> "@${MixinConstants.MixinExtras.LOCAL}(index = ${specifier.index})"
                     is OrdinalSpecifier -> "@${MixinConstants.MixinExtras.LOCAL}(ordinal = ${specifier.ordinal})"
+                    is NameSpecifier -> "@${MixinConstants.MixinExtras.LOCAL}(name = \"${StringUtil.escapeStringCharacters(specifier.name)}\")"
                     is UnusedSpecifier -> {
                         param.delete()
                         continue

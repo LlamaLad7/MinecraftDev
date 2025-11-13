@@ -22,6 +22,7 @@ package com.demonwav.mcdev.translations.inspections
 
 import com.demonwav.mcdev.translations.TranslationFiles
 import com.demonwav.mcdev.translations.identification.TranslationIdentifier
+import com.demonwav.mcdev.util.showBalloon
 import com.intellij.codeInspection.LocalQuickFix
 import com.intellij.codeInspection.ProblemDescriptor
 import com.intellij.codeInspection.ProblemsHolder
@@ -70,7 +71,8 @@ class NoTranslationInspection : TranslationInspection() {
 
         override fun applyFix(project: Project, descriptor: ProblemDescriptor) {
             try {
-                val literal = descriptor.psiElement.toUElementOfType<ULiteralExpression>() ?: return
+                val element = descriptor.psiElement
+                val literal = element.toUElementOfType<ULiteralExpression>() ?: return
                 val translation = TranslationIdentifier.identify(literal)
                 val literalValue = literal.value as String
                 val key = translation?.key?.copy(infix = literalValue)?.full ?: literalValue
@@ -81,7 +83,9 @@ class NoTranslationInspection : TranslationInspection() {
                     Messages.getQuestionIcon(),
                 )
                 if (result != null) {
-                    TranslationFiles.add(literal.sourcePsi!!, key, result)
+                    TranslationFiles.add(literal.sourcePsi!!, key, result).onFailure {
+                        return showBalloon(project, null, element, it.message)
+                    }
                 }
             } catch (_: IncorrectOperationException) {
             } catch (e: Exception) {

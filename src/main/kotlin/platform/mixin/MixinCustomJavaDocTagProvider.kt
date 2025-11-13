@@ -20,8 +20,9 @@
 
 package com.demonwav.mcdev.platform.mixin
 
-import com.demonwav.mcdev.platform.mixin.util.isMixinEntryPoint
+import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiMember
 import com.intellij.psi.PsiReference
 import com.intellij.psi.javadoc.CustomJavadocTagProvider
 import com.intellij.psi.javadoc.JavadocTagInfo
@@ -35,7 +36,13 @@ class MixinCustomJavaDocTagProvider : CustomJavadocTagProvider {
 
         override fun isInline() = false
 
-        override fun isValidInContext(element: PsiElement?) = isMixinEntryPoint(element)
+        override fun isValidInContext(element: PsiElement?): Boolean {
+            if (element !is PsiMember) {
+                return false
+            }
+
+            return element.annotations.any { MixinAnnotationHandler.forMixinAnnotation(it) != null }
+        }
 
         override fun checkTagValue(value: PsiDocTagValue?): String? = null
         override fun getReference(value: PsiDocTagValue?): PsiReference? = null

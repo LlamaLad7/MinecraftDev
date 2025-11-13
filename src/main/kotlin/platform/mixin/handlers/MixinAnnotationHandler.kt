@@ -76,10 +76,9 @@ interface MixinAnnotationHandler {
     val isSoft: Boolean get() = false
 
     /**
-     * Returns whether elements annotated with this annotation should be considered "entry points",
-     * i.e. not reported as unused
+     * Returns whether elements annotated with this annotation should not be reported as unused
      */
-    val isEntryPoint: Boolean
+    val isImplicitlyUsed: Boolean
 
     val icon: Icon get() = MixinAssets.MIXIN_ELEMENT_ICON
 

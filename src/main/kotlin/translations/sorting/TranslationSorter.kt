@@ -28,6 +28,7 @@ import com.demonwav.mcdev.util.applyWriteAction
 import com.demonwav.mcdev.util.lexicographical
 import com.demonwav.mcdev.util.mcDomain
 import com.demonwav.mcdev.util.runWriteAction
+import com.demonwav.mcdev.util.showBalloon
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
@@ -84,14 +85,18 @@ object TranslationSorter {
                     it,
                     keepComments,
                 )
-                else -> sortByTemplate(
-                    project,
-                    locale,
-                    TranslationFiles.buildSortingTemplateFromDefault(file, domain)
-                        ?: throw IllegalStateException("Could not generate template from default translation file"),
-                    it,
-                    keepComments,
-                )
+                else -> {
+                    val template = TranslationFiles.buildSortingTemplateFromDefault(file, domain).getOrElse {
+                        return showBalloon(project, null, null, it.message)
+                    } ?: return showBalloon(project, null, null, "Could not generate template from default translation file")
+                    sortByTemplate(
+                        project,
+                        locale,
+                        template,
+                        it,
+                        keepComments,
+                    )
+                }
             }
         }
 

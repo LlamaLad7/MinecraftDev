@@ -23,7 +23,8 @@ package com.demonwav.mcdev.platform.mixin.inspection.mixinextras
 import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.ShareUtil
 import com.demonwav.mcdev.platform.mixin.inspection.MixinInspection
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
-import com.demonwav.mcdev.platform.mixin.util.MixinConstants.MixinExtras.unwrapLocalRef
+import com.demonwav.mcdev.platform.mixin.util.isLocalRef
+import com.demonwav.mcdev.platform.mixin.util.unwrapLocalRef
 import com.demonwav.mcdev.util.equivalentTo
 import com.demonwav.mcdev.util.findContainingClass
 import com.demonwav.mcdev.util.findContainingMethod
@@ -33,7 +34,6 @@ import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiParameter
 import com.intellij.psi.PsiType
-import com.intellij.psi.util.PsiTypesUtil
 
 class ConflictingShareTypeInspection : MixinInspection() {
     override fun getStaticDescription() = "Reports when two @Shares of the same variable have different types"
@@ -83,8 +83,7 @@ class ConflictingShareTypeInspection : MixinInspection() {
     private fun getShareType(share: PsiAnnotation): PsiType? {
         val param = share.parent?.parent as? PsiParameter ?: return null
         val paramType = param.type
-        val paramClass = PsiTypesUtil.getPsiClass(paramType) ?: return null
-        if (paramClass.qualifiedName?.startsWith(MixinConstants.MixinExtras.LOCAL_REF_PACKAGE) != true) {
+        if (paramType.isLocalRef) {
             return null
         }
         return paramType.unwrapLocalRef()
