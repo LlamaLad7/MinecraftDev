@@ -20,11 +20,14 @@
 
 package com.demonwav.mcdev.platform.mixin.insight
 
+import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.SHADOW
+import com.demonwav.mcdev.platform.mixin.util.isMixinExtrasSugar
 import com.intellij.codeInsight.daemon.ImplicitUsageProvider
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiModifierListOwner
 import com.intellij.psi.PsiParameter
 
 class MixinImplicitUsageProvider : ImplicitUsageProvider {
@@ -40,7 +43,30 @@ class MixinImplicitUsageProvider : ImplicitUsageProvider {
         return method.hasAnnotation(SHADOW)
     }
 
-    override fun isImplicitUsage(element: PsiElement) = isParameterInShadow(element)
+    private fun isHandlerImplicitlyUsed(element: PsiElement): Boolean {
+        if (element is PsiParameter) {
+            if (element.isMixinExtrasSugar) {
+                return false
+            }
+
+            val declarationScope = element.declarationScope
+            return if (declarationScope is PsiMethod) {
+                isHandlerImplicitlyUsed(declarationScope)
+            } else {
+                false
+            }
+        }
+
+        if (element is PsiModifierListOwner) {
+            return element.annotations.any {
+                MixinAnnotationHandler.forMixinAnnotation(it)?.isImplicitlyUsed == true
+            }
+        }
+
+        return false
+    }
+
+    override fun isImplicitUsage(element: PsiElement) = isParameterInShadow(element) || isHandlerImplicitlyUsed(element)
     override fun isImplicitRead(element: PsiElement) = isShadowField(element)
     override fun isImplicitWrite(element: PsiElement) = isShadowField(element)
 }

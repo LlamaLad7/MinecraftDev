@@ -52,7 +52,7 @@ import static com.intellij.psi.TokenType.*;
 
 HEADER_NAME=accessWidener|classTweaker
 HEADER_VERSION_ELEMENT=v\d+
-HEADER_NAMESPACE_ELEMENT=named|intermediary
+HEADER_NAMESPACE_ELEMENT=\w+
 PRIMITIVE=[ZBCSIFDJV]
 CLASS_VALUE=L[^;\n]+;
 SIGNATURE_CLASS_VALUE_START=L[^;<\n]+

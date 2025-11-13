@@ -20,11 +20,11 @@
 
 package com.demonwav.mcdev.platform.mcp.actions
 
-import com.demonwav.mcdev.platform.mcp.actions.SrgActionBase.Companion.showBalloon
-import com.demonwav.mcdev.platform.mcp.actions.SrgActionBase.Companion.showSuccessBalloon
 import com.demonwav.mcdev.util.descriptor
 import com.demonwav.mcdev.util.getDataFromActionEvent
 import com.demonwav.mcdev.util.internalName
+import com.demonwav.mcdev.util.showBalloon
+import com.demonwav.mcdev.util.showSuccessBalloon
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.editor.Editor
@@ -41,12 +41,12 @@ import java.awt.datatransfer.StringSelection
 class CopyAwAction : AnAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
-        val data = getDataFromActionEvent(e) ?: return showBalloon("Unknown failure", e)
+        val data = getDataFromActionEvent(e) ?: return showBalloon(e, "Unknown failure")
         val editor = data.editor
 
         val element = data.element
         if (element !is PsiIdentifier) {
-            showBalloon("Invalid element", e)
+            showBalloon(e, "Invalid element")
             return
         }
 
@@ -54,7 +54,7 @@ class CopyAwAction : AnAction() {
             is PsiMember -> parent
             is PsiReference -> parent.resolve()
             else -> null
-        } ?: return showBalloon("Invalid element", e)
+        } ?: return showBalloon(e, "Invalid element")
 
         doCopy(target, element, editor, e)
     }
@@ -69,19 +69,19 @@ class CopyAwAction : AnAction() {
                 }
                 is PsiField -> {
                     val containing = target.containingClass?.internalName
-                        ?: return maybeShow("Could not get owner of field", e)
+                        ?: return maybeShow(e, "Could not get owner of field")
                     val desc = target.type.descriptor
                     val text = "accessible field $containing ${target.name} $desc"
                     copyToClipboard(editor, element, text)
                 }
                 is PsiMethod -> {
                     val containing = target.containingClass?.internalName
-                        ?: return maybeShow("Could not get owner of method", e)
-                    val desc = target.descriptor ?: return maybeShow("Could not get descriptor of method", e)
+                        ?: return maybeShow(e, "Could not get owner of method")
+                    val desc = target.descriptor ?: return maybeShow(e, "Could not get descriptor of method")
                     val text = "accessible method $containing ${target.internalName} $desc"
                     copyToClipboard(editor, element, text)
                 }
-                else -> maybeShow("Invalid element", e)
+                else -> maybeShow(e, "Invalid element")
             }
         }
 
@@ -94,9 +94,9 @@ class CopyAwAction : AnAction() {
             }
         }
 
-        private fun maybeShow(text: String, e: AnActionEvent?) {
+        private fun maybeShow(e: AnActionEvent?, text: String) {
             if (e != null) {
-                showBalloon(text, e)
+                showBalloon(e, text)
             }
         }
     }

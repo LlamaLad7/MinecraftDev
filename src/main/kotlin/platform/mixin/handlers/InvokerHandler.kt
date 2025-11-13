@@ -109,7 +109,7 @@ class InvokerHandler : MixinMemberAnnotationHandler {
         ).createSmartPointer()
     }
 
-    override val isEntryPoint = false
+    override val isImplicitlyUsed = false
 
     override val icon = MixinAssets.MIXIN_ACCESSOR_ICON
 }

@@ -101,7 +101,7 @@ class ShadowHandler : MixinMemberAnnotationHandler {
         return (member.name ?: return null).removePrefix(prefix)
     }
 
-    override val isEntryPoint = false
+    override val isImplicitlyUsed = false
 
     override val icon = MixinAssets.MIXIN_SHADOW_ICON
 

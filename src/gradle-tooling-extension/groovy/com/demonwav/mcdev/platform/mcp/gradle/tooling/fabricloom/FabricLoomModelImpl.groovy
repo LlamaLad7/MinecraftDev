@@ -21,10 +21,12 @@
 package com.demonwav.mcdev.platform.mcp.gradle.tooling.fabricloom
 
 import groovy.transform.Immutable
+import org.jetbrains.annotations.Nullable
 
 @Immutable(knownImmutableClasses = [File])
 class FabricLoomModelImpl implements FabricLoomModel, Serializable {
     String minecraftVersion
+    @Nullable
     File tinyMappings
     Map<String, List<DecompilerModel>> decompilers
     boolean splitMinecraftJar

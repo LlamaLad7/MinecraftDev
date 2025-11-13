@@ -116,12 +116,11 @@ object LocalVariables {
         }
 
         for (parameter in method.parameterList.parameters) {
-            val mixinName = if (argsOnly) "arg$argsIndex" else parameter.name
             args += SourceLocalVariable(
                 parameter.name,
                 parameter.type,
                 argsIndex,
-                mixinName = mixinName,
+                mixinName = "arg$argsIndex",
                 variable = parameter
             )
             argsIndex++
@@ -230,8 +229,11 @@ object LocalVariables {
                 val extraVars = extraVariables[offset]
                 if (extraVars != null) {
                     for (variable in extraVars) {
-                        val localsHere = this.locals[offset]
+                        var localsHere = this.locals[offset]
                             ?: arrayOfNulls<SourceLocalVariable>(variable.index + 1).also { this.locals[offset] = it }
+                        if (variable.index >= localsHere.size) {
+                            localsHere = localsHere.copyOf(variable.index + 1)
+                        }
                         localsHere[variable.index] = variable
                         if (variable.type == PsiTypes.longType() || variable.type == PsiTypes.doubleType()) {
                             if (variable.index + 1 < localsHere.size) {
@@ -448,7 +450,7 @@ object LocalVariables {
 
         // Initialise method arguments
         for (argType in Type.getArgumentTypes(method.desc)) {
-            frame[local] = LocalVariable("arg" + index++, argType.toString(), null, null, null, local)
+            frame[local] = LocalVariable("arg" + index++, argType.toString(), null, null, null, local, isNamed = false)
             local += argType.size
         }
 
@@ -805,7 +807,7 @@ object LocalVariables {
                             localType.descriptor
                         }
                     }
-                    localVars[j] = LocalVariable("var$j", desc, null, i, null, j)
+                    localVars[j] = LocalVariable("var$j", desc, null, i, null, j, isNamed = false)
                     if (desc != null) {
                         lastKnownType[j] = desc
                     }
@@ -881,6 +883,7 @@ object LocalVariables {
         val start: Int?,
         var end: Int?,
         val index: Int,
+        val isNamed: Boolean = true,
     ) {
         fun isInRange(index: Int): Boolean {
             val end = this.end
@@ -904,6 +907,7 @@ object LocalVariables {
         ancestor.start,
         ancestor.end,
         ancestor.index,
+        ancestor.isNamed,
     ) {
         var lifetime = 0
         var frames = 0

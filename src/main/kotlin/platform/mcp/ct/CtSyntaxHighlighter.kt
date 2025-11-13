@@ -55,7 +55,7 @@ class CtSyntaxHighlighter : SyntaxHighlighterBase() {
         val HEADER_NAME =
             TextAttributesKey.createTextAttributesKey("CT_HEADER_NAME", DefaultLanguageHighlighterColors.KEYWORD)
         val HEADER_NAMESPACE =
-            TextAttributesKey.createTextAttributesKey("CT_HEADER_NAMESPACE", DefaultLanguageHighlighterColors.KEYWORD)
+            TextAttributesKey.createTextAttributesKey("CT_HEADER_NAMESPACE", DefaultLanguageHighlighterColors.CLASS_REFERENCE)
         val ACCESS =
             TextAttributesKey.createTextAttributesKey("CT_ACCESS", DefaultLanguageHighlighterColors.KEYWORD)
         val INJECT_INTERFACE =

@@ -34,6 +34,8 @@ class NbttCodeStyleSettingsProvider : CodeStyleSettingsProvider() {
             override fun getHelpTopic(): String? = null
         }
 
+    override fun getLanguage() = NbttLanguage
+
     override fun getConfigurableDisplayName() = MCDevBundle("nbt.lang.display_name")
 
     override fun createCustomSettings(settings: CodeStyleSettings) = NbttCodeStyleSettings(settings)

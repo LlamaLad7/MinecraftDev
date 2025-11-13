@@ -22,6 +22,10 @@ package com.demonwav.mcdev.platform.mcp.actions
 
 import com.demonwav.mcdev.platform.mcp.mappings.Mappings
 import com.demonwav.mcdev.util.ActionData
+import com.demonwav.mcdev.util.descriptor
+import com.demonwav.mcdev.util.fullQualifiedName
+import com.demonwav.mcdev.util.showBalloon
+import com.demonwav.mcdev.util.showSuccessBalloon
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiClass
@@ -34,36 +38,49 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 class CopyCoremodTargetAction : SrgActionBase() {
-    override fun withSrgTarget(parent: PsiElement, srgMap: Mappings, e: AnActionEvent, data: ActionData) {
+    override fun withSrgTarget(parent: PsiElement, srgMap: Mappings?, e: AnActionEvent, data: ActionData) {
         when (parent) {
             is PsiField -> {
-                val containing = parent.containingClass ?: return showBalloon("No SRG name found", e)
-                val classSrg = srgMap.getIntermediaryClass(containing) ?: return showBalloon("No SRG name found", e)
-                val srg = srgMap.getIntermediaryField(parent) ?: return showBalloon("No SRG name found", e)
+                val containing = parent.containingClass ?: return showBalloon(e, "No containing class")
+                val classSrg = srgMap?.getIntermediaryClass(containing) ?: containing.fullQualifiedName ?: return showBalloon(
+                    e,
+                    "No containing class found"
+                )
+                val srg = srgMap?.getIntermediaryField(parent)?.name ?: parent.name
                 copyToClipboard(
                     data.editor,
                     data.element,
                     Pair("target", "FIELD"),
                     Pair("class", classSrg),
-                    Pair("fieldName", srg.name),
+                    Pair("fieldName", srg),
                 )
             }
             is PsiMethod -> {
-                val containing = parent.containingClass ?: return showBalloon("No SRG name found", e)
-                val classSrg = srgMap.getIntermediaryClass(containing) ?: return showBalloon("No SRG name found", e)
-                val srg = srgMap.getIntermediaryMethod(parent) ?: return showBalloon("No SRG name found", e)
-                val srgDescriptor = srg.descriptor ?: return showBalloon("No SRG name found", e)
+                val containing = parent.containingClass ?: return showBalloon(e, "No containing class")
+                val classSrg = srgMap?.getIntermediaryClass(containing) ?: containing.fullQualifiedName ?: return showBalloon(
+                    e,
+                    "No containing class found"
+                )
+                val (srgName, srgDescriptor) = srgMap?.getIntermediaryMethod(parent)?.let {
+                    it.name to it.descriptor
+                } ?: (parent.name to parent.descriptor)
+                if (srgDescriptor == null) {
+                    return showBalloon(e, "No method descriptor found")
+                }
                 copyToClipboard(
                     data.editor,
                     data.element,
                     Pair("target", "METHOD"),
                     Pair("class", classSrg),
-                    Pair("methodName", srg.name),
+                    Pair("methodName", srgName),
                     Pair("methodDesc", srgDescriptor),
                 )
             }
             is PsiClass -> {
-                val classSrg = srgMap.getIntermediaryClass(parent) ?: return showBalloon("No SRG name found", e)
+                val classSrg = srgMap?.getIntermediaryClass(parent) ?: parent.fullQualifiedName ?: return showBalloon(
+                    e,
+                    "No FQN found"
+                )
                 copyToClipboard(
                     data.editor,
                     data.element,
@@ -71,7 +88,7 @@ class CopyCoremodTargetAction : SrgActionBase() {
                     Pair("name", classSrg),
                 )
             }
-            else -> showBalloon("Not a valid element", e)
+            else -> showBalloon(e, "Not a valid element")
         }
     }
 

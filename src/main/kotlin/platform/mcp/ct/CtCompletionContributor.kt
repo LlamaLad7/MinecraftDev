@@ -20,7 +20,10 @@
 
 package com.demonwav.mcdev.platform.mcp.ct
 
+import com.demonwav.mcdev.facet.MinecraftFacet
+import com.demonwav.mcdev.platform.fabric.FabricModuleType
 import com.demonwav.mcdev.platform.mcp.ct.gen.psi.CtTypes
+import com.demonwav.mcdev.util.findModule
 import com.intellij.codeInsight.completion.CodeCompletionHandlerBase
 import com.intellij.codeInsight.completion.CompletionContributor
 import com.intellij.codeInsight.completion.CompletionParameters
@@ -86,7 +89,11 @@ object CtNamespaceCompletionProvider : CompletionProvider<CompletionParameters>(
         parameters: CompletionParameters,
         context: ProcessingContext,
         result: CompletionResultSet,
-    ) = result.addAllElements(listOf("named", "intermediary").map(LookupElementBuilder::create))
+    ) {
+        val module = parameters.originalFile.findModule() ?: return
+        val fabricModule = MinecraftFacet.getInstance(module, FabricModuleType) ?: return
+        result.addAllElements(fabricModule.mappingNamespaces.map(LookupElementBuilder::create))
+    }
 }
 
 object CtEntryStartCompletionProvider : CompletionProvider<CompletionParameters>() {

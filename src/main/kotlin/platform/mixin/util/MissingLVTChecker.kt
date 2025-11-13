@@ -18,31 +18,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.demonwav.mcdev.platform.mcp.gradle.tooling.fabricloom;
+package com.demonwav.mcdev.platform.mixin.util
 
-import org.jetbrains.annotations.Nullable;
+import com.intellij.openapi.extensions.ExtensionPointName
+import com.intellij.openapi.module.Module
 
-import java.io.File;
-import java.util.List;
-import java.util.Map;
-
-public interface FabricLoomModel {
-
-    String getMinecraftVersion();
-
-    @Nullable
-    File getTinyMappings();
-
-    Map<String, List<DecompilerModel>> getDecompilers();
-
-    boolean getSplitMinecraftJar();
-
-    interface DecompilerModel {
-
-        String getName();
-
-        String getTaskName();
-
-        String getSourcesPath();
+interface MissingLVTChecker {
+    companion object {
+        val EP_NAME = ExtensionPointName.create<MissingLVTChecker>("com.demonwav.minecraft-dev.missingLVTChecker")
     }
+
+    fun hasMissingLVT(module: Module, className: String): Boolean
 }

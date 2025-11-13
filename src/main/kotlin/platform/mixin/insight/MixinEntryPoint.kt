@@ -22,8 +22,6 @@ package com.demonwav.mcdev.platform.mixin.insight
 
 import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
-import com.demonwav.mcdev.platform.mixin.util.isMixinEntryPoint
-import com.demonwav.mcdev.util.toTypedArray
 import com.intellij.codeInspection.reference.RefElement
 import com.intellij.codeInspection.visibility.EntryPointWithVisibilityLevel
 import com.intellij.psi.PsiElement
@@ -42,17 +40,9 @@ class MixinEntryPoint : EntryPointWithVisibilityLevel() {
     override fun getDisplayName() = "Mixin injectors"
     override fun getTitle() = "Suggest private visibility level for Mixin injectors"
 
-    // TODO: support more handlers than the builtin
-    // need to find a way to access the project for that
-    override fun getIgnoreAnnotations() =
-        MixinAnnotationHandler.getBuiltinHandlers()
-            .filter { (_, handler) -> handler.isEntryPoint }
-            .map { (name, _) -> name }
-            .toTypedArray()
+    override fun isEntryPoint(element: PsiElement) = false
 
-    override fun isEntryPoint(element: PsiElement) = isMixinEntryPoint(element)
-
-    override fun isEntryPoint(refElement: RefElement, psiElement: PsiElement) = isEntryPoint(psiElement)
+    override fun isEntryPoint(refElement: RefElement, psiElement: PsiElement) = false
 
     override fun getMinVisibilityLevel(member: PsiMember): Int {
         if (member !is PsiMethod) {
