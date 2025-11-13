@@ -182,7 +182,7 @@ abstract class InjectorAnnotationHandler : MixinAnnotationHandler {
 
     open val isShiftAlwaysDiscouraged = true
 
-    override val isEntryPoint = true
+    override val isImplicitlyUsed = true
 
     override val icon = MixinAssets.MIXIN_INJECTOR_ICON
 

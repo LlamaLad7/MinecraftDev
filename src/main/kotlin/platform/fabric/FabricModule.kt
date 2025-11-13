@@ -56,6 +56,10 @@ class FabricModule internal constructor(facet: MinecraftFacet) : AbstractModule(
     override val namedToMojangManager: MappingsManager?
         get() = namedToMojangManagerField
 
+    private var mappingNamespacesField = emptyList<String>()
+    val mappingNamespaces: List<String>
+        get() = mappingNamespacesField
+
     override val moduleType = FabricModuleType
     override val type = PlatformType.FABRIC
     override val icon = PlatformAssets.FABRIC_ICON
@@ -79,60 +83,74 @@ class FabricModule internal constructor(facet: MinecraftFacet) : AbstractModule(
     }
 
     override fun refresh() {
-        namedToMojangManagerField = if (detectYarn()) {
+        val mappingDetection = detectMappings()
+
+        namedToMojangManagerField = if (mappingDetection.yarnDetected) {
             MappingsManager.Immediate(HardcodedYarnToMojmap.createMappings())
         } else {
             null
         }
+
+        mappingNamespacesField = mappingDetection.namespaces
     }
 
-    private fun detectYarn(): Boolean {
-        val gradleData = GradleUtil.findGradleModuleData(facet.module) ?: return false
-        val loomData =
-            gradleData.children.find { it.key == FabricLoomData.KEY }?.data as? FabricLoomData ?: return false
-        val mappingsFile = loomData.tinyMappings ?: return false
+    private fun detectMappings(): MappingDetectionResult {
+        val gradleData = GradleUtil.findGradleModuleData(facet.module) ?: return MappingDetectionResult.DEFAULT
+        val loomData = gradleData.children.find { it.key == FabricLoomData.KEY }?.data as? FabricLoomData
+            ?: return MappingDetectionResult.DEFAULT
+        val mappingsFile = loomData.tinyMappings ?: return MappingDetectionResult.DEFAULT
 
-        var yarnDetected = false
-        val visitor = object : MappingVisitor {
-            private var namedIndex = -1
-
-            override fun visitNamespaces(srcNamespace: String?, dstNamespaces: List<String>) {
-                namedIndex = dstNamespaces.indexOf("named")
-            }
-
-            override fun visitContent() = namedIndex >= 0
-
-            override fun visitClass(srcName: String) = true
-
-            override fun visitField(srcName: String?, srcDesc: String?) = false
-
-            override fun visitMethod(srcName: String?, srcDesc: String?) = false
-
-            override fun visitMethodArg(argPosition: Int, lvIndex: Int, srcName: String?) = false
-
-            override fun visitMethodVar(lvtRowIndex: Int, lvIndex: Int, startOpIdx: Int, srcName: String?) = false
-
-            override fun visitDstName(targetKind: MappedElementKind?, namespace: Int, name: String) {
-                if (namespace == namedIndex && name == "net/minecraft/client/MinecraftClient") {
-                    yarnDetected = true
-                }
-            }
-
-            override fun visitComment(targetKind: MappedElementKind?, comment: String?) {
-            }
-        }
+        val result = MappingDetectionResult()
 
         try {
-            MappingReader.read(mappingsFile.toPath(), visitor)
-        } catch (e: IOException) {
-            return false
+            MappingReader.read(mappingsFile.toPath(), result)
+        } catch (_: IOException) {
+            return MappingDetectionResult.DEFAULT
         }
 
-        return yarnDetected
+        return result
     }
 
     override fun dispose() {
         super.dispose()
         fabricJson = null
+    }
+
+    private class MappingDetectionResult : MappingVisitor {
+        var yarnDetected = false
+        var namespaces = emptyList<String>()
+        private var namedIndex = -1
+
+        override fun visitNamespaces(srcNamespace: String?, dstNamespaces: List<String>) {
+            namedIndex = dstNamespaces.indexOf("named")
+            namespaces = listOfNotNull(srcNamespace) + dstNamespaces
+        }
+
+        override fun visitContent() = namedIndex >= 0
+
+        override fun visitClass(srcName: String) = true
+
+        override fun visitField(srcName: String?, srcDesc: String?) = false
+
+        override fun visitMethod(srcName: String?, srcDesc: String?) = false
+
+        override fun visitMethodArg(argPosition: Int, lvIndex: Int, srcName: String?) = false
+
+        override fun visitMethodVar(lvtRowIndex: Int, lvIndex: Int, startOpIdx: Int, srcName: String?) = false
+
+        override fun visitDstName(targetKind: MappedElementKind?, namespace: Int, name: String) {
+            if (namespace == namedIndex && name == "net/minecraft/client/MinecraftClient") {
+                yarnDetected = true
+            }
+        }
+
+        override fun visitComment(targetKind: MappedElementKind?, comment: String?) {
+        }
+
+        companion object {
+            val DEFAULT = MappingDetectionResult().apply {
+                namespaces = listOf("official")
+            }
+        }
     }
 }

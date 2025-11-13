@@ -25,6 +25,7 @@ import com.demonwav.mcdev.platform.mcp.mappings.getMappedMethodCall
 import com.demonwav.mcdev.translations.TranslationFiles
 import com.demonwav.mcdev.util.findModule
 import com.demonwav.mcdev.util.runWriteAction
+import com.demonwav.mcdev.util.showBalloon
 import com.intellij.codeInsight.intention.PsiElementBaseIntentionAction
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationType
@@ -49,7 +50,9 @@ class ConvertToTranslationIntention : PsiElementBaseIntentionAction() {
         val literal = element.parent.toUElementOfType<ULiteralExpression>() ?: return
         val value = literal.evaluateString() ?: return
 
-        val existingKey = TranslationFiles.findTranslationKeyForText(element, value)
+        val existingKey = TranslationFiles.findTranslationKeyForText(element, value).getOrElse {
+            return showBalloon(project, editor, element, it.message)
+        }
 
         val result = Messages.showInputDialogWithCheckBox(
             "Enter translation key:",
@@ -83,7 +86,9 @@ class ConvertToTranslationIntention : PsiElementBaseIntentionAction() {
         val replaceLiteral = result.second
         try {
             if (existingKey != key) {
-                TranslationFiles.add(element, key, value)
+                TranslationFiles.add(element, key, value).onFailure {
+                    return showBalloon(project, editor, element, it.message)
+                }
             }
             if (replaceLiteral) {
                 val translationSettings = TranslationSettings.getInstance(project)

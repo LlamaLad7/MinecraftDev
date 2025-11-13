@@ -43,6 +43,9 @@ private end_line ::= crlf | <<eof>>
 header ::= HEADER_NAME HEADER_VERSION_ELEMENT HEADER_NAMESPACE_ELEMENT {
     mixin="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.impl.CtHeaderImplMixin"
     implements="com.demonwav.mcdev.platform.mcp.ct.psi.mixins.CtHeaderMixin"
+    methods=[
+        namespaceElement="HEADER_NAMESPACE_ELEMENT"
+    ]
     pin = 1
 }
 

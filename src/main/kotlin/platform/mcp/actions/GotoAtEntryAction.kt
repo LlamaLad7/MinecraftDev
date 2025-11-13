@@ -28,6 +28,7 @@ import com.demonwav.mcdev.util.ActionData
 import com.demonwav.mcdev.util.getDataFromActionEvent
 import com.demonwav.mcdev.util.gotoTargetElement
 import com.demonwav.mcdev.util.qualifiedMemberReference
+import com.demonwav.mcdev.util.showBalloon
 import com.demonwav.mcdev.util.simpleQualifiedMemberReference
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -111,6 +112,6 @@ class GotoAtEntryAction : AnAction() {
     }
 
     private fun showBalloon(e: AnActionEvent) {
-        SrgActionBase.showBalloon("No access transformer entry found", e)
+        showBalloon(e, "No access transformer entry found")
     }
 }

@@ -25,7 +25,10 @@ import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InjectionPoint
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
 import com.demonwav.mcdev.platform.mixin.inspection.injector.ParameterGroup
 import com.demonwav.mcdev.util.findAnnotations
+import com.intellij.openapi.project.Project
+import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiType
@@ -61,6 +64,8 @@ class ModifyConstantHandler : InjectorAnnotationHandler() {
         Opcodes.IFGE,
         Opcodes.IFGT,
         Opcodes.IFLE,
+        Opcodes.CHECKCAST,
+        Opcodes.INSTANCEOF,
     )
 
     private fun getConstantInfos(modifyConstant: PsiAnnotation): List<ConstantInjectionPoint.ConstantInfo>? {
@@ -103,30 +108,89 @@ class ModifyConstantHandler : InjectorAnnotationHandler() {
         }
 
         val psiManager = PsiManager.getInstance(annotation.project)
-        return constantInfos.asSequence().map {
-            when (it.constant) {
-                null -> PsiType.getJavaLangObject(psiManager, annotation.resolveScope)
-                is Int -> PsiTypes.intType()
-                is Float -> PsiTypes.floatType()
-                is Long -> PsiTypes.longType()
-                is Double -> PsiTypes.doubleType()
-                is String -> PsiType.getJavaLangString(psiManager, annotation.resolveScope)
-                is Type -> PsiType.getJavaLangClass(psiManager, annotation.resolveScope)
-                else -> throw IllegalStateException("Unknown constant type: ${it.constant.javaClass.name}")
+        return constantInfos.asSequence()
+            .distinctBy { it.constant?.javaClass }
+            .flatMap {
+                when (it.constant) {
+                    null -> sequenceOf(
+                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiType.getJavaLangObject(psiManager, annotation.resolveScope))
+                    )
+                    is Int -> sequenceOf(
+                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.intType()),
+                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.booleanType()),
+                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.byteType()),
+                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.charType()),
+                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.shortType()),
+                    )
+                    is Long -> sequenceOf(
+                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.longType())
+                    )
+                    is Float -> sequenceOf(
+                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.floatType())
+                    )
+                    is Double -> sequenceOf(
+                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.doubleType())
+                    )
+                    is String -> sequenceOf(
+                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiType.getJavaLangString(psiManager, annotation.resolveScope))
+                    )
+                    is Type -> sequenceOf(
+                        makeTypeCheckMethodSignature(annotation.project, psiManager, annotation, targetClass, targetMethod, getClassType(psiManager, annotation)),
+                        makeTypeCheckMethodSignature(annotation.project, psiManager, annotation, targetClass, targetMethod, PsiTypes.booleanType()),
+                    )
+                    else -> throw IllegalStateException("Unknown constant type: ${it.constant.javaClass.name}")
+                }
             }
-        }.distinct().map { type ->
-            MethodSignature(
-                listOf(
-                    ParameterGroup(listOf(sanitizedParameter(type, "constant"))),
-                    ParameterGroup(
-                        collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
-                        isVarargs = true,
-                        required = ParameterGroup.RequiredLevel.OPTIONAL,
-                    ),
+            .toList()
+    }
+
+    private fun makeMethodSignature(
+        project: Project,
+        targetClass: ClassNode,
+        targetMethod: MethodNode,
+        type: PsiType,
+    ): MethodSignature {
+        return MethodSignature(
+            listOf(
+                ParameterGroup(listOf(sanitizedParameter(type, "constant"))),
+                ParameterGroup(
+                    collectTargetMethodParameters(project, targetClass, targetMethod),
+                    isVarargs = true,
+                    required = ParameterGroup.RequiredLevel.OPTIONAL,
                 ),
-                type,
-            )
-        }.toList()
+            ),
+            type,
+        )
+    }
+
+    private fun makeTypeCheckMethodSignature(
+        project: Project,
+        psiManager: PsiManager,
+        context: PsiElement,
+        targetClass: ClassNode,
+        targetMethod: MethodNode,
+        returnType: PsiType,
+    ): MethodSignature {
+        return MethodSignature(
+            listOf(
+                ParameterGroup(
+                    listOf(
+                        sanitizedParameter(PsiType.getJavaLangObject(psiManager, context.resolveScope), "instance"),
+                        sanitizedParameter(getClassType(psiManager, context), "type"),
+                    )
+                ),
+                ParameterGroup(
+                    collectTargetMethodParameters(project, targetClass, targetMethod),
+                    isVarargs = true,
+                    required = ParameterGroup.RequiredLevel.OPTIONAL,
+                ),
+            ),
+            returnType,
+        )
+    }
+
+    private fun getClassType(psiManager: PsiManager, context: PsiElement): PsiType {
+        return JavaPsiFacade.getElementFactory(psiManager.project).createTypeFromText("java.lang.Class<?>", context)
     }
 
     override fun isInsnAllowed(insn: AbstractInsnNode, decorations: Map<String, Any?>): Boolean {

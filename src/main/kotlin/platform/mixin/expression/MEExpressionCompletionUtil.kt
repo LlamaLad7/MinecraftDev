@@ -58,6 +58,7 @@ import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.platform.mixin.util.SignatureToPsi
 import com.demonwav.mcdev.platform.mixin.util.canonicalName
 import com.demonwav.mcdev.platform.mixin.util.hasAccess
+import com.demonwav.mcdev.platform.mixin.util.hasNamedLocalVariables
 import com.demonwav.mcdev.platform.mixin.util.isPrimitive
 import com.demonwav.mcdev.platform.mixin.util.mixinTargets
 import com.demonwav.mcdev.platform.mixin.util.textify
@@ -92,6 +93,7 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.FoldRegion
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.text.StringUtil
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.patterns.StandardPatterns
 import com.intellij.psi.JavaPsiFacade
@@ -990,6 +992,7 @@ object MEExpressionCompletionUtil {
             val locals = localsHere.filter { it.index == index }
 
             val elementFactory = JavaPsiFacade.getElementFactory(project)
+            val hasNamedLocalVariables = mixinClass.findModule()?.hasNamedLocalVariables(targetClass.name.replace('/', '.')) != false
 
             return locals.map { localVariable ->
                 val localPsiType = if (localVariable.signature != null) {
@@ -1001,6 +1004,10 @@ object MEExpressionCompletionUtil {
                 }
                 val localsOfMyType = localsHere.filter { it.desc == localVariable.desc }
                 val ordinal = localsOfMyType.indexOf(localVariable)
+                val mixinLocalName = localVariable.name.takeIf {
+                    // Don't complete to names for arguments to workaround FabricMC/Mixin#189
+                    !isArgsOnly && hasNamedLocalVariables
+                }
                 val isImplicit = localsOfMyType.size == 1
                 val localName = localVariable.name.toValidIdentifier()
                 createUniqueLookup(localName)
@@ -1010,6 +1017,7 @@ object MEExpressionCompletionUtil {
                         localName,
                         Type.getType(localVariable.desc),
                         ordinal,
+                        mixinLocalName,
                         isArgsOnly,
                         isImplicit,
                         mixinClass,
@@ -1033,7 +1041,7 @@ object MEExpressionCompletionUtil {
             createUniqueLookup(localName)
                 .withIcon(PlatformIcons.VARIABLE_ICON)
                 .withTypeText(localType.presentableName())
-                .withLocalDefinition(localName, localType, ordinal, isArgsOnly, isImplicit, mixinClass)
+                .withLocalDefinition(localName, localType, ordinal, null, isArgsOnly, isImplicit, mixinClass)
                 .createEliminable("local $localName", if (isImplicit) -1 else 0)
         )
     }
@@ -1082,6 +1090,7 @@ object MEExpressionCompletionUtil {
         name: String,
         type: Type,
         ordinal: Int,
+        mixinLocalName: String?,
         isArgsOnly: Boolean,
         canBeImplicit: Boolean,
         mixinClass: PsiClass,
@@ -1094,11 +1103,15 @@ object MEExpressionCompletionUtil {
             if (isTypeAccessible) {
                 append("type = ${type.className}.class, ")
             }
-            if (!isImplicit) {
+
+            if (mixinLocalName != null) {
+                append("name = \"${StringUtil.escapeStringCharacters(mixinLocalName)}\", ")
+            } else if (!isImplicit) {
                 append("ordinal = ")
                 append(ordinal)
                 append(", ")
             }
+
             if (isArgsOnly) {
                 append("argsOnly = true, ")
             }

@@ -116,6 +116,9 @@
         <extensionPoint name="injectionPointAnnotation"
                         beanClass="com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InjectionPointAnnotation"
                         dynamic="true"/>
+        <extensionPoint name="missingLVTChecker"
+                        interface="com.demonwav.mcdev.platform.mixin.util.MissingLVTChecker"
+                        dynamic="true"/>
 
         <extensionPoint name="eventGenHelper" beanClass="com.intellij.lang.LanguageExtensionPoint" dynamic="true">
             <with attribute="implementationClass" implements="com.demonwav.mcdev.insight.generation.EventGenHelper"/>
@@ -311,6 +314,8 @@
                         implementation="com.demonwav.mcdev.platform.mixin.handlers.mixinextras.ExpressionInjectionPoint"/>
 
         <injectionPointAnnotation annotation="org.spongepowered.asm.mixin.injection.Constant" atCode="CONSTANT"/>
+
+        <missingLVTChecker implementation="com.demonwav.mcdev.platform.mixin.util.MinecraftMissingLVTChecker"/>
 
         <eventGenHelper language="JAVA" implementationClass="com.demonwav.mcdev.insight.generation.JavaEventGenHelper"/>
     </extensions>
@@ -1022,6 +1027,13 @@
                          level="WARNING"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mcp.ct.inspections.DuplicateAwEntryInspection"/>
+        <localInspection displayName="Unknown CT namespace"
+                         groupName="MCP"
+                         language="Class Tweaker"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mcp.ct.inspections.UnknownCtNamespaceInspection"/>
         <!--endregion-->
 
         <!--region MIXIN INSPECTIONS-->
@@ -1230,6 +1242,14 @@
                          level="WARNING"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.injector.ModifyVariableArgsOnlyInspection"/>
+        <localInspection displayName="@ModifyVariable may use variable name"
+                         shortName="ModifyVariableMayUseName"
+                         groupName="Mixin"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.injector.ModifyVariableMayUseNameInspection"/>
         <localInspection displayName="@Inject before a superconstructor call is cancellable"
                          shortName="InjectCancellableBeforeSuperConstructorCall"
                          groupName="Mixin"
@@ -1458,6 +1478,14 @@
                          level="WARNING"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.mixinextras.LocalArgsOnlyInspection"/>
+        <localInspection displayName="@Local may use name"
+                         shortName="LocalMayUseName"
+                         groupName="Mixin"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.mixinextras.LocalMayUseNameInspection"/>
         <localInspection displayName="@Share has conflicting variable type"
                          shortName="ConflictingShareType"
                          groupName="Mixin"
@@ -1466,6 +1494,14 @@
                          level="ERROR"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.mixinextras.ConflictingShareTypeInspection"/>
+        <localInspection displayName="@Share has non-LocalRef type"
+                         shortName="ShareNonLocalRef"
+                         groupName="Mixin"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="ERROR"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.mixinextras.ShareNonLocalRefInspection"/>
         <!--endregion-->
 
         <!--region Configuration -->
@@ -1516,6 +1552,7 @@
         <!--endregion-->
 
         <registryKey defaultValue="true" description="Use the new mappings parser." key="mcdev.new.tsrg.parser"/>
+        <registryKey defaultValue="false" description="Assume Minecraft is unobfuscated" key="mcdev.unobfuscated.minecraft"/>
     </extensions>
 
     <extensions defaultExtensionNs="org.jetbrains.plugins.gradle">
