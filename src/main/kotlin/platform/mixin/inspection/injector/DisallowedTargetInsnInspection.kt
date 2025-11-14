@@ -41,7 +41,7 @@ class DisallowedTargetInsnInspection : MixinInspection() {
                 return
             }
 
-            val injectorAnnotation = AtResolver.findInjectorAnnotation(annotation) ?: return
+            val injectorAnnotation = AtResolver.findInjectorAnnotation(annotation, skipThroughSlice = false) ?: return
             val injector = MixinAnnotationHandler.forMixinAnnotation(injectorAnnotation, annotation.project)
                 as? InjectorAnnotationHandler ?: return
             val containingClass = injectorAnnotation.findContainingClass() ?: return
