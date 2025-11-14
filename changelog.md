@@ -1,5 +1,11 @@
 # Minecraft Development for IntelliJ
 
+## [1.8.8]
+
+### Fixed
+
+- `@At` targets inside `@Slice` are no longer checked for invalid instructions according to the injector type.
+
 ## [1.8.7]
 
 ### Added

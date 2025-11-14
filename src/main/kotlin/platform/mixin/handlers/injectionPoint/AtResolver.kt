@@ -29,6 +29,8 @@ import com.demonwav.mcdev.platform.mixin.reference.isMiscDynamicSelector
 import com.demonwav.mcdev.platform.mixin.reference.parseMixinSelector
 import com.demonwav.mcdev.platform.mixin.reference.target.TargetReference
 import com.demonwav.mcdev.platform.mixin.util.InjectionPointSpecifier
+import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.AT
+import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.SLICE
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Classes.SHIFT
 import com.demonwav.mcdev.platform.mixin.util.findSourceClass
 import com.demonwav.mcdev.platform.mixin.util.findSourceElement
@@ -152,11 +154,13 @@ class AtResolver(
             }
         }
 
-        fun findInjectorAnnotation(at: PsiAnnotation): PsiAnnotation? {
+        fun findInjectorAnnotation(at: PsiAnnotation, skipThroughSlice: Boolean = true): PsiAnnotation? {
             return at.parents(false)
                 .takeWhile { it !is PsiClass }
                 .filterIsInstance<PsiAnnotation>()
-                .firstOrNull { it.parent is PsiModifierList }
+                .firstOrNull {
+                    !skipThroughSlice || (!it.hasQualifiedName(SLICE) && !it.hasQualifiedName(AT))
+                }
         }
 
         fun getShift(at: PsiAnnotation): Int {
@@ -281,7 +285,7 @@ class AtResolver(
         val injectionPoint = getInjectionPoint(at) ?: return emptyList()
         val targetAttr = at.findAttributeValue("target")
         val target = targetAttr?.let { parseMixinSelector(it) }
-        val injector = findInjectorAnnotation(at)?.let(MixinAnnotationHandler::forMixinAnnotation)
+        val injector = findInjectorAnnotation(at, skipThroughSlice = false)?.let(MixinAnnotationHandler::forMixinAnnotation)
             as? InjectorAnnotationHandler
 
         // Collect all possible targets
