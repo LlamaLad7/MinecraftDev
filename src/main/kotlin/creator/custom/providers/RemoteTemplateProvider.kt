@@ -36,7 +36,6 @@ import com.github.kittinunf.result.getOrNull
 import com.github.kittinunf.result.onError
 import com.intellij.ide.util.projectWizard.WizardContext
 import com.intellij.openapi.application.PathManager
-import com.intellij.openapi.application.writeAction
 import com.intellij.openapi.diagnostic.ControlFlowException
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.observable.properties.PropertyGraph
@@ -161,7 +160,7 @@ open class RemoteTemplateProvider : TemplateProvider {
         val rootFile = fs.refreshAndFindFileByPath(archiveRoot)
             ?: return emptyList()
         val modalityState = context.modalityState
-        writeAction { rootFile.refreshSync(modalityState) }
+        rootFile.refreshSync(modalityState)
 
         val innerPath = replaceVariables(rawInnerPath)
         val repoRoot = if (innerPath.isNotBlank()) {

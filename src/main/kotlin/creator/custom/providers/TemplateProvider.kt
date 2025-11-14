@@ -46,6 +46,8 @@ import com.intellij.util.KeyedLazyInstance
 import com.intellij.util.xmlb.annotations.Attribute
 import java.util.ResourceBundle
 import javax.swing.JComponent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 
 /**
  * Extensions responsible for creating a [TemplateDescriptor] based on whatever data it is provided in its configuration
@@ -73,31 +75,34 @@ interface TemplateProvider {
 
         fun getAllKeys() = EP_NAME.extensionList.mapNotNull { it.key }
 
-        fun findTemplates(
+        suspend fun findTemplates(
             modalityState: ModalityState,
             repoRoot: VirtualFile,
             templates: MutableList<VfsLoadedTemplate> = mutableListOf(),
-            bundle: ResourceBundle? = loadMessagesBundle(modalityState, repoRoot)
+            bundle: ResourceBundle? = null
         ): List<VfsLoadedTemplate> {
+            val bundle = bundle ?: loadMessagesBundle(modalityState, repoRoot)
             val visitor = object : VirtualFileVisitor<Unit>() {
                 override fun visitFile(file: VirtualFile): Boolean {
                     if (!file.isFile || !file.name.endsWith(".mcdev.template.json")) {
                         return true
                     }
 
-                    try {
-                        createVfsLoadedTemplate(modalityState, file.parent, file, bundle = bundle)
-                            ?.let(templates::add)
-                    } catch (t: Throwable) {
-                        if (t is ControlFlowException) {
-                            throw t
-                        }
+                    runBlocking(Dispatchers.Unconfined) {
+                        try {
+                            createVfsLoadedTemplate(modalityState, file.parent, file, bundle = bundle)
+                                ?.let(templates::add)
+                        } catch (t: Throwable) {
+                            if (t is ControlFlowException) {
+                                throw t
+                            }
 
-                        val attachment = runCatching { Attachment(file.name, file.readText()) }.getOrNull()
-                        if (attachment != null) {
-                            thisLogger().error("Failed to load template ${file.path}", t, attachment)
-                        } else {
-                            thisLogger().error("Failed to load template ${file.path}", t)
+                            val attachment = runCatching { Attachment(file.name, file.readText()) }.getOrNull()
+                            if (attachment != null) {
+                                thisLogger().error("Failed to load template ${file.path}", t, attachment)
+                            } else {
+                                thisLogger().error("Failed to load template ${file.path}", t)
+                            }
                         }
                     }
 
@@ -108,7 +113,7 @@ interface TemplateProvider {
             return templates
         }
 
-        fun loadMessagesBundle(modalityState: ModalityState, repoRoot: VirtualFile): ResourceBundle? = try {
+        suspend fun loadMessagesBundle(modalityState: ModalityState, repoRoot: VirtualFile): ResourceBundle? = try {
             val locale = DynamicBundle.getLocale()
             // Simplified bundle resolution, but covers all the most common cases
             val baseBundle = doLoadMessageBundle(
@@ -135,7 +140,7 @@ interface TemplateProvider {
             null
         }
 
-        private fun doLoadMessageBundle(
+        private suspend fun doLoadMessageBundle(
             file: VirtualFile?,
             modalityState: ModalityState,
             parent: ResourceBundle?
@@ -158,7 +163,7 @@ interface TemplateProvider {
             return parent
         }
 
-        fun createVfsLoadedTemplate(
+        suspend fun createVfsLoadedTemplate(
             modalityState: ModalityState,
             templateRoot: VirtualFile,
             descriptorFile: VirtualFile,

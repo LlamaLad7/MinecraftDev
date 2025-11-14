@@ -20,7 +20,9 @@
 
 package com.demonwav.mcdev.util
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.writeAction
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
@@ -44,7 +46,7 @@ val Path.virtualFileOrError: VirtualFile
 val VirtualFile.manifest: Manifest?
     get() = try {
         JarFile(localFile).use { it.manifest }
-    } catch (e: IOException) {
+    } catch (_: IOException) {
         null
     }
 
@@ -77,7 +79,18 @@ val VirtualFile.mcDomainAndPath: Pair<String, String>?
 operator fun Manifest.get(attribute: String): String? = mainAttributes.getValue(attribute)
 operator fun Manifest.get(attribute: Attributes.Name): String? = mainAttributes.getValue(attribute)
 
-fun VirtualFile.refreshSync(modalityState: ModalityState): VirtualFile? {
-    RefreshQueue.getInstance().refresh(false, this.isDirectory, null, modalityState, this)
+suspend fun VirtualFile.refreshSync(modalityState: ModalityState): VirtualFile? {
+    fun refresh() {
+        RefreshQueue.getInstance().refresh(false, this.isDirectory, null, modalityState, this)
+    }
+
+    if (ApplicationManager.getApplication().isWriteAccessAllowed) {
+        refresh()
+    } else {
+        writeAction {
+            refresh()
+        }
+    }
+
     return this.parent?.findOrCreateChildData(this, this.name)
 }
