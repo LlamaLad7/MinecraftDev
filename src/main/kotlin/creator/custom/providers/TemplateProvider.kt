@@ -45,7 +45,9 @@ import com.intellij.serviceContainer.BaseKeyedLazyInstance
 import com.intellij.util.KeyedLazyInstance
 import com.intellij.util.xmlb.annotations.Attribute
 import java.util.ResourceBundle
+import java.util.concurrent.TimeUnit
 import javax.swing.JComponent
+import org.jetbrains.concurrency.runAsync
 
 /**
  * Extensions responsible for creating a [TemplateDescriptor] based on whatever data it is provided in its configuration
@@ -151,8 +153,9 @@ interface TemplateProvider {
             }
 
             try {
-                return file.refreshSync(modalityState)
-                    ?.inputStream?.reader()?.use { TemplateResourceBundle(it, parent) }
+                return runAsync {
+                    file.inputStream.reader().use { TemplateResourceBundle(it, parent) }
+                }.blockingGet(20, TimeUnit.MILLISECONDS)
             } catch (t: Throwable) {
                 if (t is ControlFlowException) {
                     return parent
@@ -171,8 +174,12 @@ interface TemplateProvider {
             tooltip: String? = null,
             bundle: ResourceBundle? = null
         ): VfsLoadedTemplate? {
-            descriptorFile.refreshSync(modalityState)
-            var descriptor = Gson().fromJson<TemplateDescriptor>(descriptorFile.readText())
+            var descriptor = runCatching {
+                runAsync {
+                    descriptorFile.refreshSync(modalityState)
+                    Gson().fromJson<TemplateDescriptor>(descriptorFile.readText())
+                }.blockingGet(100, TimeUnit.MILLISECONDS)
+            }.getOrNull() ?: return null
             if (descriptor.version != TemplateDescriptor.FORMAT_VERSION) {
                 thisLogger().warn("Cannot handle template ${descriptorFile.path} of version ${descriptor.version}")
                 return null
