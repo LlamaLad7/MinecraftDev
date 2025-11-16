@@ -21,6 +21,7 @@
 package com.demonwav.mcdev.platform.mcp.vanillagradle
 
 import com.demonwav.mcdev.platform.mcp.gradle.tooling.vanillagradle.VanillaGradleModel
+import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.externalSystem.model.DataNode
 import com.intellij.openapi.externalSystem.model.project.ModuleData
 import org.gradle.tooling.model.idea.IdeaModule
@@ -34,7 +35,9 @@ class VanillaGradleProjectResolverExtension : AbstractProjectResolverExtension()
     override fun getToolingExtensionsClasses() = extraProjectModelClasses
 
     override fun populateModuleExtraModels(gradleModule: IdeaModule, ideModule: DataNode<ModuleData>) {
-        val vgData = resolverCtx.getExtraProject(gradleModule, VanillaGradleModel::class.java)
+        val vgData = runReadAction {
+            resolverCtx.getExtraProject(gradleModule, VanillaGradleModel::class.java)
+        }
         if (vgData != null && vgData.hasVanillaGradle()) {
             val gradleProjectPath = gradleModule.gradleProject.projectIdentifier.projectPath
             val suffix = if (gradleProjectPath.endsWith(':')) "" else ":"

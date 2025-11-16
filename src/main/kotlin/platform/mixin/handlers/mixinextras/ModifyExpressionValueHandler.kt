@@ -46,6 +46,10 @@ class ModifyExpressionValueHandler : MixinExtrasInjectorAnnotationHandler() {
             return false
         }
 
+        if (decorations[ExpressionDecorations.SIMPLE_EXPRESSION_TYPE] != null) {
+            return true
+        }
+
         val returnType = getInsnReturnType(insn) ?: return false
         return returnType != Type.VOID_TYPE
     }
