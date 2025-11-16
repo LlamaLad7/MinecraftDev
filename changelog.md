@@ -1,5 +1,12 @@
 # Minecraft Development for IntelliJ
 
+## [1.8.9]
+
+### Fixed
+
+- Fixed freeze in project creator
+- Fixed ModifyExpressionValue sometimes being detected as disallowed if MixinExtras expressions are used
+
 ## [1.8.8]
 
 ### Fixed
