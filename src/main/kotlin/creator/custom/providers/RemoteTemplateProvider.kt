@@ -28,9 +28,7 @@ import com.demonwav.mcdev.creator.custom.TemplateDescriptor
 import com.demonwav.mcdev.creator.modalityState
 import com.demonwav.mcdev.creator.selectProxy
 import com.demonwav.mcdev.update.PluginUtil
-import com.demonwav.mcdev.util.asyncIO
 import com.demonwav.mcdev.util.capitalize
-import com.demonwav.mcdev.util.invokeAndWait
 import com.demonwav.mcdev.util.refreshSync
 import com.github.kittinunf.fuel.core.FuelManager
 import com.github.kittinunf.fuel.coroutines.awaitByteArrayResult
@@ -38,8 +36,6 @@ import com.github.kittinunf.result.getOrNull
 import com.github.kittinunf.result.onError
 import com.intellij.ide.util.projectWizard.WizardContext
 import com.intellij.openapi.application.PathManager
-import com.intellij.openapi.application.readAction
-import com.intellij.openapi.application.writeAction
 import com.intellij.openapi.diagnostic.ControlFlowException
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.observable.properties.PropertyGraph
@@ -48,7 +44,6 @@ import com.intellij.openapi.observable.util.transform
 import com.intellij.openapi.observable.util.trim
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
-import com.intellij.openapi.progress.blockingContext
 import com.intellij.openapi.util.NlsContexts
 import com.intellij.openapi.vfs.JarFileSystem
 import com.intellij.ui.CollectionComboBoxModel
@@ -62,7 +57,6 @@ import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.columns
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.builder.textValidation
-import com.intellij.util.application
 import com.intellij.util.io.createDirectories
 import java.awt.Component
 import java.nio.file.Path
@@ -70,12 +64,10 @@ import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JList
 import javax.swing.ListCellRenderer
-import javax.swing.SwingUtilities
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.exists
 import kotlin.io.path.writeBytes
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 
 open class RemoteTemplateProvider : TemplateProvider {
@@ -172,9 +164,7 @@ open class RemoteTemplateProvider : TemplateProvider {
             ?: return@withContext emptyList()
         val modalityState = context.modalityState
 
-        blockingContext {
-            rootFile.refreshSync(modalityState)
-        }
+        rootFile.refreshSync(modalityState)
 
         val innerPath = replaceVariables(rawInnerPath)
         val repoRoot = if (innerPath.isNotBlank()) {

@@ -132,13 +132,6 @@ fun tryWriteSafeContext(modalityState: ModalityState = ModalityState.defaultModa
     }
 }
 
-// Coroutine version of `tryWriteSafeContext`
-suspend fun tryWriteSafeContextSuspend(modalityState: ModalityState = ModalityState.defaultModalityState(), func: () -> Unit) {
-    blockingContext {
-        tryWriteSafeContext(modalityState, func)
-    }
-}
-
 inline fun <T : Any?> PsiFile.runWriteAction(crossinline func: () -> T) =
     applyWriteAction { func() }
 
