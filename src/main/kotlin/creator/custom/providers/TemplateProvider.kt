@@ -82,34 +82,38 @@ interface TemplateProvider {
             bundle: ResourceBundle? = null
         ): List<VfsLoadedTemplate> {
             val bundle = bundle ?: loadMessagesBundle(modalityState, repoRoot)
+            val templatesToLoad = mutableListOf<VirtualFile>()
             val visitor = object : VirtualFileVisitor<Unit>() {
                 override fun visitFile(file: VirtualFile): Boolean {
                     if (!file.isFile || !file.name.endsWith(".mcdev.template.json")) {
                         return true
                     }
 
-                    runBlocking(Dispatchers.Unconfined) {
-                        try {
-                            createVfsLoadedTemplate(modalityState, file.parent, file, bundle = bundle)
-                                ?.let(templates::add)
-                        } catch (t: Throwable) {
-                            if (t is ControlFlowException) {
-                                throw t
-                            }
-
-                            val attachment = runCatching { Attachment(file.name, file.readText()) }.getOrNull()
-                            if (attachment != null) {
-                                thisLogger().error("Failed to load template ${file.path}", t, attachment)
-                            } else {
-                                thisLogger().error("Failed to load template ${file.path}", t)
-                            }
-                        }
-                    }
+                    templatesToLoad += file
 
                     return true
                 }
             }
             VfsUtilCore.visitChildrenRecursively(repoRoot, visitor)
+
+            for (file in templatesToLoad) {
+                try {
+                    createVfsLoadedTemplate(modalityState, file.parent, file, bundle = bundle)
+                        ?.let(templates::add)
+                } catch (t: Throwable) {
+                    if (t is ControlFlowException) {
+                        throw t
+                    }
+
+                    val attachment = runCatching { Attachment(file.name, file.readText()) }.getOrNull()
+                    if (attachment != null) {
+                        thisLogger().error("Failed to load template ${file.path}", t, attachment)
+                    } else {
+                        thisLogger().error("Failed to load template ${file.path}", t)
+                    }
+                }
+            }
+
             return templates
         }
 
