@@ -43,6 +43,9 @@ version = "$ideaVersionName-$coreVersion"
 if (buildNumber != null) {
     version = "$version-nightly+$buildNumber"
 }
+if (System.getenv("CI") != "true") {
+    version = "$version-local"
+}
 
 java {
     toolchain {
