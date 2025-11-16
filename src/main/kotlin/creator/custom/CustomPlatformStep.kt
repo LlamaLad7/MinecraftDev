@@ -67,7 +67,7 @@ class CustomPlatformStep(
     val creatorUiScope = TemplateService.instance.scope("MinecraftDev Creator UI")
     val templateRepos = MinecraftSettings.instance.creatorTemplateRepos
 
-    val templateRepoProperty = propertyGraph.property<MinecraftSettings.TemplateRepo>(
+    val templateRepoProperty = propertyGraph.property(
         templateRepos.firstOrNull() ?: MinecraftSettings.TemplateRepo.makeBuiltinRepo()
     )
     var templateRepo by templateRepoProperty
@@ -79,19 +79,19 @@ class CustomPlatformStep(
     lateinit var availableGroupsSegmentedButton: SegmentedButton<String>
     lateinit var availableTemplatesSegmentedButton: SegmentedButton<LoadedTemplate>
 
-    val selectedGroupProperty = propertyGraph.property<String>("")
+    val selectedGroupProperty = propertyGraph.property("")
     var selectedGroup by selectedGroupProperty
     val selectedTemplateProperty = propertyGraph.property<LoadedTemplate>(EmptyLoadedTemplate)
     var selectedTemplate by selectedTemplateProperty
 
-    val templateProvidersLoadingProperty = propertyGraph.property<Boolean>(true)
+    val templateProvidersLoadingProperty = propertyGraph.property(true)
     val templateProvidersTextProperty = propertyGraph.property("")
     val templateProvidersText2Property = propertyGraph.property("")
     lateinit var templateProvidersProcessIcon: Cell<AsyncProcessIcon>
 
-    val templateLoadingProperty = propertyGraph.property<Boolean>(false)
-    val templateLoadingTextProperty = propertyGraph.property<String>("")
-    val templateLoadingText2Property = propertyGraph.property<String>("")
+    val templateLoadingProperty = propertyGraph.property(false)
+    val templateLoadingTextProperty = propertyGraph.property("")
+    val templateLoadingText2Property = propertyGraph.property("")
     lateinit var templatePropertiesProcessIcon: Cell<AsyncProcessIcon>
     lateinit var noTemplatesAvailable: Cell<JLabel>
     var templateLoadingJob: Job? = null

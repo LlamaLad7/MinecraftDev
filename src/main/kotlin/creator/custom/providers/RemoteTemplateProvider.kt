@@ -144,7 +144,7 @@ open class RemoteTemplateProvider : TemplateProvider {
         return doLoadTemplates(context, repo, remoteRepo.innerPath)
     }
 
-    protected suspend fun doLoadTemplates(
+    protected fun doLoadTemplates(
         context: WizardContext,
         repo: MinecraftSettings.TemplateRepo,
         rawInnerPath: String
@@ -267,7 +267,7 @@ open class RemoteTemplateProvider : TemplateProvider {
                             index: Int,
                             isSelected: Boolean,
                             cellHasFocus: Boolean
-                        ): Component? {
+                        ): Component {
                             text = value?.displayname?.let(MCDevBundle::invoke) ?: value?.name?.capitalize().toString()
                             return this
                         }
