@@ -46,10 +46,12 @@ class ModifyExpressionValueHandler : MixinExtrasInjectorAnnotationHandler() {
             return false
         }
 
-        // TODO: fix this to make it more accurate
-//        val returnType = getInsnReturnType(insn) ?: return false
-//        return returnType != Type.VOID_TYPE
-        return true
+        if (decorations[ExpressionDecorations.SIMPLE_EXPRESSION_TYPE] != null) {
+            return true
+        }
+
+        val returnType = getInsnReturnType(insn) ?: return false
+        return returnType != Type.VOID_TYPE
     }
 
     override val allowedInsnDescription = "instructions that return a value"
