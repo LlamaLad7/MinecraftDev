@@ -24,13 +24,33 @@ import com.demonwav.mcdev.platform.mcp.ct.gen.psi.CtTypes
 import com.demonwav.mcdev.platform.mcp.ct.psi.mixins.CtHeaderMixin
 import com.intellij.extapi.psi.ASTWrapperPsiElement
 import com.intellij.lang.ASTNode
+import com.intellij.openapi.diagnostic.logger
 import com.intellij.psi.PsiElement
 
 abstract class CtHeaderImplMixin(node: ASTNode) : ASTWrapperPsiElement(node), CtHeaderMixin {
+    companion object {
+        private val LOG = logger<CtHeaderImplMixin>()
+    }
+
+    override val nameString: String
+        get() = findNotNullChildByType<PsiElement>(CtTypes.HEADER_NAME).text
 
     override val versionString: String?
         get() = findChildByType<PsiElement>(CtTypes.HEADER_VERSION_ELEMENT)?.text
 
     override val namespaceString: String?
         get() = findChildByType<PsiElement>(CtTypes.HEADER_NAMESPACE_ELEMENT)?.text
+
+    override val effectiveVersion: Int?
+        get() {
+            val version = versionString?.removePrefix("v")?.toIntOrNull() ?: return null
+            return when (nameString) {
+                "accessWidener" -> version
+                "classTweaker" -> version + 2
+                else -> {
+                    LOG.error("Unknown header name: $nameString")
+                    null
+                }
+            }
+        }
 }

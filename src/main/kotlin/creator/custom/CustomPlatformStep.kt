@@ -27,12 +27,18 @@ import com.demonwav.mcdev.creator.custom.providers.LoadedTemplate
 import com.demonwav.mcdev.creator.custom.providers.TemplateProvider
 import com.demonwav.mcdev.creator.modalityState
 import com.demonwav.mcdev.util.getOrLogException
+import com.demonwav.mcdev.util.invokeAndWait
+import com.demonwav.mcdev.util.runWriteTask
+import com.demonwav.mcdev.util.tryWriteSafeContext
 import com.intellij.ide.wizard.AbstractNewProjectWizardStep
 import com.intellij.ide.wizard.GitNewProjectWizardData
 import com.intellij.ide.wizard.NewProjectWizardBaseData
 import com.intellij.ide.wizard.NewProjectWizardStep
 import com.intellij.openapi.application.EDT
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.TransactionGuard
 import com.intellij.openapi.application.asContextElement
+import com.intellij.openapi.application.impl.ModalityStateEx
 import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.observable.properties.GraphProperty
@@ -51,10 +57,12 @@ import com.intellij.ui.dsl.builder.bindText
 import com.intellij.util.application
 import com.intellij.util.ui.AsyncProcessIcon
 import javax.swing.JLabel
+import javax.swing.SwingUtilities
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import org.jetbrains.kotlin.descriptors.Modality
 
 /**
  * The step to select a custom template repo.
@@ -67,7 +75,7 @@ class CustomPlatformStep(
     val creatorUiScope = TemplateService.instance.scope("MinecraftDev Creator UI")
     val templateRepos = MinecraftSettings.instance.creatorTemplateRepos
 
-    val templateRepoProperty = propertyGraph.property<MinecraftSettings.TemplateRepo>(
+    val templateRepoProperty = propertyGraph.property(
         templateRepos.firstOrNull() ?: MinecraftSettings.TemplateRepo.makeBuiltinRepo()
     )
     var templateRepo by templateRepoProperty
@@ -79,19 +87,19 @@ class CustomPlatformStep(
     lateinit var availableGroupsSegmentedButton: SegmentedButton<String>
     lateinit var availableTemplatesSegmentedButton: SegmentedButton<LoadedTemplate>
 
-    val selectedGroupProperty = propertyGraph.property<String>("")
+    val selectedGroupProperty = propertyGraph.property("")
     var selectedGroup by selectedGroupProperty
     val selectedTemplateProperty = propertyGraph.property<LoadedTemplate>(EmptyLoadedTemplate)
     var selectedTemplate by selectedTemplateProperty
 
-    val templateProvidersLoadingProperty = propertyGraph.property<Boolean>(true)
+    val templateProvidersLoadingProperty = propertyGraph.property(true)
     val templateProvidersTextProperty = propertyGraph.property("")
     val templateProvidersText2Property = propertyGraph.property("")
     lateinit var templateProvidersProcessIcon: Cell<AsyncProcessIcon>
 
-    val templateLoadingProperty = propertyGraph.property<Boolean>(false)
-    val templateLoadingTextProperty = propertyGraph.property<String>("")
-    val templateLoadingText2Property = propertyGraph.property<String>("")
+    val templateLoadingProperty = propertyGraph.property(false)
+    val templateLoadingTextProperty = propertyGraph.property("")
+    val templateLoadingText2Property = propertyGraph.property("")
     lateinit var templatePropertiesProcessIcon: Cell<AsyncProcessIcon>
     lateinit var noTemplatesAvailable: Cell<JLabel>
     var templateLoadingJob: Job? = null
@@ -248,11 +256,9 @@ class CustomPlatformStep(
         templateLoadingTextProperty.set(MCDevBundle("creator.step.generic.load_template.message"))
         templateLoadingProperty.set(true)
 
-        // For some reason syncRefresh doesn't play nice with writeAction() coroutines so we do it beforehand
-        application.invokeAndWait(
-            { runWriteAction { VirtualFileManager.getInstance().syncRefresh() } },
-            context.modalityState
-        )
+        tryWriteSafeContext(context.modalityState) {
+            VirtualFileManager.getInstance().syncRefresh()
+        }
 
         val dialogCoroutineContext = context.modalityState.asContextElement()
         val uiContext = dialogCoroutineContext + Dispatchers.EDT

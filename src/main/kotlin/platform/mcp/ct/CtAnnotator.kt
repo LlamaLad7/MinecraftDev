@@ -46,7 +46,7 @@ class CtAnnotator : Annotator {
             }
 
             if (element.accessElement.text.startsWith("transitive-") &&
-                element.containingFile?.childOfType<CtHeader>()?.versionString == "v1"
+                element.containingFile?.childOfType<CtHeader>()?.effectiveVersion == 1
             ) {
                 holder.newAnnotation(HighlightSeverity.ERROR, "Transitive accesses were introduced in v2").create()
             }

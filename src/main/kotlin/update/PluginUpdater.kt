@@ -23,7 +23,6 @@ package com.demonwav.mcdev.update
 import com.demonwav.mcdev.util.findDeclaredField
 import com.demonwav.mcdev.util.forEachNotNull
 import com.demonwav.mcdev.util.invokeLater
-import com.demonwav.mcdev.util.invokeLaterAny
 import com.intellij.ide.plugins.IdeaPluginDescriptor
 import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.ide.plugins.PluginManagerMain
@@ -31,6 +30,7 @@ import com.intellij.ide.plugins.PluginNode
 import com.intellij.ide.plugins.RepositoryHelper
 import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
@@ -58,7 +58,7 @@ object PluginUpdater {
                 .forEachNotNull { updateStatus = updateStatus.mergeWith(checkUpdatesInCustomRepo(it)) }
 
             val finalUpdate = updateStatus
-            invokeLaterAny { callback(finalUpdate) }
+            invokeLater(ModalityState.any()) { callback(finalUpdate) }
         } catch (e: Exception) {
             PluginUpdateStatus.CheckFailed("Minecraft Development plugin update check failed")
         }
