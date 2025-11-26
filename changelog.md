@@ -1,5 +1,13 @@
 # Minecraft Development for IntelliJ
 
+## [1.8.10]
+
+### Fixed
+
+- Fixed `transitive-*` being reported as an error in class tweakers.
+- Fixed all local classes being reported as being inside a mixin.
+- Fixed write-unsafe context errors when using the project creator.
+
 ## [1.8.9]
 
 ### Fixed
