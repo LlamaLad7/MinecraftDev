@@ -134,6 +134,17 @@ def merge_source_into_target(source: str, target: str, dry_run: bool):
             print(err, file=sys.stderr)
         sys.exit(1)
 
+def do_push(branch_name: str, dry_run: bool):
+    print(f"Pushing branch {branch_name}")
+    rc, out, err = run_git(["push"], dry_run)
+    if rc != 0:
+        print(f"Failed to push branch {branch_name}", file=sys.stderr)
+        if out:
+            print(out)
+        if err:
+            print(err)
+        sys.exit(1)
+
 def tag_and_push(branch: str, version: str, push: bool, dry_run: bool):
     tag = f"{branch}-{version}"
     # check tag does not already exist
@@ -165,7 +176,7 @@ def fetch_origin(dry_run: bool):
     print("Fetching origin ...")
     rc, out, err = run_git(["fetch", "origin"], dry_run)
     if rc != 0:
-        print("Warning: 'git fetch origin --prune' returned non-zero.", file=sys.stderr)
+        print("Warning: 'git fetch origin' returned non-zero.", file=sys.stderr)
         if out:
             print(out)
         if err:
@@ -215,12 +226,15 @@ def main():
             print(f"Merge of {prev} into {br} failed. Aborting.", file=sys.stderr)
             sys.exit(1)
 
+        if push:
+            do_push(br, dry_run=dry_run)
+
         tag_and_push(br, version, push=push, dry_run=dry_run)
 
         prev = br
 
     print("\nSwitching back to dev branch...")
-    run_git(["checkout", "dev"], dry_run)
+    checkout_branch("dev", dry_run=dry_run)
 
     print("\nAll done. Created tags for version", version, "on branches:", ", ".join(branches))
 
