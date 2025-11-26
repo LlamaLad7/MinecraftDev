@@ -219,6 +219,9 @@ def main():
 
         prev = br
 
+    print("\nSwitching back to dev branch...")
+    run_git(["checkout", "dev"], dry_run)
+
     print("\nAll done. Created tags for version", version, "on branches:", ", ".join(branches))
 
 if __name__ == "__main__":
