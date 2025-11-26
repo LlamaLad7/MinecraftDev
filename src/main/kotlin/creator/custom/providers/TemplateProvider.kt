@@ -45,9 +45,9 @@ import com.intellij.serviceContainer.BaseKeyedLazyInstance
 import com.intellij.util.KeyedLazyInstance
 import com.intellij.util.xmlb.annotations.Attribute
 import java.util.ResourceBundle
+import java.util.concurrent.TimeUnit
 import javax.swing.JComponent
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
+import org.jetbrains.concurrency.runAsync
 
 /**
  * Extensions responsible for creating a [TemplateDescriptor] based on whatever data it is provided in its configuration
@@ -75,13 +75,12 @@ interface TemplateProvider {
 
         fun getAllKeys() = EP_NAME.extensionList.mapNotNull { it.key }
 
-        suspend fun findTemplates(
+        fun findTemplates(
             modalityState: ModalityState,
             repoRoot: VirtualFile,
             templates: MutableList<VfsLoadedTemplate> = mutableListOf(),
-            bundle: ResourceBundle? = null
+            bundle: ResourceBundle? = loadMessagesBundle(modalityState, repoRoot)
         ): List<VfsLoadedTemplate> {
-            val bundle = bundle ?: loadMessagesBundle(modalityState, repoRoot)
             val templatesToLoad = mutableListOf<VirtualFile>()
             val visitor = object : VirtualFileVisitor<Unit>() {
                 override fun visitFile(file: VirtualFile): Boolean {
@@ -117,7 +116,7 @@ interface TemplateProvider {
             return templates
         }
 
-        suspend fun loadMessagesBundle(modalityState: ModalityState, repoRoot: VirtualFile): ResourceBundle? = try {
+        fun loadMessagesBundle(modalityState: ModalityState, repoRoot: VirtualFile): ResourceBundle? = try {
             val locale = DynamicBundle.getLocale()
             // Simplified bundle resolution, but covers all the most common cases
             val baseBundle = doLoadMessageBundle(
@@ -144,7 +143,7 @@ interface TemplateProvider {
             null
         }
 
-        private suspend fun doLoadMessageBundle(
+        private fun doLoadMessageBundle(
             file: VirtualFile?,
             modalityState: ModalityState,
             parent: ResourceBundle?
@@ -154,8 +153,9 @@ interface TemplateProvider {
             }
 
             try {
-                return file.refreshSync(modalityState)
-                    ?.inputStream?.reader()?.use { TemplateResourceBundle(it, parent) }
+                return runAsync {
+                    file.inputStream.reader().use { TemplateResourceBundle(it, parent) }
+                }.blockingGet(20, TimeUnit.MILLISECONDS)
             } catch (t: Throwable) {
                 if (t is ControlFlowException) {
                     return parent
@@ -167,15 +167,19 @@ interface TemplateProvider {
             return parent
         }
 
-        suspend fun createVfsLoadedTemplate(
+        fun createVfsLoadedTemplate(
             modalityState: ModalityState,
             templateRoot: VirtualFile,
             descriptorFile: VirtualFile,
             tooltip: String? = null,
             bundle: ResourceBundle? = null
         ): VfsLoadedTemplate? {
-            descriptorFile.refreshSync(modalityState)
-            var descriptor = Gson().fromJson<TemplateDescriptor>(descriptorFile.readText())
+            var descriptor = runCatching {
+                runAsync {
+                    descriptorFile.refreshSync(modalityState)
+                    Gson().fromJson<TemplateDescriptor>(descriptorFile.readText())
+                }.blockingGet(100, TimeUnit.MILLISECONDS)
+            }.getOrNull() ?: return null
             if (descriptor.version != TemplateDescriptor.FORMAT_VERSION) {
                 thisLogger().warn("Cannot handle template ${descriptorFile.path} of version ${descriptor.version}")
                 return null
@@ -194,7 +198,7 @@ interface TemplateProvider {
                 descriptor.translateOrNull("platform.${labelKey.lowercase()}.label") ?: descriptor.translate(labelKey)
 
             if (descriptor.inherit != null) {
-                val parent = templateRoot.findFileByRelativePath(descriptor.inherit!!)
+                val parent = templateRoot.findFileByRelativePath(descriptor.inherit)
                 if (parent != null) {
                     parent.refresh(false, false)
                     val parentDescriptor = Gson().fromJson<TemplateDescriptor>(parent.readText())
@@ -231,5 +235,5 @@ class TemplateProviderBean : BaseKeyedLazyInstance<TemplateProvider>(), KeyedLaz
 
     override fun getKey(): String = name
 
-    override fun getImplementationClassName(): String? = implementation
+    override fun getImplementationClassName(): String = implementation
 }
