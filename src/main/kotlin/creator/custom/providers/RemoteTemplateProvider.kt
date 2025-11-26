@@ -67,6 +67,8 @@ import javax.swing.ListCellRenderer
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.exists
 import kotlin.io.path.writeBytes
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 open class RemoteTemplateProvider : TemplateProvider {
 
@@ -148,18 +150,20 @@ open class RemoteTemplateProvider : TemplateProvider {
         context: WizardContext,
         repo: MinecraftSettings.TemplateRepo,
         rawInnerPath: String
-    ): List<LoadedTemplate> {
+    ): List<LoadedTemplate> = withContext(Dispatchers.IO) { // don't run on EDT
         val remoteRootPath = RemoteTemplateRepo.getDestinationZip(repo.name)
         if (!remoteRootPath.exists()) {
-            return emptyList()
+            return@withContext emptyList()
         }
 
         val archiveRoot = remoteRootPath.absolutePathString() + JarFileSystem.JAR_SEPARATOR
 
         val fs = JarFileSystem.getInstance()
+
         val rootFile = fs.refreshAndFindFileByPath(archiveRoot)
-            ?: return emptyList()
+            ?: return@withContext emptyList()
         val modalityState = context.modalityState
+
         rootFile.refreshSync(modalityState)
 
         val innerPath = replaceVariables(rawInnerPath)
@@ -170,10 +174,10 @@ open class RemoteTemplateProvider : TemplateProvider {
         }
 
         if (repoRoot == null) {
-            return emptyList()
+            return@withContext emptyList()
         }
 
-        return TemplateProvider.findTemplates(modalityState, repoRoot)
+        return@withContext TemplateProvider.findTemplates(modalityState, repoRoot)
     }
 
     private fun replaceVariables(originalRepoUrl: String): String =
@@ -267,7 +271,7 @@ open class RemoteTemplateProvider : TemplateProvider {
                             index: Int,
                             isSelected: Boolean,
                             cellHasFocus: Boolean
-                        ): Component? {
+                        ): Component {
                             text = value?.displayname?.let(MCDevBundle::invoke) ?: value?.name?.capitalize().toString()
                             return this
                         }

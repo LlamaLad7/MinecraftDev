@@ -24,6 +24,8 @@ import com.demonwav.mcdev.platform.mcp.ct.psi.CtElement
 
 interface CtHeaderMixin : CtElement {
 
+    val nameString: String
     val versionString: String?
     val namespaceString: String?
+    val effectiveVersion: Int?
 }
