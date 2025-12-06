@@ -33,6 +33,8 @@ import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.panel
 import javax.swing.JComponent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class BuiltinTemplateProvider : RemoteTemplateProvider() {
 
@@ -59,16 +61,16 @@ class BuiltinTemplateProvider : RemoteTemplateProvider() {
     override suspend fun loadTemplates(
         context: WizardContext,
         repo: MinecraftSettings.TemplateRepo
-    ): Collection<LoadedTemplate> {
+    ): Collection<LoadedTemplate> = withContext(Dispatchers.IO) {
         val remoteTemplates = doLoadTemplates(context, repo, builtinTemplatesInnerPath)
         if (remoteTemplates.isNotEmpty()) {
-            return remoteTemplates
+            return@withContext remoteTemplates
         }
 
         val repoRoot = builtinTemplatesPath.virtualFile
-            ?: return emptyList()
+            ?: return@withContext emptyList()
         repoRoot.refreshSync(context.modalityState)
-        return TemplateProvider.findTemplates(context.modalityState, repoRoot)
+        TemplateProvider.findTemplates(context.modalityState, repoRoot)
     }
 
     override fun setupConfigUi(

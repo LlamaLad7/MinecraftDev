@@ -47,6 +47,8 @@ import com.intellij.util.xmlb.annotations.Attribute
 import java.util.ResourceBundle
 import java.util.concurrent.TimeUnit
 import javax.swing.JComponent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jetbrains.concurrency.runAsync
 
 /**
@@ -75,12 +77,12 @@ interface TemplateProvider {
 
         fun getAllKeys() = EP_NAME.extensionList.mapNotNull { it.key }
 
-        fun findTemplates(
+        suspend fun findTemplates(
             modalityState: ModalityState,
             repoRoot: VirtualFile,
             templates: MutableList<VfsLoadedTemplate> = mutableListOf(),
             bundle: ResourceBundle? = loadMessagesBundle(modalityState, repoRoot)
-        ): List<VfsLoadedTemplate> {
+        ): List<VfsLoadedTemplate> = withContext(Dispatchers.IO) {
             val templatesToLoad = mutableListOf<VirtualFile>()
             val visitor = object : VirtualFileVisitor<Unit>() {
                 override fun visitFile(file: VirtualFile): Boolean {
@@ -113,7 +115,7 @@ interface TemplateProvider {
                 }
             }
 
-            return templates
+            templates
         }
 
         fun loadMessagesBundle(modalityState: ModalityState, repoRoot: VirtualFile): ResourceBundle? = try {
