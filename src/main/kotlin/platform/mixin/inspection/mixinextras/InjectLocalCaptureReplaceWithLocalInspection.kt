@@ -119,7 +119,7 @@ class InjectLocalCaptureReplaceWithLocalInspection : MixinInspection() {
 
                 val hasNamedLocalVariables = MixinAnnotationHandler.resolveTarget(annotation).all {
                     it is MethodTargetMember &&
-                        annotation.findModule()?.hasNamedLocalVariables(it.classAndMethod.clazz.name.replace('/', '.')) != false
+                        annotation.hasNamedLocalVariables(it.classAndMethod.clazz.name.replace('/', '.'))
                 }
 
                 // based on the resolved local variables, figure out what @Local specifiers to use

@@ -46,6 +46,7 @@ object MinecraftVersions {
     val MC1_20_6 = SemanticVersion.release(1, 20, 6)
     val MC1_21 = SemanticVersion.release(1, 21)
     val MC1_21_1 = SemanticVersion.release(1, 21, 1)
+    val MC25_4 = SemanticVersion.release(25, 4) // placeholder till we know what the last 2025 winter drop version is
 
     fun requiredJavaVersion(minecraftVersion: SemanticVersion) = when {
         minecraftVersion <= MC1_16_5 -> JavaSdkVersion.JDK_1_8
