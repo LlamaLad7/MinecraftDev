@@ -52,6 +52,7 @@ object MinecraftVersions {
         minecraftVersion <= MC1_16_5 -> JavaSdkVersion.JDK_1_8
         minecraftVersion <= MC1_17_1 -> JavaSdkVersion.JDK_16
         minecraftVersion <= MC1_20_4 -> JavaSdkVersion.JDK_17
-        else -> JavaSdkVersion.JDK_21
+        minecraftVersion<= MC25_4 -> JavaSdkVersion.JDK_21
+        else -> JavaSdkVersion.JDK_25
     }
 }
