@@ -39,8 +39,6 @@ import com.intellij.ui.dsl.builder.textValidation
 import java.nio.file.Path
 import javax.swing.JComponent
 import kotlin.io.path.absolute
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 class LocalTemplateProvider : TemplateProvider {
 
@@ -51,13 +49,13 @@ class LocalTemplateProvider : TemplateProvider {
     override suspend fun loadTemplates(
         context: WizardContext,
         repo: MinecraftSettings.TemplateRepo
-    ): Collection<LoadedTemplate> = withContext(Dispatchers.IO) {
+    ): Collection<LoadedTemplate> {
         val rootPath = Path.of(repo.data.trim()).absolute()
         val repoRoot = rootPath.virtualFile
-            ?: return@withContext emptyList()
+            ?: return emptyList()
         val modalityState = context.modalityState
         repoRoot.refreshSync(modalityState)
-        TemplateProvider.findTemplates(modalityState, repoRoot)
+        return TemplateProvider.findTemplates(modalityState, repoRoot)
     }
 
     override fun setupConfigUi(

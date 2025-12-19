@@ -38,8 +38,6 @@ import com.intellij.ui.dsl.builder.textValidation
 import java.nio.file.Path
 import javax.swing.JComponent
 import kotlin.io.path.isRegularFile
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 class ZipTemplateProvider : TemplateProvider {
 
@@ -50,14 +48,14 @@ class ZipTemplateProvider : TemplateProvider {
     override suspend fun loadTemplates(
         context: WizardContext,
         repo: MinecraftSettings.TemplateRepo
-    ): Collection<LoadedTemplate> = withContext(Dispatchers.IO) {
+    ): Collection<LoadedTemplate> {
         val archiveRoot = repo.data + JarFileSystem.JAR_SEPARATOR
         val fs = JarFileSystem.getInstance()
         val rootFile = fs.refreshAndFindFileByPath(archiveRoot)
-            ?: return@withContext emptyList()
+            ?: return emptyList()
         val modalityState = context.modalityState
         rootFile.refreshSync(modalityState)
-        TemplateProvider.findTemplates(modalityState, rootFile)
+        return TemplateProvider.findTemplates(modalityState, rootFile)
     }
 
     override fun setupConfigUi(
