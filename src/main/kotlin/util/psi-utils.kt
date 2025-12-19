@@ -347,7 +347,7 @@ fun LookupElementBuilder.withImportInsertion(toImport: List<PsiClass>): LookupEl
     }
 
 fun PsiElement.findMcpModule() = this.cached {
-    val file = containingFile?.virtualFile ?: return@cached null
+    val file = containingFile?.viewProvider?.virtualFile ?: return@cached null
     val index = ProjectFileIndex.getInstance(project)
     val modules = if (index.isInLibrary(file)) {
         val library = index.getOrderEntriesForFile(file)
