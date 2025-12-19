@@ -20,7 +20,6 @@
 
 package com.demonwav.mcdev.creator
 
-import com.demonwav.mcdev.util.invokeLater
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.ide.util.projectWizard.ProjectWizardUtil
 import com.intellij.ide.util.projectWizard.WizardContext
@@ -43,7 +42,6 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.ui.dsl.builder.Cell
 import com.intellij.ui.dsl.builder.Row
 import javax.swing.JComponent
-import org.jetbrains.concurrency.runAsync
 
 internal class JdkPreferenceData(
     var jdk: JavaSdkVersion,
@@ -91,17 +89,15 @@ class JdkComboBoxWithPreference internal constructor(
             preferenceData.jdk = version
             reloadModel()
 
-            for (jdkVersion in version.ordinal until JavaSdkVersion.entries.size) {
-                val jdk = JavaSdkVersion.entries[jdkVersion]
+            for (jdkVersion in version.ordinal until JavaSdkVersion.values().size) {
+                val jdk = JavaSdkVersion.values()[jdkVersion]
 
                 val preferredSdkPath = preferenceData.sdkPathByJdk[jdk]
                 if (preferredSdkPath != null) {
                     val sdk = model.sdks.firstOrNull { it.homePath == preferredSdkPath }
                         ?: suggestions.firstOrNull { it.homePath == preferredSdkPath }
                     if (sdk != null) {
-                        runAsync {
-                            setSelectedItem(sdk)
-                        }
+                        setSelectedItem(sdk)
                         return
                     }
                 }
@@ -149,7 +145,7 @@ fun Row.jdkComboBoxWithPreference(
         for (preferenceDataStr in preferenceDataStrs) {
             val parts = preferenceDataStr.split('=', limit = 2)
             val featureVersion = parts.firstOrNull()?.toIntOrNull() ?: continue
-            val knownJdkVersions = JavaSdkVersion.entries
+            val knownJdkVersions = JavaSdkVersion.values()
             if (featureVersion !in knownJdkVersions.indices) {
                 continue
             }
@@ -180,9 +176,7 @@ fun Row.jdkComboBoxWithPreference(
     }
 
     val lastUsedSdk = stateComponent.getValue(selectedJdkProperty)
-    runAsync {
-        ProjectWizardUtil.preselectJdkForNewModule(project, lastUsedSdk, comboBox) { true }
-    }
+    ProjectWizardUtil.preselectJdkForNewModule(project, lastUsedSdk, comboBox) { true }
 
     val windowChild = context.getUserData(AbstractWizard.KEY)!!.contentPanel
     comboBox.loadSuggestions(windowChild, context.disposable)

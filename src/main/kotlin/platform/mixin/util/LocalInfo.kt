@@ -59,7 +59,7 @@ class LocalInfo(
             }
             for (argType in Type.getArgumentTypes(methodNode.desc)) {
                 args.add(
-                    LocalVariables.LocalVariable("arg${args.size}", argType.descriptor, null, null, null, args.size),
+                    LocalVariables.LocalVariable("arg${args.size}", argType.descriptor, null, null, null, args.size, isNamed = false),
                 )
                 if (argType.size == 2) {
                     args.add(null)

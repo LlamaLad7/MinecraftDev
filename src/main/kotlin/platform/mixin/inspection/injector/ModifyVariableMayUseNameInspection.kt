@@ -119,7 +119,7 @@ class ModifyVariableMayUseNameInspection : MixinInspection() {
 
             var variableName: String? = null
             for (targetClass in mixinTargets) {
-                if (!module.hasNamedLocalVariables(targetClass.name.replace('/', '.'))) {
+                if (!injectorAnnotation.hasNamedLocalVariables(targetClass.name.replace('/', '.'))) {
                     return null
                 }
 

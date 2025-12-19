@@ -34,7 +34,6 @@ import com.intellij.codeInsight.actions.ReformatCodeProcessor
 import com.intellij.ide.projectView.ProjectView
 import com.intellij.ide.util.projectWizard.WizardContext
 import com.intellij.openapi.application.WriteAction
-import com.intellij.openapi.concurrency.awaitPromise
 import com.intellij.openapi.diagnostic.Attachment
 import com.intellij.openapi.diagnostic.ControlFlowException
 import com.intellij.openapi.diagnostic.thisLogger
@@ -54,15 +53,11 @@ import com.intellij.ui.dsl.builder.Panel
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.util.application
 import java.nio.file.Path
-import java.time.Duration
-import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import org.jetbrains.concurrency.await
-import org.jetbrains.concurrency.runAsync
 
 interface ExternalTemplatePropertyProvider {
 
@@ -273,11 +268,7 @@ class CreatorTemplateProcessor(
                 destPath.parent.createDirectories()
                 destPath.writeText(processedContent)
 
-                val virtualFile = runCatching {
-                    runAsync {
-                        destPath.refreshAndFindVirtualFile()
-                    }.blockingGet(20, TimeUnit.MILLISECONDS)
-                }.getOrNull()
+                val virtualFile = destPath.refreshAndFindVirtualFile()
                 if (virtualFile != null) {
                     generatedFiles.add(file to virtualFile)
                 } else {

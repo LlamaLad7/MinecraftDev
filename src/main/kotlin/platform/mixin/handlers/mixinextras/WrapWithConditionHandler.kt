@@ -21,10 +21,12 @@
 package com.demonwav.mcdev.platform.mixin.handlers.mixinextras
 
 import com.demonwav.mcdev.platform.mixin.inspection.injector.ParameterGroup
+import com.demonwav.mcdev.platform.mixin.util.nextRealInsn
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypes
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
+import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.ClassNode
@@ -37,9 +39,32 @@ class WrapWithConditionHandler : MixinExtrasInjectorAnnotationHandler() {
         InstructionType.METHOD_CALL, InstructionType.FIELD_SET
     )
 
-    override fun isInsnAllowed(insn: AbstractInsnNode, decorations: Map<String, Any?>) = super.isInsnAllowed(insn, decorations) && getInsnReturnType(insn) == Type.VOID_TYPE
+    override fun isInsnAllowed(insn: AbstractInsnNode, decorations: Map<String, Any?>): Boolean {
+        if (!super.isInsnAllowed(insn, decorations)) {
+            return false
+        }
+
+        return when (val size = getInsnReturnType(insn)?.size) {
+            0 -> true
+            1 -> insn.nextRealInsn?.opcode == Opcodes.POP
+            2 -> insn.nextRealInsn?.opcode == Opcodes.POP2
+            else -> throw IllegalStateException("Unexpected return type size: $size")
+        }
+    }
 
     override val allowedInsnDescription = "void method invocations and field assignments"
+
+    fun getValidTargetType(insn: AbstractInsnNode): Type? {
+        if (!isInsnAllowed(insn, emptyMap())) {
+            return null
+        }
+
+        return getInsnReturnType(insn)
+    }
+
+    fun getRequiredParameterCount(insn: AbstractInsnNode, targetClass: ClassNode, annotation: PsiAnnotation): Int {
+        return getPsiParameters(insn, targetClass, annotation)?.size ?: 0
+    }
 
     override fun expectedMethodSignature(
         annotation: PsiAnnotation,

@@ -300,7 +300,7 @@ val Module.mixinVersion: SemanticVersion?
         return SemanticVersion.tryParse(version)
     }
 
-fun Module.hasNamedLocalVariables(className: String): Boolean {
+fun PsiElement.hasNamedLocalVariables(className: String): Boolean {
     for (checker in MissingLVTChecker.EP_NAME.extensionList) {
         if (checker.hasMissingLVT(this, className)) {
             return false
