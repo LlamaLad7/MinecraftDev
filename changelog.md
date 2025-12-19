@@ -1,5 +1,18 @@
 # Minecraft Development for IntelliJ
 
+## [1.8.11]
+
+### Added
+
+- Using Minecraft version to recognize unobfuscated Minecraft
+
+### Fixed
+
+- Downgraded non-void WrapWithCondition to warning if there is a pop instruction afterwards
+- Fixed local templates freezing
+- Avoided a crash for unknown MC versions
+- Don't suggest that locals can use names with argsOnly = true
+
 ## [1.8.10]
 
 ### Fixed

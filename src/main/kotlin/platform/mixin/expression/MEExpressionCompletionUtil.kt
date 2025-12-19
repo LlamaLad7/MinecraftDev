@@ -992,7 +992,7 @@ object MEExpressionCompletionUtil {
             val locals = localsHere.filter { it.index == index }
 
             val elementFactory = JavaPsiFacade.getElementFactory(project)
-            val hasNamedLocalVariables = mixinClass.findModule()?.hasNamedLocalVariables(targetClass.name.replace('/', '.')) != false
+            val hasNamedLocalVariables = mixinClass.hasNamedLocalVariables(targetClass.name.replace('/', '.'))
 
             return locals.map { localVariable ->
                 val localPsiType = if (localVariable.signature != null) {

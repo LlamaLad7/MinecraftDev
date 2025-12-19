@@ -58,7 +58,7 @@ object PluginUpdater {
                 .forEachNotNull { updateStatus = updateStatus.mergeWith(checkUpdatesInCustomRepo(it)) }
 
             val finalUpdate = updateStatus
-            invokeLater(ModalityState.any()) { callback(finalUpdate) }
+            ApplicationManager.getApplication().invokeLater({ callback(finalUpdate) }, ModalityState.any())
         } catch (e: Exception) {
             PluginUpdateStatus.CheckFailed("Minecraft Development plugin update check failed")
         }

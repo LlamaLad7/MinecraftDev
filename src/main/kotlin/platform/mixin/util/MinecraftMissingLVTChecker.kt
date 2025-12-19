@@ -20,16 +20,20 @@
 
 package com.demonwav.mcdev.platform.mixin.util
 
-import com.intellij.openapi.module.Module
+import com.demonwav.mcdev.util.MinecraftVersions
+import com.demonwav.mcdev.util.mcVersion
 import com.intellij.openapi.util.registry.Registry
+import com.intellij.psi.PsiElement
 
 class MinecraftMissingLVTChecker : MissingLVTChecker {
-    override fun hasMissingLVT(module: Module, className: String): Boolean {
-        return if (className.startsWith("net.minecraft.") || className.startsWith("com.mojang.blaze3d.")) {
-            // TODO: we'll be able to handle this better when we know which Minecraft version will be unobfuscated
-            !Registry.`is`("mcdev.unobfuscated.minecraft")
-        } else {
-            false
+    override fun hasMissingLVT(context: PsiElement, className: String): Boolean {
+        return when {
+            Registry.`is`("mcdev.unobfuscated.minecraft") -> false
+            !className.startsWith("net.minecraft.") && !className.startsWith("com.mojang.blaze3d.") -> false
+            else -> {
+                val mcVersion = context.mcVersion
+                mcVersion != null && mcVersion <= MinecraftVersions.MC25_4
+            }
         }
     }
 }
