@@ -27,8 +27,8 @@ import com.demonwav.mcdev.platform.mixin.util.MissingLVTChecker
 import com.demonwav.mcdev.util.BeforeOrAfter
 import com.demonwav.mcdev.util.invokeDeclaredMethod
 import com.intellij.codeInsight.lookup.Lookup
-import com.intellij.openapi.module.Module
 import com.intellij.openapi.util.text.StringUtil
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.fixtures.impl.CodeInsightTestFixtureImpl
@@ -806,6 +806,6 @@ class MEExpressionCompletionTest : BaseMixinTest() {
     }
 
     private object AlwaysMissingLVTChecker : MissingLVTChecker {
-        override fun hasMissingLVT(module: Module, className: String) = true
+        override fun hasMissingLVT(context: PsiElement, className: String) = true
     }
 }

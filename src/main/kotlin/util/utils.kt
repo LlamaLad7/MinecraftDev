@@ -25,7 +25,6 @@ import com.google.gson.reflect.TypeToken
 import com.intellij.codeInspection.InspectionProfileEntry
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
-import com.intellij.openapi.application.TransactionGuard
 import com.intellij.openapi.application.WriteAction
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.command.WriteCommandAction
@@ -33,7 +32,6 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.progress.ProcessCanceledException
-import com.intellij.openapi.progress.blockingContext
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
@@ -52,22 +50,20 @@ import com.intellij.psi.util.PsiUtil
 import java.lang.invoke.MethodHandles
 import java.util.Locale
 import java.util.concurrent.CancellationException
-import javax.swing.SwingUtilities
 import kotlin.math.min
 import kotlin.reflect.KClass
-import kotlinx.coroutines.CoroutineScope
 import org.jetbrains.annotations.NonNls
 import org.jetbrains.concurrency.Promise
 import org.jetbrains.concurrency.runAsync
 
-inline fun <T : Any?> runWriteTask(modalityState: ModalityState = ModalityState.defaultModalityState(), crossinline func: () -> T): T {
-    return invokeAndWait(modalityState) {
+inline fun <T : Any?> runWriteTask(crossinline func: () -> T): T {
+    return invokeAndWait {
         ApplicationManager.getApplication().runWriteAction(Computable { func() })
     }
 }
 
-fun runWriteTaskLater(modalityState: ModalityState = ModalityState.defaultModalityState(), func: () -> Unit) {
-    invokeLater(modalityState) {
+fun runWriteTaskLater(func: () -> Unit) {
+    invokeLater {
         ApplicationManager.getApplication().runWriteAction(func)
     }
 }
@@ -93,43 +89,26 @@ inline fun Project.runWriteTaskInSmartMode(crossinline func: () -> Unit) {
     dumbService.runWhenSmart(runnable)
 }
 
-fun <T : Any?> invokeAndWait(modalityState: ModalityState = ModalityState.defaultModalityState(), func: () -> T): T {
+fun <T : Any?> invokeAndWait(func: () -> T): T {
     val ref = Ref<T>()
-    ApplicationManager.getApplication().invokeAndWait({ ref.set(func()) }, modalityState)
+    ApplicationManager.getApplication().invokeAndWait({ ref.set(func()) }, ModalityState.defaultModalityState())
     return ref.get()
 }
 
-fun invokeLater(modalityState: ModalityState = ModalityState.defaultModalityState(), func: () -> Unit) {
-    ApplicationManager.getApplication().invokeLater(func, modalityState)
+fun invokeLater(func: () -> Unit) {
+    ApplicationManager.getApplication().invokeLater(func, ModalityState.defaultModalityState())
 }
 
-fun invokeLater(expired: Condition<*>, modalityState: ModalityState = ModalityState.defaultModalityState(), func: () -> Unit) {
-    ApplicationManager.getApplication().invokeLater(func, modalityState, expired)
+fun invokeLater(expired: Condition<*>, func: () -> Unit) {
+    ApplicationManager.getApplication().invokeLater(func, ModalityState.defaultModalityState(), expired)
 }
 
-inline fun <T> runWriteActionAndWait(modalityState: ModalityState = ModalityState.defaultModalityState(), crossinline action: () -> T): T {
-    return WriteAction.computeAndWait(ThrowableComputable { action() }, modalityState)
+fun invokeLaterAny(func: () -> Unit) {
+    ApplicationManager.getApplication().invokeLater(func, ModalityState.any())
 }
 
-// Best effort to get into a context where writing is considered safe, if not possible then `func` will never run.
-fun tryWriteSafeContext(modalityState: ModalityState = ModalityState.defaultModalityState(), func: () -> Unit) {
-    val guard = TransactionGuard.getInstance()
-    val state = if (guard.isWriteSafeModality(modalityState)) {
-        modalityState
-    } else {
-        ModalityState.nonModal()
-    }
-    if (SwingUtilities.isEventDispatchThread()) {
-        if (guard.isWritingAllowed) {
-            func()
-        }
-    } else {
-        invokeAndWait(state) {
-            if (guard.isWritingAllowed) {
-                func()
-            }
-        }
-    }
+inline fun <T> runWriteActionAndWait(crossinline action: () -> T): T {
+    return WriteAction.computeAndWait(ThrowableComputable { action() })
 }
 
 inline fun <T : Any?> PsiFile.runWriteAction(crossinline func: () -> T) =

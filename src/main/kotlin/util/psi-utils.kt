@@ -349,7 +349,7 @@ fun LookupElementBuilder.withImportInsertion(toImport: List<PsiClass>): LookupEl
     }
 
 fun PsiElement.findMcpModule() = this.cached {
-    val file = containingFile?.virtualFile ?: return@cached null
+    val file = containingFile?.viewProvider?.virtualFile ?: return@cached null
     val index = ProjectFileIndex.getInstance(project)
     val modules = if (index.isInLibrary(file)) {
         val library = index.getOrderEntriesForFile(file)
@@ -379,7 +379,7 @@ private fun Module.findMcpModule(): McpModule? {
 val PsiElement.mcVersion: SemanticVersion?
     get() = this.cached {
         findMcpModule()?.let {
-            SemanticVersion.parse(it.getSettings().minecraftVersion ?: return@let null)
+            SemanticVersion.tryParse(it.getSettings().minecraftVersion ?: return@let null)
         }
     }
 

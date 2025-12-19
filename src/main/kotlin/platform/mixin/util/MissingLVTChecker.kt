@@ -21,12 +21,12 @@
 package com.demonwav.mcdev.platform.mixin.util
 
 import com.intellij.openapi.extensions.ExtensionPointName
-import com.intellij.openapi.module.Module
+import com.intellij.psi.PsiElement
 
 interface MissingLVTChecker {
     companion object {
         val EP_NAME = ExtensionPointName.create<MissingLVTChecker>("com.demonwav.minecraft-dev.missingLVTChecker")
     }
 
-    fun hasMissingLVT(module: Module, className: String): Boolean
+    fun hasMissingLVT(context: PsiElement, className: String): Boolean
 }
