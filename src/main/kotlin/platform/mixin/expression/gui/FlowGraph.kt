@@ -156,7 +156,6 @@ class FlowGraph(val groups: SortedSet<FlowGroup>, val flowMap: FlowMap, val allN
                 if (!flow.isRoot) {
                     continue
                 }
-                @Suppress("UnstableApiUsage")
                 checkCanceled()
 
                 val node = FlowNode(flow, project, clazz, method, allNodes)

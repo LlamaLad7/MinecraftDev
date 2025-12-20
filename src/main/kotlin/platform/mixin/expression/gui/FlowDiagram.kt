@@ -253,7 +253,6 @@ private suspend fun addGraphContent(
         }
 
         for (group in flowGraph) {
-            @Suppress("UnstableApiUsage")
             checkCanceled()
             val cells = mutableListOf<mxCell>()
             addFlow(group.root, null, cells::add)
@@ -274,7 +273,6 @@ private suspend fun layOutGraph(
     var maxY = 0.0
     var lastLine: Int? = null
     for ((group, list) in groupedCells) {
-        @Suppress("UnstableApiUsage")
         checkCanceled()
 
         val (targetLeft, targetTop) = if (group.lineNumber == lastLine) {
