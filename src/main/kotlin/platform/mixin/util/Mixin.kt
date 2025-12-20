@@ -116,7 +116,7 @@ val PsiClass.bytecode: ClassNode?
  * 1. The class given is a Mixin.
  * 2. The class given is an interface.
  * 3. All member methods are decorated with either `@Accessor` or `@Invoker`.
- * 4. All Mixin targets are classes.
+ * 4. None of the Mixin targets are interfaces.
  *
  * @receiver The class to check
  * @return True if the above checks are satisfied.

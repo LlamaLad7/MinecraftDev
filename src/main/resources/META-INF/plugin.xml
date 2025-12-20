@@ -1102,6 +1102,14 @@
                          level="ERROR"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.MixinInnerClassInspection"/>
+        <localInspection displayName="Mixin is wrong class type"
+                         shortName="MixinWrongClassType"
+                         groupName="Mixin"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="ERROR"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.MixinClassTypeInspection"/>
         <localInspection displayName="Reference to @Mixin class"
                          shortName="ReferenceToMixin"
                          groupName="Mixin"
