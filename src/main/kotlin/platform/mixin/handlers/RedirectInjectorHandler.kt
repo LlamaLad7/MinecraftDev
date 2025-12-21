@@ -255,11 +255,13 @@ class RedirectInjectorHandler : InjectorAnnotationHandler() {
                     .mapTo(parameters) { (index, type) ->
                         val i = if (firstMatch.opcode == Opcodes.INVOKESTATIC) index else index + 1
                         val name = sourceClassAndMethod.method.localVariables?.getOrNull(i)?.name?.toJavaIdentifier()
-                        sanitizedParameter(type, name)
+                        sanitizedParameter(type, name, name != null)
                     }
             } else {
-                Type.getArgumentTypes(firstMatch.desc).mapTo(parameters) {
-                    sanitizedParameter(it.toPsiType(elementFactory), null)
+                Type.getArgumentTypes(firstMatch.desc).withIndex().mapTo(parameters) { (index, type) ->
+                    val i = if (firstMatch.opcode == Opcodes.INVOKESTATIC) index else index + 1
+                    val name = sourceClassAndMethod?.method?.localVariables?.getOrNull(i)?.name?.toJavaIdentifier()
+                    sanitizedParameter(type.toPsiType(elementFactory), name, name != null)
                 }
             }
 

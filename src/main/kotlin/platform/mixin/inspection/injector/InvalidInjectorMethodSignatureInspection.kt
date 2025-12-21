@@ -262,8 +262,10 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
             }
             return isAssignable(methodReturnType, expectedReturnType)
         }
+    }
 
-        private fun checkParameters(
+    companion object {
+        fun checkParameters(
             parameterList: PsiParameterList,
             expected: List<ParameterGroup>,
             allowCoerce: Boolean,
@@ -310,7 +312,7 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
         }
     }
 
-    private enum class CheckResult {
+    enum class CheckResult {
         OK, WARNING, ERROR
     }
 

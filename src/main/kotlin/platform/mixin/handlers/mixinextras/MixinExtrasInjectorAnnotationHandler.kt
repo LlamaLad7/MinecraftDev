@@ -319,11 +319,13 @@ abstract class MixinExtrasInjectorAnnotationHandler : InjectorAnnotationHandler(
                     genericParams.withIndex().mapTo(parameters) { (index, type) ->
                         val i = if (insn.opcode == Opcodes.INVOKESTATIC) index else index + 1
                         val name = sourceClassAndMethod.method.localVariables?.getOrNull(i)?.name?.toJavaIdentifier()
-                        sanitizedParameter(type, name)
+                        sanitizedParameter(type, name, name != null)
                     }
                 } else {
-                    Type.getArgumentTypes(insn.desc).mapTo(parameters) {
-                        sanitizedParameter(it.toPsiType(elementFactory), null)
+                    Type.getArgumentTypes(insn.desc).withIndex().mapTo(parameters) { (index, type) ->
+                        val i = if (insn.opcode == Opcodes.INVOKESTATIC) index else index + 1
+                        val name = sourceClassAndMethod?.method?.localVariables?.getOrNull(i)?.name?.toJavaIdentifier()
+                        sanitizedParameter(type.toPsiType(elementFactory), name, name != null)
                     }
                 }
                 parameters
