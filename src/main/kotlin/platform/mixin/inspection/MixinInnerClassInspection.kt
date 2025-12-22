@@ -29,7 +29,6 @@ import com.intellij.psi.PsiAnonymousClass
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiModifier
-import com.intellij.psi.util.PsiUtil
 import com.intellij.psi.util.parentOfType
 
 class MixinInnerClassInspection : MixinInspection() {
@@ -41,15 +40,6 @@ class MixinInnerClassInspection : MixinInspection() {
     private class Visitor(private val holder: ProblemsHolder) : JavaElementVisitor() {
 
         override fun visitClass(psiClass: PsiClass) {
-            if (psiClass.containingClass == null && PsiUtil.isLocalClass(psiClass) && psiClass.parentOfType<PsiClass>()?.isMixin == true) {
-                holder.registerProblem(
-                    psiClass.nameIdentifier ?: psiClass,
-                    "Local classes are not allowed inside mixins"
-                )
-
-                return
-            }
-
             val outerClass = psiClass.containingClass ?: return
             if (!outerClass.isMixin) {
                 if (outerClass is PsiAnonymousClass && outerClass.parentOfType<PsiClass>()?.isMixin == true) {
@@ -72,11 +62,6 @@ class MixinInnerClassInspection : MixinInspection() {
                         QuickFixFactory.getInstance().createModifierListFix(psiClass, PsiModifier.STATIC, true, false),
                     )
                 }
-            } else {
-                holder.registerProblem(
-                    psiClass.nameIdentifier ?: psiClass,
-                    "Inner classes are only allowed if they are also @Mixin classes"
-                )
             }
         }
 

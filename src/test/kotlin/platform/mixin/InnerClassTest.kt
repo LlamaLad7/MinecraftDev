@@ -62,8 +62,8 @@ class InnerClassTest : BaseMixinTest() {
                             };
                         }
                         
-                        private static void localClassBad() {
-                            class <error descr="Local classes are not allowed inside mixins">Local</error> {
+                        private static void localClassOk() {
+                            class Local {
                             }
                         }
                     
@@ -77,7 +77,7 @@ class InnerClassTest : BaseMixinTest() {
 
                         }
 
-                        class <error descr="Inner classes are only allowed if they are also @Mixin classes">VeryBadInnerClass</error> {
+                        class InnerClassOk {
 
                         }
 
