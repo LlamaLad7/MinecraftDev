@@ -1075,7 +1075,7 @@
                          groupName="Mixin"
                          language="JAVA"
                          enabledByDefault="true"
-                         level="WARNING"
+                         level="WEAK WARNING"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.injector.MixinParameterNameInspection"/>
         <localInspection displayName="Invalid @Mixin Target"
