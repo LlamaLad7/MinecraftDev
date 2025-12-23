@@ -53,17 +53,27 @@ class LocalInfo(
     ): Array<LocalVariables.LocalVariable?>? {
         return if (argsOnly) {
             val args = mutableListOf<LocalVariables.LocalVariable?>()
+            var index = 0
             if (!methodNode.hasAccess(Opcodes.ACC_STATIC)) {
                 val thisDesc = Type.getObjectType(targetClass.name).descriptor
                 args.add(LocalVariables.LocalVariable("this", thisDesc, null, null, null, 0))
+                index++
             }
             for (argType in Type.getArgumentTypes(methodNode.desc)) {
+                val hasNamedArguments = module.fabricMixinCompatibility?.let { it >= 17000 } == true
+                val localName = methodNode.localVariables?.getOrNull(index)?.name
+                val name = if (localName != null && hasNamedArguments) {
+                    localName
+                } else {
+                    "arg${args.size}"
+                }
                 args.add(
-                    LocalVariables.LocalVariable("arg${args.size}", argType.descriptor, null, null, null, args.size, isNamed = false),
+                    LocalVariables.LocalVariable(name, argType.descriptor, null, null, null, args.size, isNamed = hasNamedArguments),
                 )
                 if (argType.size == 2) {
                     args.add(null)
                 }
+                index++
             }
             args.toTypedArray()
         } else {

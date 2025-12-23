@@ -57,6 +57,7 @@ import com.demonwav.mcdev.platform.mixin.util.MethodTargetMember
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.platform.mixin.util.SignatureToPsi
 import com.demonwav.mcdev.platform.mixin.util.canonicalName
+import com.demonwav.mcdev.platform.mixin.util.fabricMixinCompatibility
 import com.demonwav.mcdev.platform.mixin.util.hasAccess
 import com.demonwav.mcdev.platform.mixin.util.hasNamedLocalVariables
 import com.demonwav.mcdev.platform.mixin.util.isPrimitive
@@ -92,6 +93,7 @@ import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.FoldRegion
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.patterns.PlatformPatterns
@@ -302,6 +304,7 @@ object MEExpressionCompletionUtil {
                 .flatMap { methodTarget ->
                     getCompletionVariantsFromBytecode(
                         project,
+                        module,
                         mixinClass,
                         cursorOffset,
                         statement.copy() as MEStatement,
@@ -315,6 +318,7 @@ object MEExpressionCompletionUtil {
 
     private fun getCompletionVariantsFromBytecode(
         project: Project,
+        module: Module,
         mixinClass: PsiClass,
         cursorOffsetIn: Int,
         statement: MEStatement,
@@ -523,6 +527,7 @@ object MEExpressionCompletionUtil {
         val eliminableResults = cursorInstructions.flatMap { insn ->
             getCompletionsForInstruction(
                 project,
+                module,
                 targetClass,
                 targetMethod,
                 insn.insn,
@@ -692,6 +697,7 @@ object MEExpressionCompletionUtil {
 
     private fun getCompletionsForInstruction(
         project: Project,
+        module: Module,
         targetClass: ClassNode,
         targetMethod: MethodNode,
         insn: VirtualInsn,
@@ -719,6 +725,7 @@ object MEExpressionCompletionUtil {
             }
             is VarInsnNode -> return createLocalVariableLookups(
                 project,
+                module,
                 targetClass,
                 targetMethod,
                 originalInsn,
@@ -728,6 +735,7 @@ object MEExpressionCompletionUtil {
             )
             is IincInsnNode -> return createLocalVariableLookups(
                 project,
+                module,
                 targetClass,
                 targetMethod,
                 originalInsn,
@@ -952,6 +960,7 @@ object MEExpressionCompletionUtil {
 
     private fun createLocalVariableLookups(
         project: Project,
+        module: Module,
         targetClass: ClassNode,
         targetMethod: MethodNode,
         originalInsn: AbstractInsnNode,
@@ -994,6 +1003,8 @@ object MEExpressionCompletionUtil {
             val elementFactory = JavaPsiFacade.getElementFactory(project)
             val hasNamedLocalVariables = mixinClass.hasNamedLocalVariables(targetClass.name.replace('/', '.'))
 
+            val hasNamedArguments = module.fabricMixinCompatibility?.let { it >= 17000 } == true
+
             return locals.map { localVariable ->
                 val localPsiType = if (localVariable.signature != null) {
                     val sigToPsi = SignatureToPsi(elementFactory, mixinClass)
@@ -1006,7 +1017,7 @@ object MEExpressionCompletionUtil {
                 val ordinal = localsOfMyType.indexOf(localVariable)
                 val mixinLocalName = localVariable.name.takeIf {
                     // Don't complete to names for arguments to workaround FabricMC/Mixin#189
-                    !isArgsOnly && hasNamedLocalVariables
+                    (!isArgsOnly || hasNamedArguments) && hasNamedLocalVariables
                 }
                 val isImplicit = localsOfMyType.size == 1
                 val localName = localVariable.name.toValidIdentifier()

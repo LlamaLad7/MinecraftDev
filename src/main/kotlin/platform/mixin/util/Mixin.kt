@@ -31,6 +31,7 @@ import com.demonwav.mcdev.platform.mixin.util.MixinConstants.MixinExtras.OPERATI
 import com.demonwav.mcdev.util.SemanticVersion
 import com.demonwav.mcdev.util.cached
 import com.demonwav.mcdev.util.computeStringArray
+import com.demonwav.mcdev.util.constantValue
 import com.demonwav.mcdev.util.findModule
 import com.demonwav.mcdev.util.resolveClassArray
 import com.intellij.openapi.module.Module
@@ -289,6 +290,15 @@ private fun isClassAssignable(leftClass: PsiClass, rightClass: PsiClass): Boolea
 
 val PsiElement.isFabricMixin: Boolean get() =
     JavaPsiFacade.getInstance(project).findClass(MixinConstants.Classes.FABRIC_UTIL, resolveScope) != null
+
+val Module.fabricMixinCompatibility: Int?
+    get() {
+        val facade = JavaPsiFacade.getInstance(project)
+        val fabricUtil = facade.findClass(MixinConstants.Classes.FABRIC_UTIL, moduleWithLibrariesScope)
+            ?: return null
+        val compatibilityLatestField = fabricUtil.findFieldByName("COMPATIBILITY_LATEST", false) ?: return null
+        return compatibilityLatestField.initializer?.constantValue as? Int
+    }
 
 val Module.mixinVersion: SemanticVersion?
     get() {
