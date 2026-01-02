@@ -191,6 +191,10 @@ class MixinParameterNameInspection : MixinInspection() {
         expectedParams: List<ParameterGroup>,
         parametersWithoutSugar: Array<PsiParameter>
     ) {
+        if (parametersWithoutSugar.isEmpty()) {
+            return
+        }
+
         var pos = 0
         for (group in expectedParams) {
             if (!group.match(parametersWithoutSugar, pos, handler.allowCoerce)) {
