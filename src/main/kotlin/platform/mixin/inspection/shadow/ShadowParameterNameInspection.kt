@@ -49,7 +49,7 @@ class ShadowParameterNameInspection : MixinInspection() {
                 return
             }
             val thisLocals = if (target.classAndMethod.method.hasAccess(Opcodes.ACC_STATIC)) 0 else 1
-            val targetLocals = target.classAndMethod.method.localVariables?.drop(thisLocals)?.sortedBy { it.index } ?: return
+            val targetLocals = target.classAndMethod.method.localVariables?.sortedBy { it.index }?.drop(thisLocals) ?: return
 
             val method = annotation.parent?.parent as? PsiMethod ?: return
             for ((param, targetLocal) in method.parameterList.parameters.zip(targetLocals)) {
