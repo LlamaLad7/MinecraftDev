@@ -61,7 +61,7 @@ class LocalInfo(
             }
             for (argType in Type.getArgumentTypes(methodNode.desc)) {
                 val hasNamedArguments = module.fabricMixinCompatibility?.let { it >= 17000 } == true
-                val localName = methodNode.localVariables?.getOrNull(index)?.name
+                val localName = methodNode.localVariables?.find { it.index == index }?.name
                 val name = if (localName != null && hasNamedArguments) {
                     localName
                 } else {

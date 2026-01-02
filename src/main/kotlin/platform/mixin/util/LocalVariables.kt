@@ -451,7 +451,7 @@ object LocalVariables {
 
         // Initialise method arguments
         for ((index, argType) in Type.getArgumentTypes(method.desc).withIndex()) {
-            val localName = method.localVariables?.getOrNull(index + staticOffset)?.name
+            val localName = method.localVariables?.find { it.index == index + staticOffset }?.name
             val name = if (localName == null || !settings.namedParameters) {
                 "arg$index"
             } else {

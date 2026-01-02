@@ -248,19 +248,20 @@ class RedirectInjectorHandler : InjectorAnnotationHandler() {
                 parameters += Parameter("instance", Type.getObjectType(firstMatch.owner).toPsiType(elementFactory))
             }
 
+            val sortedLocals = sourceClassAndMethod?.method?.localVariables?.sortedBy { it.index }
             if (signature != null) {
                 signature.second
                     .asSequence()
                     .withIndex()
                     .mapTo(parameters) { (index, type) ->
                         val i = if (firstMatch.opcode == Opcodes.INVOKESTATIC) index else index + 1
-                        val name = sourceClassAndMethod.method.localVariables?.getOrNull(i)?.name?.toJavaIdentifier()
+                        val name = sortedLocals?.getOrNull(i)?.name?.toJavaIdentifier()
                         sanitizedParameter(type, name, name != null)
                     }
             } else {
                 Type.getArgumentTypes(firstMatch.desc).withIndex().mapTo(parameters) { (index, type) ->
                     val i = if (firstMatch.opcode == Opcodes.INVOKESTATIC) index else index + 1
-                    val name = sourceClassAndMethod?.method?.localVariables?.getOrNull(i)?.name?.toJavaIdentifier()
+                    val name = sortedLocals?.getOrNull(i)?.name?.toJavaIdentifier()
                     sanitizedParameter(type.toPsiType(elementFactory), name, name != null)
                 }
             }
