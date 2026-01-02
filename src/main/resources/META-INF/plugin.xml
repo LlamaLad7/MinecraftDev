@@ -1435,6 +1435,14 @@
                          level="WARNING"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.shadow.ShadowModifiersInspection"/>
+        <localInspection displayName="Shadow parameter names don't match the target class"
+                         shortName="ShadowNameDoesntMatchTargetClass"
+                         groupName="Mixin"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="WEAK WARNING"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.shadow.ShadowParameterNameInspection"/>
         <localInspection displayName="@Shadow field with prefix"
                          shortName="ShadowFieldPrefix"
                          groupName="Mixin"
