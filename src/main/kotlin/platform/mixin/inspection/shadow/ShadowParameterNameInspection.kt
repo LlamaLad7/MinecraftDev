@@ -59,7 +59,7 @@ class ShadowParameterNameInspection : MixinInspection() {
                     holder.registerProblem(
                         problemElement,
                         "Parameter name does not match name '$correctName' in target class",
-                        RenameFix(correctName)
+                        RenameFix(correctName, false, false)
                     )
                 }
             }

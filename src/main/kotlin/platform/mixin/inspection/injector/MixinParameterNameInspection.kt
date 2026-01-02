@@ -87,7 +87,7 @@ class MixinParameterNameInspection : MixinInspection() {
                     val fixes = mutableListOf<LocalQuickFix>()
 
                     for (name in names) {
-                        fixes += RenameFix(name)
+                        fixes += RenameFix(name, false, false)
                     }
 
                     fixes += if (index < parametersWithoutSugar.size) {
