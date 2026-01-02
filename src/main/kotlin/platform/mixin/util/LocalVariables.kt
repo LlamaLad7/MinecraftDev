@@ -441,17 +441,15 @@ object LocalVariables {
         val frames = method.instructions.iterator().asSequence().filterIsInstance<FrameNode>().toList()
         val frame = arrayOfNulls<LocalVariable>(method.maxLocals)
         var local = 0
-        var staticOffset = 0
 
         // Initialise implicit "this" reference in non-static methods
         if (!method.hasAccess(Opcodes.ACC_STATIC)) {
             frame[local++] = LocalVariable("this", Type.getObjectType(classNode.name).toString(), null, null, null, 0)
-            staticOffset = 1
         }
 
         // Initialise method arguments
         for ((index, argType) in Type.getArgumentTypes(method.desc).withIndex()) {
-            val localName = method.localVariables?.find { it.index == index + staticOffset }?.name
+            val localName = method.localVariables?.find { it.index == local }?.name
             val name = if (localName == null || !settings.namedParameters) {
                 "arg$index"
             } else {
