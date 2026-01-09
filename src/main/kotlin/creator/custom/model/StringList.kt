@@ -28,4 +28,7 @@ data class StringList(val values: List<String>) : List<String> by values {
     @JvmOverloads
     fun toString(separator: String, prefix: String = "", postfix: String = ""): String =
         values.joinToString(separator, prefix, postfix)
+
+    fun toStringQuoted(): String =
+      values.joinToString(", ", transform = { '"' + it + '"' })
 }
