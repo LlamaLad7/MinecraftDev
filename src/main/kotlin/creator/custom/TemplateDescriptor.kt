@@ -40,7 +40,7 @@ data class TemplateDescriptor(
 
     companion object {
 
-        const val FORMAT_VERSION = 1
+        const val FORMAT_VERSION = 2
     }
 }
 
