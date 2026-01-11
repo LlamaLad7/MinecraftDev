@@ -214,6 +214,9 @@
         <creatorPropertyType
             implementation="com.demonwav.mcdev.creator.custom.types.NeoForgeVersionsCreatorProperty$Factory"
             type="neoforge_versions"/>
+        <creatorPropertyType
+            implementation="com.demonwav.mcdev.creator.custom.types.PaperVersionCreatorProperty$Factory"
+            type="paper_versions"/>
         <creatorPropertyType implementation="com.demonwav.mcdev.creator.custom.types.ParchmentCreatorProperty$Factory"
                              type="parchment"/>
         <creatorPropertyType
