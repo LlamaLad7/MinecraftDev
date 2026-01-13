@@ -520,6 +520,9 @@
             implementation="com.demonwav.mcdev.platform.bukkit.framework.OldPaperPresentationProvider"/>
         <library.presentationProvider
             implementation="com.demonwav.mcdev.platform.bukkit.framework.PaperPresentationProvider"/>
+        <library.presentationProvider
+                implementation="com.demonwav.mcdev.platform.bukkit.framework.ModernPaperPresentationProvider"/>
+
         <!--endregion-->
 
         <!--region SPONGE-->

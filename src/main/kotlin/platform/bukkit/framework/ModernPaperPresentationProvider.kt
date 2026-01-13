@@ -18,28 +18,35 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.demonwav.mcdev.platform.fabric.framework
+package com.demonwav.mcdev.platform.bukkit.framework
 
 import com.demonwav.mcdev.asset.PlatformAssets
 import com.demonwav.mcdev.util.localFile
+import com.google.gson.Gson
 import com.intellij.framework.library.LibraryVersionProperties
 import com.intellij.openapi.roots.libraries.LibraryPresentationProvider
 import com.intellij.openapi.vfs.VirtualFile
 import java.util.jar.JarFile
 
-class FabricPresentationProvider : LibraryPresentationProvider<LibraryVersionProperties>(FABRIC_LIBRARY_KIND) {
+class ModernPaperPresentationProvider : LibraryPresentationProvider<LibraryVersionProperties>(PAPER_LIBRARY_KIND) {
 
-    override fun getIcon(properties: LibraryVersionProperties?) = PlatformAssets.FABRIC_ICON
+    override fun getIcon(properties: LibraryVersionProperties?) = PlatformAssets.PAPER_ICON
 
-    override fun detect(classesRoots: MutableList<VirtualFile>): LibraryVersionProperties? {
+    override fun detect(classesRoots: List<VirtualFile>): LibraryVersionProperties? {
         for (classesRoot in classesRoots) {
             if (!classesRoot.name.endsWith(".jar")) {
                 continue
             }
             runCatching {
                 JarFile(classesRoot.localFile).use { jar ->
-                    jar.getEntry("net/fabricmc/loader/api/FabricLoader.class") ?: return@runCatching
-                    return LibraryVersionProperties()
+                    jar.getEntry("io/papermc/paper/ServerBuildInfo.class") ?: return@runCatching
+                    val versionJson = jar.getEntry("apiVersioning.json") ?: return@runCatching
+                    jar.getInputStream(versionJson).use { stream ->
+                        stream.reader().use { reader ->
+                            val map = Gson().fromJson(reader, Map::class.java)
+                            return LibraryVersionProperties(map["currentApiVersion"] as String)
+                        }
+                    }
                 }
             }
         }
