@@ -78,41 +78,37 @@ abstract class SimpleCreatorProperty<T>(
 
     override val graphProperty: GraphProperty<T> by lazy { graph.property(defaultValue) }
 
-    protected fun buildDropdownMenu(panel: Panel, options: Map<T, String>?) {
-        if (graphProperty.get() !in options!!.keys) {
-            graphProperty.set(defaultValue)
-        }
-
-        panel.row(descriptor.translatedLabel) {
-            if (descriptor.forceDropdown == true) {
-                comboBox(options.keys, DropdownAutoRenderer())
-                    .bindItem(graphProperty)
-                    .enabled(descriptor.editable != false)
-                    .also {
-                        val component = it.component
-                        ComboboxSpeedSearch.installOn(component)
-                        val validation =
-                            BuiltinValidations.isAnyOf(component::getSelectedItem, options.keys, component)
-                        it.validationOnInput(validation)
-                        it.validationOnApply(validation)
-                    }
-            } else {
-                segmentedButton(options.keys) { text = options[it] ?: it.toString() }
-                    .bind(graphProperty)
-                    .enabled(descriptor.editable != false)
-                    .maxButtonsCount(4)
-                    .validation {
-                        val message = MCDevBundle("creator.validation.invalid_option")
-                        addInputRule(message) { it.selectedItem !in options.keys }
-                        addApplyRule(message) { it.selectedItem !in options.keys }
-                    }
-            }
-        }.propertyVisibility()
-    }
-
     override fun buildUi(panel: Panel) {
         if (isDropdown) {
-            buildDropdownMenu(panel, options)
+            if (graphProperty.get() !in options!!.keys) {
+                graphProperty.set(defaultValue)
+            }
+
+            panel.row(descriptor.translatedLabel) {
+                if (descriptor.forceDropdown == true) {
+                    comboBox(options.keys, DropdownAutoRenderer())
+                        .bindItem(graphProperty)
+                        .enabled(descriptor.editable != false)
+                        .also {
+                            val component = it.component
+                            ComboboxSpeedSearch.installOn(component)
+                            val validation =
+                                BuiltinValidations.isAnyOf(component::getSelectedItem, options.keys, component)
+                            it.validationOnInput(validation)
+                            it.validationOnApply(validation)
+                        }
+                } else {
+                    segmentedButton(options.keys) { text = options[it] ?: it.toString() }
+                        .bind(graphProperty)
+                        .enabled(descriptor.editable != false)
+                        .maxButtonsCount(4)
+                        .validation {
+                            val message = MCDevBundle("creator.validation.invalid_option")
+                            addInputRule(message) { it.selectedItem !in options.keys }
+                            addApplyRule(message) { it.selectedItem !in options.keys }
+                        }
+                }
+            }.propertyVisibility()
         } else {
             buildSimpleUi(panel)
         }
