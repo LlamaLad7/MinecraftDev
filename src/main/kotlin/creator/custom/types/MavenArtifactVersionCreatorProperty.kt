@@ -54,7 +54,7 @@ class MavenArtifactVersionCreatorProperty(
     var versionFilter: (SemanticVersion) -> Boolean = { true }
 
     override val graphProperty: GraphProperty<SemanticVersion> = graph.property(SemanticVersion(emptyList()))
-    private val versionsProperty = graph.property<Collection<SemanticVersion>>(emptyList())
+    private val versionsProperty = graph.property<Set<SemanticVersion>>(emptySet())
     private val loadingVersionsProperty = graph.property(true)
     private val loadingVersionsStatusProperty = graph.property("")
 
@@ -127,7 +127,7 @@ class MavenArtifactVersionCreatorProperty(
             descriptor.limit ?: 50
         ) { result ->
             result.onSuccess { versions ->
-                versionsProperty.set(versions)
+                versionsProperty.set(versions.toSet())
                 loadingVersionsProperty.set(false)
             }.onFailure { exception ->
                 loadingVersionsStatusProperty.set(exception.message ?: exception.javaClass.simpleName)
