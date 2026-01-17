@@ -38,7 +38,7 @@ abstract class SimpleCreatorProperty<T>(
     valueType: Class<T>
 ) : CreatorProperty<T>(descriptor, context, valueType) {
 
-    val options: Map<T, String>? = makeOptionsList()
+    private val options: Map<T, String>? = makeOptionsList()
 
     private fun makeOptionsList(): Map<T, String>? {
         val map = when (val options = descriptor.options) {
