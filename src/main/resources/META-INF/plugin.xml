@@ -200,6 +200,9 @@
             implementation="com.demonwav.mcdev.creator.custom.types.ForgeVersionsCreatorProperty$Factory"
             type="forge_versions"/>
         <creatorPropertyType
+            implementation="com.demonwav.mcdev.creator.custom.types.GradlePluginSelectorCreatorProperty$Factory"
+            type="gradle_plugin"/>
+        <creatorPropertyType
             implementation="com.demonwav.mcdev.creator.custom.types.InlineStringListCreatorProperty$Factory"
             type="inline_string_list"/>
         <creatorPropertyType implementation="com.demonwav.mcdev.creator.custom.types.IntegerCreatorProperty$Factory"
