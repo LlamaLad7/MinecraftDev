@@ -57,7 +57,9 @@ class GradlePluginSelectorCreatorProperty(
     private val loadingVersionsProperty = graph.property(true)
     private val loadingVersionsStatusProperty = graph.property("")
 
-    override val graphProperty: GraphProperty<Holder> = graph.property(Holder(SemanticVersion(emptyList()), false))
+    private val defaultValue = createDefaultValue(descriptor.default)
+
+    override val graphProperty: GraphProperty<Holder> = graph.property(defaultValue)
     var property: Holder by graphProperty
 
     private val versionsModel = graph.property<Set<SemanticVersion>>(emptySet())
@@ -66,6 +68,9 @@ class GradlePluginSelectorCreatorProperty(
     private val enabledProperty = graphProperty.transform({ it.enabled }, { property.copy(enabled = it) })
 
     override fun createDefaultValue(raw: Any?): Holder {
+        if (raw is Boolean) {
+            return Holder(SemanticVersion(emptyList()), raw)
+        }
         if (raw is String) {
             return deserialize(raw)
         }
@@ -108,8 +113,6 @@ class GradlePluginSelectorCreatorProperty(
                     combobox.component.addItem(version)
                 }
             }
-
-
         }.propertyVisibility()
     }
 
