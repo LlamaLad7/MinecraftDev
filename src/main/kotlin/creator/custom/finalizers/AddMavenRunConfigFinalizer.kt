@@ -1,0 +1,41 @@
+package com.demonwav.mcdev.creator.custom.finalizers
+
+import com.intellij.execution.RunManager
+import com.intellij.ide.util.projectWizard.WizardContext
+import com.intellij.openapi.project.Project
+import org.jetbrains.idea.maven.execution.MavenRunConfigurationType
+import org.jetbrains.idea.maven.execution.MavenRunnerParameters
+import org.jetbrains.idea.maven.execution.MavenRunnerSettings
+
+class AddMavenRunConfigFinalizer : AddRunConfigFinalizer {
+
+    override val executablesName: String = "goals"
+
+    override suspend fun execute(
+        context: WizardContext,
+        project: Project,
+        properties: Map<String, Any>,
+        templateProperties: Map<String, Any?>
+    ) {
+        val goals = properties.executables
+        val projectDir = context.projectFileDirectory
+
+        val params = MavenRunnerParameters().also {
+            it.goals = goals
+            it.workingDirPath = projectDir
+        }
+        val settings = MavenRunConfigurationType.createRunnerAndConfigurationSettings(null, null, params, project)
+
+        settings.name = properties["name"] as String
+        settings.isActivateToolWindowBeforeRun = true
+        settings.storeInLocalWorkspace()
+
+        val runManager = RunManager.getInstance(project)
+
+        runManager.addConfiguration(settings)
+
+        if (properties["select"] == true || runManager.selectedConfiguration == null) {
+            runManager.selectedConfiguration = settings
+        }
+    }
+}
