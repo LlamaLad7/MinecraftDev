@@ -227,75 +227,86 @@ abstract class CreatorProperty<T>(
 
     protected fun Row.propertyVisibility(): Row = this.visibleIf(visibleProperty)
 
-    private fun setupVisibleProperty(
+    fun setupVisibleProperty(
         reporter: TemplateValidationReporter,
         visibility: Any?
     ): GraphProperty<Boolean> {
-        val prop = graph.property(true)
-        if (visibility == null || visibility is Boolean) {
-            prop.set(visibility != false)
-            return prop
-        }
+        return setupVisibleProperty(graph, properties, reporter, visibility)
+    }
 
-        if (visibility !is Map<*, *>) {
-            reporter.error("Visibility can only be a boolean or an object")
-            return prop
-        }
-
-        var dependsOn = visibility["dependsOn"]
-        if (dependsOn !is String && (dependsOn !is List<*> || dependsOn.any { it !is String })) {
-            reporter.error(
-                "Expected 'visible' to have a 'dependsOn' value that is either a string or a list of strings"
-            )
-            return prop
-        }
-
-        val dependenciesNames = when (dependsOn) {
-            is String -> setOf(dependsOn)
-            is Collection<*> -> dependsOn.filterIsInstance<String>().toSet()
-            else -> throw IllegalStateException("Should not be reached")
-        }
-        val dependencies = dependenciesNames.mapNotNull {
-            val dependency = this.properties[it]
-            if (dependency == null) {
-                reporter.error("Visibility dependency '$it' does not exist")
+    companion object {
+        fun setupVisibleProperty(
+            graph: PropertyGraph,
+            properties: Map<String, CreatorProperty<*>>,
+            reporter: TemplateValidationReporter,
+            visibility: Any?
+        ): GraphProperty<Boolean> {
+            val prop = graph.property(true)
+            if (visibility == null || visibility is Boolean) {
+                prop.set(visibility != false)
+                return prop
             }
-            dependency
-        }
-        if (dependencies.size != dependenciesNames.size) {
-            // Errors have already been reported
-            return prop
-        }
 
-        val condition = visibility["condition"]
-        if (condition !is String) {
-            reporter.error("Expected 'visible' to have a 'condition' string")
-            return prop
-        }
+            if (visibility !is Map<*, *>) {
+                reporter.error("Visibility can only be a boolean or an object")
+                return prop
+            }
 
-        var didInitialUpdate = false
-        val update: () -> Boolean = {
-            val conditionProperties = dependencies.associate { prop -> prop.descriptor.name to prop.get() }
-            val result = TemplateEvaluator.condition(conditionProperties, condition)
-            val exception = result.exceptionOrNull()
-            if (exception != null) {
-                if (!didInitialUpdate) {
-                    didInitialUpdate = true
-                    reporter.error("Failed to compute initial visibility: ${exception.message}")
-                    thisLogger().info("Failed to compute initial visibility: ${exception.message}", exception)
-                } else {
-                    thisLogger().error("Failed to compute initial visibility: ${exception.message}", exception)
+            val dependsOn = visibility["dependsOn"]
+            if (dependsOn !is String && (dependsOn !is List<*> || dependsOn.any { it !is String })) {
+                reporter.error(
+                    "Expected 'visible' to have a 'dependsOn' value that is either a string or a list of strings"
+                )
+                return prop
+            }
+
+            val dependenciesNames = when (dependsOn) {
+                is String -> setOf(dependsOn)
+                is Collection<*> -> dependsOn.filterIsInstance<String>().toSet()
+                else -> throw IllegalStateException("Should not be reached")
+            }
+            val dependencies = dependenciesNames.mapNotNull {
+                val dependency = properties[it]
+                if (dependency == null) {
+                    reporter.error("Visibility dependency '$it' does not exist")
                 }
+                dependency
+            }
+            if (dependencies.size != dependenciesNames.size) {
+                // Errors have already been reported
+                return prop
             }
 
-            result.getOrDefault(true)
-        }
+            val condition = visibility["condition"]
+            if (condition !is String) {
+                reporter.error("Expected 'visible' to have a 'condition' string")
+                return prop
+            }
 
-        prop.set(update())
-        for (dependency in dependencies) {
-            prop.dependsOn(dependency.graphProperty, deleteWhenModified = false, update)
-        }
+            var didInitialUpdate = false
+            val update: () -> Boolean = {
+                val conditionProperties = dependencies.associate { prop -> prop.descriptor.name to prop.get() }
+                val result = TemplateEvaluator.condition(conditionProperties, condition)
+                val exception = result.exceptionOrNull()
+                if (exception != null) {
+                    if (!didInitialUpdate) {
+                        didInitialUpdate = true
+                        reporter.error("Failed to compute initial visibility: ${exception.message}")
+                        thisLogger().info("Failed to compute initial visibility: ${exception.message}", exception)
+                    } else {
+                        thisLogger().error("Failed to compute initial visibility: ${exception.message}", exception)
+                    }
+                }
 
-        return prop
+                result.getOrDefault(true)
+            }
+
+            prop.set(update())
+            for (dependency in dependencies) {
+                prop.dependsOn(dependency.graphProperty, deleteWhenModified = false, update)
+            }
+
+            return prop
+        }
     }
 }
