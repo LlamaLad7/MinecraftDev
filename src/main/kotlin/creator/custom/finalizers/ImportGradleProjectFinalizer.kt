@@ -50,26 +50,30 @@ class ImportGradleProjectFinalizer : CreatorFinalizer {
                 linkAndSyncGradleProject(project, projectDir)
             }
 
-            runCatching {
-                // Try to open the tool window after starting the sync.
-                // Having the tool window open will provide better context to the user about what's going on.
-                // The Build tool window isn't registered until a build is running, so we can't just open the tool window
-                // like normal here, we have to wait until after the build starts.
-                val manager = ToolWindowManager.getInstance(project)
-                for (i in 0 until 10) {
-                    delay(250)
-                    manager.getToolWindow("Build")?.let {
-                        withContext(Dispatchers.EDT) {
-                            it.show()
-                        }
-                        break
-                    }
-                }
-            }
+            openBuildToolWindow(project)
 
             link.await()
 
             thisLogger().info("Linking done")
+        }
+    }
+}
+
+suspend fun openBuildToolWindow(project: Project) = coroutineScope {
+    runCatching {
+        // Try to open the tool window after starting the sync.
+        // Having the tool window open will provide better context to the user about what's going on.
+        // The Build tool window isn't registered until a build is running, so we can't just open the tool window
+        // like normal here, we have to wait until after the build starts.
+        val manager = ToolWindowManager.getInstance(project)
+        for (i in 0 until 5) {
+            delay(250)
+            manager.getToolWindow("Build")?.let {
+                withContext(Dispatchers.EDT) {
+                    it.show()
+                }
+                break
+            }
         }
     }
 }
