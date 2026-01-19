@@ -55,6 +55,8 @@ abstract class CreatorProperty<T>(
     private var derivation: PreparedDerivation? = null
     private lateinit var visibleProperty: GraphProperty<Boolean>
 
+    var forceValueProperty: GraphProperty<String?>? = null
+
     abstract val graphProperty: GraphProperty<T>
 
     abstract fun createDefaultValue(raw: Any?): T
@@ -63,11 +65,18 @@ abstract class CreatorProperty<T>(
 
     abstract fun deserialize(string: String): T
 
+    open fun handleForceValueProperty(original: T, string: String): T = original
+
     open fun toStringProperty(graphProperty: GraphProperty<T>): ObservableMutableProperty<String> =
         graphProperty.transform(::serialize, ::deserialize)
 
     open fun get(): T? {
-        val value = graphProperty.get()
+        val forcedValue = forceValueProperty?.get()
+        var value = graphProperty.get()
+        if (forcedValue != null) {
+            value = handleForceValueProperty(value, forcedValue)
+        }
+
         if (descriptor.nullIfDefault == true) {
             val default = createDefaultValue(descriptor.default)
             if (value == default) {
@@ -234,7 +243,85 @@ abstract class CreatorProperty<T>(
         return setupVisibleProperty(graph, properties, reporter, visibility)
     }
 
+    fun initForceValueProperty(reporter: TemplateValidationReporter): CreatorProperty<T> {
+        this.forceValueProperty = setupForceValueProperty(graph, properties, reporter, descriptor.forceValue)
+        return this
+    }
+
     companion object {
+        private fun obtainDependencies(
+            properties: Map<String, CreatorProperty<*>>,
+            reporter: TemplateValidationReporter,
+            property: Map<*, *>,
+            name: String
+        ): List<CreatorProperty<*>>? {
+            val dependsOn = property["dependsOn"]
+            if (dependsOn !is String && (dependsOn !is List<*> || dependsOn.any { it !is String })) {
+                reporter.error(
+                    "Expected '$name' to have a 'dependsOn' value that is either a string or a list of strings"
+                )
+                return null
+            }
+
+            val dependenciesNames = when (dependsOn) {
+                is String -> setOf(dependsOn)
+                is Collection<*> -> dependsOn.filterIsInstance<String>().toSet()
+                else -> throw IllegalStateException("Should not be reached")
+            }
+            val dependencies = dependenciesNames.mapNotNull {
+                val dependency = properties[it]
+                if (dependency == null) {
+                    reporter.error("'$name' dependency '$it' does not exist")
+                }
+                dependency
+            }
+            if (dependencies.size != dependenciesNames.size) {
+                // Errors have already been reported
+                return null
+            }
+
+            return dependencies
+        }
+
+        private fun setupDependableProperty(
+            dependencies: List<CreatorProperty<*>>,
+            reporter: TemplateValidationReporter,
+            property: Map<*, *>,
+            name: String,
+            prop: GraphProperty<Boolean>
+        ): GraphProperty<Boolean> {
+            val condition = property["condition"]
+            if (condition !is String) {
+                reporter.error("Expected '$name' to have a 'condition' string")
+                return prop
+            }
+
+            var didInitialUpdate = false
+            val update: () -> Boolean = {
+                val conditionProperties = dependencies.associate { prop -> prop.descriptor.name to prop.get() }
+                val result = TemplateEvaluator.condition(conditionProperties, condition)
+                val exception = result.exceptionOrNull()
+                if (exception != null) {
+                    if (!didInitialUpdate) {
+                        didInitialUpdate = true
+                        reporter.error("Failed to compute initial $name-property: ${exception.message}")
+                        thisLogger().info("Failed to compute initial $name-property: ${exception.message}", exception)
+                    } else {
+                        thisLogger().error("Failed to compute initial $name-property: ${exception.message}", exception)
+                    }
+                }
+
+                result.getOrDefault(true)
+            }
+
+            prop.set(update())
+            for (dependency in dependencies) {
+                prop.dependsOn(dependency.graphProperty, deleteWhenModified = false, update)
+            }
+
+            return prop
+        }
+
         fun setupVisibleProperty(
             graph: PropertyGraph,
             properties: Map<String, CreatorProperty<*>>,
@@ -252,61 +339,62 @@ abstract class CreatorProperty<T>(
                 return prop
             }
 
-            val dependsOn = visibility["dependsOn"]
-            if (dependsOn !is String && (dependsOn !is List<*> || dependsOn.any { it !is String })) {
-                reporter.error(
-                    "Expected 'visible' to have a 'dependsOn' value that is either a string or a list of strings"
-                )
-                return prop
+            val dependencies = obtainDependencies(properties, reporter, visibility, "visible")
+                ?: return prop // The error has already been reported
+
+            return setupDependableProperty(dependencies, reporter, visibility, "visible", prop)
+        }
+
+        fun setupForceValueProperty(
+            graph: PropertyGraph,
+            properties: Map<String, CreatorProperty<*>>,
+            reporter: TemplateValidationReporter,
+            forceValue: Any?
+        ): GraphProperty<String?> {
+            val out = graph.property<String?>(null)
+
+            if (forceValue == null) {
+                return out;
             }
 
-            val dependenciesNames = when (dependsOn) {
-                is String -> setOf(dependsOn)
-                is Collection<*> -> dependsOn.filterIsInstance<String>().toSet()
-                else -> throw IllegalStateException("Should not be reached")
-            }
-            val dependencies = dependenciesNames.mapNotNull {
-                val dependency = properties[it]
-                if (dependency == null) {
-                    reporter.error("Visibility dependency '$it' does not exist")
-                }
-                dependency
-            }
-            if (dependencies.size != dependenciesNames.size) {
-                // Errors have already been reported
-                return prop
+            if (forceValue !is Map<*, *>) {
+                reporter.error("ForceValue can only be a boolean or an object")
+                return out
             }
 
-            val condition = visibility["condition"]
-            if (condition !is String) {
-                reporter.error("Expected 'visible' to have a 'condition' string")
-                return prop
+            val dependencies = obtainDependencies(properties, reporter, forceValue, "forceValue")
+                ?: return out // The error has already been reported
+
+            val value = forceValue["value"]
+            if (value !is String) {
+                reporter.error("Expected 'forceValue' to have a 'value' string")
+                return out
             }
 
-            var didInitialUpdate = false
-            val update: () -> Boolean = {
-                val conditionProperties = dependencies.associate { prop -> prop.descriptor.name to prop.get() }
-                val result = TemplateEvaluator.condition(conditionProperties, condition)
-                val exception = result.exceptionOrNull()
-                if (exception != null) {
-                    if (!didInitialUpdate) {
-                        didInitialUpdate = true
-                        reporter.error("Failed to compute initial visibility: ${exception.message}")
-                        thisLogger().info("Failed to compute initial visibility: ${exception.message}", exception)
-                    } else {
-                        thisLogger().error("Failed to compute initial visibility: ${exception.message}", exception)
+            val conditionProperty =
+                setupDependableProperty(dependencies, reporter, forceValue, "forceValue", graph.property(false))
+
+            val update: () -> String? = {
+                if (conditionProperty.get()) {
+                    val conditionProperties = dependencies.associate { prop -> prop.descriptor.name to prop.get() }
+                    val result = TemplateEvaluator.template(conditionProperties, value)
+                    val exception = result.exceptionOrNull()
+                    if (exception != null) {
+                        thisLogger().error("Failed to compute forceValue-property: ${exception.message}", exception)
                     }
+
+                    result.getOrNull()
+                } else {
+                    null
                 }
-
-                result.getOrDefault(true)
             }
 
-            prop.set(update())
+            out.set(update())
             for (dependency in dependencies) {
-                prop.dependsOn(dependency.graphProperty, deleteWhenModified = false, update)
+                out.dependsOn(dependency.graphProperty, deleteWhenModified = false, update)
             }
 
-            return prop
+            return out
         }
     }
 }

@@ -22,6 +22,7 @@ package com.demonwav.mcdev.creator.custom.types
 
 import com.demonwav.mcdev.creator.custom.CreatorContext
 import com.demonwav.mcdev.creator.custom.TemplatePropertyDescriptor
+import com.demonwav.mcdev.creator.custom.TemplateValidationReporter
 import com.intellij.openapi.extensions.ExtensionPointName
 import com.intellij.openapi.extensions.RequiredElement
 import com.intellij.openapi.util.KeyedExtensionCollector
@@ -42,13 +43,20 @@ interface CreatorPropertyFactory {
         fun createFromType(
             type: String,
             descriptor: TemplatePropertyDescriptor,
-            context: CreatorContext
+            context: CreatorContext,
+            reporter: TemplateValidationReporter
         ): CreatorProperty<*>? {
-            return COLLECTOR.findSingle(type)?.create(descriptor, context)
+            return COLLECTOR.findSingle(type)?.create(descriptor, context, reporter)
         }
     }
 
-    fun create(descriptor: TemplatePropertyDescriptor, context: CreatorContext): CreatorProperty<*>
+    fun create(descriptor: TemplatePropertyDescriptor, context: CreatorContext, reporter: TemplateValidationReporter): CreatorProperty<*> {
+        return create(descriptor, context)
+    }
+
+    fun create(descriptor: TemplatePropertyDescriptor, context: CreatorContext): CreatorProperty<*> {
+        throw UnsupportedOperationException("No create method has been overridden.")
+    }
 }
 
 class CreatorPropertyFactoryBean :

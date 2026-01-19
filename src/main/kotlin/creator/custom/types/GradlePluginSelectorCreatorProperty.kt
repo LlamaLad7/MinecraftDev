@@ -83,12 +83,31 @@ class GradlePluginSelectorCreatorProperty(
     override fun deserialize(string: String): Holder =
         Holder.tryParse(string) ?: Holder(SemanticVersion(emptyList()), false)
 
+    override fun handleForceValueProperty(
+        original: Holder,
+        string: String
+    ): Holder = original.copy(enabled = string.toBooleanStrictOrNull() ?: original.enabled)
+
     override fun buildUi(panel: Panel) {
         val label = descriptor.translatedLabel
         panel.row(label) {
-            checkBox("")
+            val checkbox = checkBox("")
                 .bindSelected(enabledProperty)
                 .enabled(descriptor.editable != false)
+
+            var previousEnabledStatus = enabledProperty.get()
+            forceValueProperty?.afterChange { str ->
+                if (str == null) {
+                    checkbox.enabled(descriptor.editable != false)
+                    enabledProperty.set(previousEnabledStatus)
+                } else {
+                    str.toBooleanStrictOrNull()?.let {
+                        checkbox.enabled(false)
+                        previousEnabledStatus = enabledProperty.get()
+                        enabledProperty.set(it)
+                    }
+                }
+            }
 
             label("Version:").gap(RightGap.SMALL)
             val combobox = comboBox(versionsModel.get())
@@ -226,8 +245,10 @@ class GradlePluginSelectorCreatorProperty(
     class Factory : CreatorPropertyFactory {
         override fun create(
             descriptor: TemplatePropertyDescriptor,
-            context: CreatorContext
-        ): CreatorProperty<*> = GradlePluginSelectorCreatorProperty(descriptor, context)
+            context: CreatorContext,
+            reporter: TemplateValidationReporter
+        ): CreatorProperty<*> =
+            GradlePluginSelectorCreatorProperty(descriptor, context).initForceValueProperty(reporter)
     }
 
     @TemplateApi

@@ -205,7 +205,7 @@ class CreatorTemplateProcessor(
             reporter.fatal("Duplicate property name ${descriptor.name}")
         }
 
-        val prop = CreatorPropertyFactory.createFromType(descriptor.type, descriptor, context)
+        val prop = CreatorPropertyFactory.createFromType(descriptor.type, descriptor, context, reporter)
             ?: reporter.fatal("Unknown template property type ${descriptor.type}")
 
         prop.setupProperty(reporter)
