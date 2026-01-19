@@ -92,6 +92,7 @@ class FabricLoomDecompileSourceProvider : AttachSourcesProvider {
             runGradleTaskWithCallback(
                 project,
                 Paths.get(projectPath),
+                toolWindow = false,
                 { settings -> settings.taskNames = listOf(decompiler.taskName) },
                 taskCallback,
             )
