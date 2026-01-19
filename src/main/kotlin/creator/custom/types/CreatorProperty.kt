@@ -35,6 +35,8 @@ import com.intellij.openapi.observable.properties.ObservableMutableProperty
 import com.intellij.openapi.observable.properties.PropertyGraph
 import com.intellij.openapi.observable.util.bindStorage
 import com.intellij.openapi.observable.util.transform
+import com.intellij.ui.components.JBCheckBox
+import com.intellij.ui.dsl.builder.Cell
 import com.intellij.ui.dsl.builder.Panel
 import com.intellij.ui.dsl.builder.Row
 
@@ -248,6 +250,29 @@ abstract class CreatorProperty<T>(
         return this
     }
 
+    fun createCheckboxEnabledToggleMethod(
+        property: ObservableMutableProperty<Boolean>,
+        checkbox: Cell<JBCheckBox>
+    ): CheckboxUpdater {
+        class Inner : CheckboxUpdater {
+            private var previousEnabledStatus = property.get()
+            override fun update(str: String?) {
+                if (str == null) {
+                    checkbox.enabled(descriptor.editable != false)
+                    property.set(previousEnabledStatus)
+                } else {
+                    str.toBooleanStrictOrNull()?.let {
+                        checkbox.enabled(false)
+                        previousEnabledStatus = property.get()
+                        property.set(it)
+                    }
+                }
+            }
+        }
+
+        return Inner()
+    }
+
     companion object {
         private fun obtainDependencies(
             properties: Map<String, CreatorProperty<*>>,
@@ -396,5 +421,10 @@ abstract class CreatorProperty<T>(
 
             return out
         }
+    }
+
+    @FunctionalInterface
+    interface CheckboxUpdater {
+        fun update(str: String?)
     }
 }

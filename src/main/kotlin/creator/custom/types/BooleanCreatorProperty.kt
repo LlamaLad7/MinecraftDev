@@ -57,19 +57,9 @@ class BooleanCreatorProperty(
                 .bindSelected(graphProperty)
                 .enabled(descriptor.editable != false)
 
-            var previousEnabledStatus = graphProperty.get()
-            forceValueProperty?.afterChange { str ->
-                if (str == null) {
-                    checkbox.enabled(descriptor.editable != false)
-                    graphProperty.set(previousEnabledStatus)
-                } else {
-                    str.toBooleanStrictOrNull()?.let {
-                        checkbox.enabled(false)
-                        previousEnabledStatus = graphProperty.get()
-                        graphProperty.set(it)
-                    }
-                }
-            }
+            val checkboxUpdater = createCheckboxEnabledToggleMethod(graphProperty, checkbox)
+            checkboxUpdater.update(forceValueProperty?.get())
+            forceValueProperty?.afterChange(checkboxUpdater::update)
         }.propertyVisibility()
     }
 

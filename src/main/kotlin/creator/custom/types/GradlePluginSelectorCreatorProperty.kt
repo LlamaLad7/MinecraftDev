@@ -95,19 +95,9 @@ class GradlePluginSelectorCreatorProperty(
                 .bindSelected(enabledProperty)
                 .enabled(descriptor.editable != false)
 
-            var previousEnabledStatus = enabledProperty.get()
-            forceValueProperty?.afterChange { str ->
-                if (str == null) {
-                    checkbox.enabled(descriptor.editable != false)
-                    enabledProperty.set(previousEnabledStatus)
-                } else {
-                    str.toBooleanStrictOrNull()?.let {
-                        checkbox.enabled(false)
-                        previousEnabledStatus = enabledProperty.get()
-                        enabledProperty.set(it)
-                    }
-                }
-            }
+            val checkboxUpdater = createCheckboxEnabledToggleMethod(enabledProperty, checkbox)
+            checkboxUpdater.update(forceValueProperty?.get())
+            forceValueProperty?.afterChange(checkboxUpdater::update)
 
             label("Version:").gap(RightGap.SMALL)
             val combobox = comboBox(versionsModel.get())
