@@ -194,12 +194,6 @@ tasks.runIde {
     jvmArgs("--add-exports=java.base/jdk.internal.vm=ALL-UNNAMED")
 }
 
-tasks.register("cleanSandbox", Delete::class) {
-    group = "intellij"
-    description = "Deletes the sandbox directory."
-    delete(layout.projectDirectory.dir(".sandbox"))
-}
-
 tasks.test {
     useJUnitPlatform()
 }

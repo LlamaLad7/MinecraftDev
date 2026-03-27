@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -136,17 +136,17 @@ object TinySrgParser : SrgParser {
                 return true
             }
 
-            override fun visitMethod(srcName: String, srcDesc: String): Boolean {
+            override fun visitMethod(srcName: String?, srcDesc: String?): Boolean {
                 inter = srcName
                 desc = srcDesc
                 return true
             }
 
-            override fun visitMethodArg(argPosition: Int, lvIndex: Int, srcName: String): Boolean {
+            override fun visitMethodArg(argPosition: Int, lvIndex: Int, srcName: String?): Boolean {
                 return false
             }
 
-            override fun visitMethodVar(lvtRowIndex: Int, lvIndex: Int, startOpIdx: Int, srcName: String): Boolean {
+            override fun visitMethodVar(lvtRowIndex: Int, lvIndex: Int, startOpIdx: Int, endOpIdx: Int, srcName: String?): Boolean {
                 return false
             }
 

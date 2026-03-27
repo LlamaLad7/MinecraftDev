@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -53,7 +53,7 @@ class ModsTomlValidationInspection : LocalInspectionTool() {
 
     override fun getStaticDescription(): String = "Checks mods.toml files for errors"
 
-    override fun processFile(file: PsiFile, manager: InspectionManager): MutableList<ProblemDescriptor> {
+    override fun processFile(file: PsiFile, manager: InspectionManager): List<ProblemDescriptor> {
         if (file.virtualFile.name in ForgeTomlConstants.FILE_NAMES) {
             return super.processFile(file, manager)
         }

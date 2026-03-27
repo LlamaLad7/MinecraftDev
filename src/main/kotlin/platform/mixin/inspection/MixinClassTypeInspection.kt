@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -27,6 +27,7 @@ import com.demonwav.mcdev.platform.mixin.util.mixinTargets
 import com.intellij.codeInspection.LocalQuickFix
 import com.intellij.codeInspection.LocalQuickFixOnPsiElement
 import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.java.syntax.parser.JavaKeywords
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.JavaPsiFacade
@@ -61,9 +62,9 @@ class MixinClassTypeInspection : MixinInspection() {
             val fixes = mutableListOf<LocalQuickFix>()
             if (classKeywordElement != null) {
                 if (needsToBeClass && !needsToBeInterface) {
-                    fixes += ChangeClassTypeFix(classKeywordElement, PsiKeyword.CLASS)
+                    fixes += ChangeClassTypeFix(classKeywordElement, JavaKeywords.CLASS)
                 } else if (needsToBeInterface && !needsToBeClass) {
-                    fixes += ChangeClassTypeFix(classKeywordElement, PsiKeyword.INTERFACE)
+                    fixes += ChangeClassTypeFix(classKeywordElement, JavaKeywords.INTERFACE)
                 }
             }
 

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -42,6 +42,7 @@ import com.demonwav.mcdev.util.toJavaIdentifier
 import com.intellij.byteCodeViewer.ByteCodeViewerManager
 import com.intellij.codeEditor.JavaEditorFileSwapper
 import com.intellij.ide.highlighter.JavaFileType
+import com.intellij.java.syntax.parser.JavaKeywords
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
@@ -1050,7 +1051,7 @@ fun MethodNode.findBodyElements(clazz: ClassNode, project: Project, scope: Globa
         if (body != null) {
             val children = body.children
             val superCtorIndex = children.indexOfFirst {
-                it is PsiMethodCallExpression && it.methodExpression.text == PsiKeyword.SUPER
+                it is PsiMethodCallExpression && it.methodExpression.text == JavaKeywords.SUPER
             }
             result += children.take(superCtorIndex + 1)
             sourceMethod.containingClass?.children?.forEach { element ->

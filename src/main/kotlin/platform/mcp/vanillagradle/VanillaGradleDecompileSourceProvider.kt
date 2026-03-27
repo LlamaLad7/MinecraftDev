@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -68,7 +68,7 @@ class VanillaGradleDecompileSourceProvider : AttachSourcesProvider {
             val taskCallback = object : TaskCallback {
                 override fun onSuccess() {
                     val importSpec = ImportSpecBuilder(project, GradleConstants.SYSTEM_ID)
-                        .callback(
+                        .withCallback(
                             object : ExternalProjectRefreshCallback {
                                 override fun onSuccess(externalProject: DataNode<ProjectData>?) = callback.setDone()
 

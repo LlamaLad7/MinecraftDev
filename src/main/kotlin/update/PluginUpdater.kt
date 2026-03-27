@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -59,7 +59,7 @@ object PluginUpdater {
 
             val finalUpdate = updateStatus
             ApplicationManager.getApplication().invokeLater({ callback(finalUpdate) }, ModalityState.any())
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             PluginUpdateStatus.CheckFailed("Minecraft Development plugin update check failed")
         }
     }
@@ -107,8 +107,9 @@ object PluginUpdater {
 
     private fun checkUpdatesInCustomRepo(host: String): PluginUpdateStatus {
         val plugins = try {
-            RepositoryHelper.loadPlugins(host, null, null)
-        } catch (e: IOException) {
+            RepositoryHelper.loadPluginModels(host, null, null)
+                .map { it.getDescriptor() }
+        } catch (_: IOException) {
             return PluginUpdateStatus.CheckFailed("Checking custom plugin repository $host  failed")
         }
 

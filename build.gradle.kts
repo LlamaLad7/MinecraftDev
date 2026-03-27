@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -19,11 +19,14 @@
  */
 
 import io.sentry.android.gradle.extensions.SentryPluginExtension
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.atomics.AtomicInt
 import org.gradle.kotlin.dsl.configure
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.gradle.ext.settings
 import org.jetbrains.gradle.ext.taskTriggers
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.tasks.CleanSandboxTask
 import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
 
 plugins {
@@ -102,8 +105,12 @@ dependencies {
         exclude(group = "org.slf4j")
     }
 
+    implementation(libs.jspecify)
+
     intellijPlatform {
-        intellijIdeaCommunity(libs.versions.intellij.ide, useInstaller = false)
+        intellijIdeaCommunity(libs.versions.intellij.ide) {
+            useInstaller = false
+        }
 
         // Bundled plugin dependencies
         bundledPlugin("com.intellij.java")
@@ -120,7 +127,6 @@ dependencies {
         bundledPlugin("org.jetbrains.kotlin")
         bundledPlugin("org.toml.lang")
         bundledPlugin("org.jetbrains.plugins.yaml")
-
 
         testFramework(TestFrameworkType.JUnit5)
         testFramework(TestFrameworkType.Platform)
@@ -198,8 +204,39 @@ tasks.processResources {
     }
 }
 
+// Run unit tests in paralllel. Unfortunately, to accomplish this, we also need separate sandboxes for each test fork.
+// All of this is still worth doing since the IntelliJ test fixtures themselves are rather slow.
+val testForks = 6
+val sandboxTestTasks = mutableListOf<TaskProvider<PrepareSandboxTask>>()
+repeat(testForks) {
+    sandboxTestTasks += tasks.register<PrepareSandboxTask>("prepareTestSandboxFork$it") {
+        sandboxSuffix.set("-fork-$it")
+        doFirst {
+            sandboxDirectory.get().asFile.listFiles()
+                ?.filter { f -> f.name.endsWith("-fork-$it") }
+                ?.forEach { f -> f.deleteRecursively() }
+        }
+    }
+}
+tasks.prepareTestSandbox {
+    doFirst {
+        sandboxDirectory.get().asFile.listFiles()
+            ?.filter { f -> f.name.endsWith("-test") }
+            ?.forEach { f -> f.deleteRecursively() }
+    }
+}
+
+val cleanTestSandboxForks by tasks.registering(Delete::class) {
+    doFirst {
+        tasks.prepareTestSandbox.flatMap { it.sandboxDirectory }
+            .get().asFile.listFiles()
+            ?.filter { it.name.matches(Regex(".*-(?:fork-\\d+|test)")) }
+            ?.let { delete(it) }
+    }
+}
 tasks.test {
-    dependsOn(tasks.jar, testLibs)
+    dependsOn(tasks.jar, testLibs, sandboxTestTasks)
+    finalizedBy(cleanTestSandboxForks)
 
     testLibs.resolvedConfiguration.resolvedArtifacts.forEach {
         systemProperty("testLibs.${it.name}", it.file.absolutePath)
@@ -211,6 +248,12 @@ tasks.test {
         "-Dsun.io.useCanonCaches=false",
         "-Dsun.io.useCanonPrefixCache=false",
     )
+
+    val sandboxDir = tasks.prepareTestSandbox.flatMap { it.sandboxDirectory }.get().asFile
+
+    maxParallelForks = testForks
+    systemProperty("sandboxDir", sandboxDir.absolutePath)
+    systemProperty("forks", testForks.toString())
 }
 
 idea {

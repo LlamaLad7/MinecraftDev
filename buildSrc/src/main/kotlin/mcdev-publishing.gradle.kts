@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -26,6 +26,7 @@ import java.net.http.HttpResponse
 import kotlin.io.path.absolute
 import org.jetbrains.intellij.platform.gradle.utils.IdeServicesPluginRepositoryService
 import org.jetbrains.intellij.pluginRepository.PluginRepositoryFactory
+import org.jetbrains.intellij.pluginRepository.model.ProductFamily
 
 plugins {
     id("org.jetbrains.intellij.platform")
@@ -63,8 +64,9 @@ tasks.publishPlugin {
                     false -> PluginRepositoryFactory.create(host.get(), token.get())
                 }
                 @Suppress("DEPRECATION")
-                val uploadBean = repositoryClient.uploader.upload(
+                val uploadBean = repositoryClient.uploader.uploadUpdateByXmlIdAndFamily(
                     id = pluginId,
+                    family = ProductFamily.INTELLIJ,
                     file = path.toFile(),
                     channel = channel.takeIf { it != "default" },
                     notes = null,
