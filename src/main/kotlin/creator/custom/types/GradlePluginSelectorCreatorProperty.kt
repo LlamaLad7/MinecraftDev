@@ -26,44 +26,89 @@ import com.demonwav.mcdev.creator.custom.CreatorCredentials
 import com.demonwav.mcdev.creator.custom.TemplateEvaluator
 import com.demonwav.mcdev.creator.custom.TemplatePropertyDescriptor
 import com.demonwav.mcdev.creator.custom.TemplateValidationReporter
+import com.demonwav.mcdev.creator.custom.model.TemplateApi
+import com.demonwav.mcdev.creator.custom.types.GradlePluginSelectorCreatorProperty.Holder
 import com.demonwav.mcdev.util.SemanticVersion
 import com.demonwav.mcdev.util.getOrLogException
 import com.github.kittinunf.fuel.core.Request
 import com.github.kittinunf.fuel.core.extensions.authentication
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.observable.properties.GraphProperty
+import com.intellij.openapi.observable.util.transform
 import com.intellij.ui.ComboboxSpeedSearch
 import com.intellij.ui.JBColor
 import com.intellij.ui.dsl.builder.Panel
+import com.intellij.ui.dsl.builder.RightGap
 import com.intellij.ui.dsl.builder.bindItem
+import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.util.ui.AsyncProcessIcon
-import java.util.concurrent.ConcurrentHashMap
+import fleet.multiplatform.shims.ConcurrentHashMap
 import java.util.function.Function
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.kotlin.cli.common.toBooleanLenient
 
-class MavenArtifactVersionCreatorProperty(
+class GradlePluginSelectorCreatorProperty(
     descriptor: TemplatePropertyDescriptor,
     context: CreatorContext
-) : SemanticVersionCreatorProperty(descriptor, context) {
-
-    lateinit var sourceUrl: String
-    var rawVersionFilter: (String) -> Boolean = { true }
-    var versionFilter: (SemanticVersion) -> Boolean = { true }
-
-    override val graphProperty: GraphProperty<SemanticVersion> = graph.property(SemanticVersion(emptyList()))
-    private val versionsProperty = graph.property<Set<SemanticVersion>>(emptySet())
+) : CreatorProperty<Holder>(descriptor, context, Holder::class.java) {
     private val loadingVersionsProperty = graph.property(true)
     private val loadingVersionsStatusProperty = graph.property("")
 
+    private val defaultValue = createDefaultValue(descriptor.default)
+
+    override val graphProperty: GraphProperty<Holder> = graph.property(defaultValue)
+    var property: Holder by graphProperty
+
+    private val versionsModel = graph.property<Set<SemanticVersion>>(emptySet())
+
+    private val versionProperty = graphProperty.transform({ it.version }, { property.copy(version = it) })
+    private val enabledProperty = graphProperty.transform({ it.enabled }, { property.copy(enabled = it) })
+
+    override fun createDefaultValue(raw: Any?): Holder {
+        if (raw is Boolean) {
+            return Holder(SemanticVersion(emptyList()), raw)
+        }
+        if (raw is String) {
+            return deserialize(raw)
+        }
+
+        return Holder(SemanticVersion(emptyList()), false)
+    }
+
+    override fun serialize(value: Holder): String = value.toString()
+
+    override fun deserialize(string: String): Holder =
+        Holder.tryParse(string) ?: Holder(SemanticVersion(emptyList()), false)
+
+    override fun handleForceValueProperty(
+        original: Holder,
+        string: String
+    ): Holder = original.copy(enabled = string.toBooleanStrictOrNull() ?: original.enabled)
+
     override fun buildUi(panel: Panel) {
-        panel.row(descriptor.translatedLabel) {
-            val combobox = comboBox(versionsProperty.get())
-                .bindItem(graphProperty)
+        val label = descriptor.translatedLabel
+        panel.row(label) {
+            val checkbox = checkBox("")
+                .bindSelected(enabledProperty)
+                .enabled(descriptor.editable != false)
+
+            val checkboxUpdater = createCheckboxEnabledToggleMethod(enabledProperty, checkbox)
+            checkboxUpdater.update(forceValueProperty?.get())
+            forceValueProperty?.afterChange(checkboxUpdater::update)
+
+            label("Version:").gap(RightGap.SMALL)
+            val combobox = comboBox(versionsModel.get())
+                .bindItem(versionProperty)
                 .enabled(descriptor.editable != false)
                 .also { ComboboxSpeedSearch.installOn(it.component) }
+
+            val warning = descriptor.translatedWarning
+            if (warning != null) {
+                combobox.comment(descriptor.translate(warning))
+            }
 
             cell(AsyncProcessIcon(makeStorageKey("progress")))
                 .visibleIf(loadingVersionsProperty)
@@ -71,7 +116,7 @@ class MavenArtifactVersionCreatorProperty(
                 .bindText(loadingVersionsStatusProperty)
                 .visibleIf(loadingVersionsProperty)
 
-            versionsProperty.afterChange { versions ->
+            versionsModel.afterChange { versions ->
                 combobox.component.removeAllItems()
                 for (version in versions) {
                     combobox.component.addItem(version)
@@ -83,15 +128,16 @@ class MavenArtifactVersionCreatorProperty(
     override fun setupProperty(reporter: TemplateValidationReporter) {
         super.setupProperty(reporter)
 
+        var rawVersionFilter: (String) -> Boolean = { true }
+        var versionFilter: (SemanticVersion) -> Boolean = { true }
+
         val url = descriptor.parameters?.get("sourceUrl") as? String
         if (url == null) {
             reporter.error("Expected string parameter 'sourceUrl'")
             return
         }
 
-        sourceUrl = url
-
-        val rawVersionFilterCondition = descriptor.parameters?.get("rawVersionFilter")
+        val rawVersionFilterCondition = descriptor.parameters["rawVersionFilter"]
         if (rawVersionFilterCondition != null) {
             if (rawVersionFilterCondition !is String) {
                 reporter.error("'rawVersionFilter' must be a string")
@@ -104,7 +150,7 @@ class MavenArtifactVersionCreatorProperty(
             }
         }
 
-        val versionFilterCondition = descriptor.parameters?.get("versionFilter")
+        val versionFilterCondition = descriptor.parameters["versionFilter"]
         if (versionFilterCondition != null) {
             if (versionFilterCondition !is String) {
                 reporter.error("'versionFilter' must be a string")
@@ -121,13 +167,14 @@ class MavenArtifactVersionCreatorProperty(
             context,
             // The key might be a bit too unique, but that'll do the job
             descriptor.name + "@" + descriptor.hashCode(),
-            sourceUrl,
+            url,
             rawVersionFilter,
             versionFilter,
             descriptor.limit ?: 50
         ) { result ->
             result.onSuccess { versions ->
-                versionsProperty.set(versions.toSet())
+                val set = versions.toSet()
+                versionsModel.set(set)
                 loadingVersionsProperty.set(false)
             }.onFailure { exception ->
                 loadingVersionsStatusProperty.set(exception.message ?: exception.javaClass.simpleName)
@@ -139,7 +186,7 @@ class MavenArtifactVersionCreatorProperty(
 
         private var versionsCache = ConcurrentHashMap<String, List<SemanticVersion>>()
 
-        private fun downloadVersions(
+        fun downloadVersions(
             context: CreatorContext,
             key: String,
             url: String,
@@ -157,10 +204,10 @@ class MavenArtifactVersionCreatorProperty(
                 return
             }
 
-            val scope = context.childScope("MavenArtifactVersionCreatorProperty")
+            val scope = context.childScope("GradlePluginSelectorCreatorProperty")
             scope.launch(Dispatchers.Default) {
                 val result = withContext(Dispatchers.IO) {
-                    var requestCustomizer = CreatorCredentials.findMavenRepoCredentials(url)?.let { (user, pass) ->
+                    val requestCustomizer = CreatorCredentials.findMavenRepoCredentials(url)?.let { (user, pass) ->
                         Function<Request, Request> { request -> request.authentication().basic(user, pass) }
                     }
 
@@ -186,10 +233,38 @@ class MavenArtifactVersionCreatorProperty(
     }
 
     class Factory : CreatorPropertyFactory {
-
         override fun create(
             descriptor: TemplatePropertyDescriptor,
-            context: CreatorContext
-        ): CreatorProperty<*> = MavenArtifactVersionCreatorProperty(descriptor, context)
+            context: CreatorContext,
+            reporter: TemplateValidationReporter
+        ): CreatorProperty<*> =
+            GradlePluginSelectorCreatorProperty(descriptor, context).initForceValueProperty(reporter)
+    }
+
+    @TemplateApi
+    data class Holder(
+        val version: SemanticVersion,
+        val enabled: Boolean
+    ) {
+        override fun toString(): String {
+            return "$enabled $version"
+        }
+
+        companion object {
+            fun tryParse(raw: String): Holder? {
+                val split = raw.split(" ", limit = 2)
+                return when (split.size) {
+                    1 -> raw.toBooleanLenient()?.let { Holder(SemanticVersion(emptyList()), it) }
+                    2 -> split[0].toBooleanLenient()?.let {
+                        Holder(
+                            SemanticVersion.tryParse(split[1]) ?: SemanticVersion(emptyList()),
+                            it
+                        )
+                    }
+
+                    else -> null
+                }
+            }
+        }
     }
 }

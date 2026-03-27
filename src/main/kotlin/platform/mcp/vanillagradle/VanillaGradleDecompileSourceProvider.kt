@@ -87,6 +87,7 @@ class VanillaGradleDecompileSourceProvider : AttachSourcesProvider {
             runGradleTaskWithCallback(
                 project,
                 Paths.get(projectPath),
+                toolWindow = false,
                 { settings -> settings.taskNames = listOf(decompileTaskName) },
                 taskCallback,
             )

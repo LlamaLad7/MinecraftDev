@@ -20,40 +20,42 @@
 
 package com.demonwav.mcdev.creator.custom.finalizers
 
+import com.intellij.execution.RunManager
 import com.intellij.ide.util.projectWizard.WizardContext
-import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VfsUtil
-import java.nio.file.Path
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import org.jetbrains.idea.maven.buildtool.MavenSyncSpec
-import org.jetbrains.idea.maven.project.MavenProjectsManager
+import org.jetbrains.idea.maven.execution.MavenRunConfigurationType
+import org.jetbrains.idea.maven.execution.MavenRunnerParameters
+import org.jetbrains.idea.maven.execution.MavenRunnerSettings
 
-class ImportMavenProjectFinalizer : CreatorFinalizer {
+class AddMavenRunConfigFinalizer : AddRunConfigFinalizer {
+
+    override val executablesName: String = "goals"
 
     override suspend fun execute(
         context: WizardContext,
         project: Project,
         properties: Map<String, Any>,
         templateProperties: Map<String, Any?>
-    ) = coroutineScope {
+    ) {
+        val goals = properties.executables
         val projectDir = context.projectFileDirectory
-        val pomFile = VfsUtil.findFile(Path.of(projectDir).resolve("pom.xml"), true)
-            ?: return@coroutineScope
 
-        thisLogger().info("Invoking import on EDT pomFile = ${pomFile.path}")
-        val projectsManager = MavenProjectsManager.getInstance(project)
-        projectsManager.addManagedFiles(listOf(pomFile))
-
-        val import = async {
-            projectsManager.updateAllMavenProjects(MavenSyncSpec.incremental("ImportMavenProjectFinalizer", false))
+        val params = MavenRunnerParameters().also {
+            it.goals = goals
+            it.workingDirPath = projectDir
         }
+        val settings = MavenRunConfigurationType.createRunnerAndConfigurationSettings(null, null, params, project)
 
-        openBuildToolWindow(project)
+        settings.name = properties["name"] as String
+        settings.isActivateToolWindowBeforeRun = true
+        settings.storeInLocalWorkspace()
 
-        import.await()
+        val runManager = RunManager.getInstance(project)
 
-        thisLogger().info("Import finished")
+        runManager.addConfiguration(settings)
+
+        if (properties["select"] == true || runManager.selectedConfiguration == null) {
+            runManager.selectedConfiguration = settings
+        }
     }
 }

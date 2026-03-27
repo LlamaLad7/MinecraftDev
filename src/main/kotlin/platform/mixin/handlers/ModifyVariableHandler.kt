@@ -27,6 +27,7 @@ import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
 import com.demonwav.mcdev.platform.mixin.inspection.injector.ParameterGroup
 import com.demonwav.mcdev.platform.mixin.util.LocalInfo
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
+import com.demonwav.mcdev.util.Parameter
 import com.demonwav.mcdev.util.constantStringValue
 import com.demonwav.mcdev.util.findContainingMethod
 import com.demonwav.mcdev.util.findModule
@@ -61,29 +62,26 @@ class ModifyVariableHandler : InjectorAnnotationHandler() {
         val localType = method.parameterList.getParameter(0)?.type
         val info = LocalInfo.fromAnnotation(localType, annotation)
 
-        val possibleTypes = mutableSetOf<String>()
+        val elementFactory = JavaPsiFacade.getElementFactory(annotation.project)
+        val seenParams = mutableSetOf<String>()
+        val result = mutableListOf<MethodSignature>()
         for (insn in targets) {
             val matchedLocals = info.matchLocals(
                 module, targetClass, targetMethod, insn.insn,
                 CollectVisitor.Mode.COMPLETION, matchType = false
             ) ?: continue
             for (local in matchedLocals) {
-                possibleTypes += local.desc!!
+                if (seenParams.add(local.desc + local.name)) {
+                    val localType = Type.getType(local.desc).toPsiType(elementFactory)
+                    result += MethodSignature(
+                        listOf(
+                            ParameterGroup(listOf(sanitizedParameter(localType, local.name, local.isNamed))),
+                            targetParamsGroup,
+                        ),
+                        localType,
+                    )
+                }
             }
-        }
-
-        val result = mutableListOf<MethodSignature>()
-
-        val elementFactory = JavaPsiFacade.getElementFactory(annotation.project)
-        for (type in possibleTypes) {
-            val psiType = Type.getType(type).toPsiType(elementFactory)
-            result += MethodSignature(
-                listOf(
-                    ParameterGroup(listOf(sanitizedParameter(psiType, "value"))),
-                    targetParamsGroup,
-                ),
-                psiType,
-            )
         }
 
         return result

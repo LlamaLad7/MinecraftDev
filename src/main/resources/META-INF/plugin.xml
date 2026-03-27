@@ -200,6 +200,9 @@
             implementation="com.demonwav.mcdev.creator.custom.types.ForgeVersionsCreatorProperty$Factory"
             type="forge_versions"/>
         <creatorPropertyType
+            implementation="com.demonwav.mcdev.creator.custom.types.GradlePluginSelectorCreatorProperty$Factory"
+            type="gradle_plugin"/>
+        <creatorPropertyType
             implementation="com.demonwav.mcdev.creator.custom.types.InlineStringListCreatorProperty$Factory"
             type="inline_string_list"/>
         <creatorPropertyType implementation="com.demonwav.mcdev.creator.custom.types.IntegerCreatorProperty$Factory"
@@ -214,6 +217,9 @@
         <creatorPropertyType
             implementation="com.demonwav.mcdev.creator.custom.types.NeoForgeVersionsCreatorProperty$Factory"
             type="neoforge_versions"/>
+        <creatorPropertyType
+            implementation="com.demonwav.mcdev.creator.custom.types.PaperVersionCreatorProperty$Factory"
+            type="paper_versions"/>
         <creatorPropertyType implementation="com.demonwav.mcdev.creator.custom.types.ParchmentCreatorProperty$Factory"
                              type="parchment"/>
         <creatorPropertyType
@@ -233,8 +239,12 @@
 
         <creatorFinalizer implementation="com.demonwav.mcdev.creator.custom.finalizers.ImportGradleProjectFinalizer"
                           type="import_gradle_project"/>
+        <creatorFinalizer implementation="com.demonwav.mcdev.creator.custom.finalizers.AddGradleRunConfigFinalizer"
+                          type="add_gradle_run"/>
         <creatorFinalizer implementation="com.demonwav.mcdev.creator.custom.finalizers.ImportMavenProjectFinalizer"
                           type="import_maven_project"/>
+        <creatorFinalizer implementation="com.demonwav.mcdev.creator.custom.finalizers.AddMavenRunConfigFinalizer"
+                          type="add_maven_run"/>
         <creatorFinalizer implementation="com.demonwav.mcdev.creator.custom.finalizers.RunGradleTasksFinalizer"
                           type="run_gradle_tasks"/>
         <creatorFinalizer implementation="com.demonwav.mcdev.creator.custom.finalizers.GitAddAllFinalizer"
@@ -520,6 +530,9 @@
             implementation="com.demonwav.mcdev.platform.bukkit.framework.OldPaperPresentationProvider"/>
         <library.presentationProvider
             implementation="com.demonwav.mcdev.platform.bukkit.framework.PaperPresentationProvider"/>
+        <library.presentationProvider
+                implementation="com.demonwav.mcdev.platform.bukkit.framework.ModernPaperPresentationProvider"/>
+
         <!--endregion-->
 
         <!--region SPONGE-->
@@ -1070,6 +1083,14 @@
                          level="WARNING"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.injector.MixinCancellableInspection"/>
+        <localInspection displayName="Mixin parameter names don't match the target class"
+                         shortName="NameDoesntMatchTargetClass"
+                         groupName="Mixin"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="WEAK WARNING"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.injector.MixinParameterNameInspection"/>
         <localInspection displayName="Invalid @Mixin Target"
                          shortName="InvalidMixinTarget"
                          groupName="Mixin"
@@ -1102,6 +1123,14 @@
                          level="ERROR"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.MixinInnerClassInspection"/>
+        <localInspection displayName="Mixin is wrong class type"
+                         shortName="MixinWrongClassType"
+                         groupName="Mixin"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="ERROR"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.MixinClassTypeInspection"/>
         <localInspection displayName="Reference to @Mixin class"
                          shortName="ReferenceToMixin"
                          groupName="Mixin"
@@ -1419,6 +1448,14 @@
                          level="WARNING"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.shadow.ShadowModifiersInspection"/>
+        <localInspection displayName="Shadow parameter names don't match the target class"
+                         shortName="ShadowNameDoesntMatchTargetClass"
+                         groupName="Mixin"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="WEAK WARNING"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.shadow.ShadowParameterNameInspection"/>
         <localInspection displayName="@Shadow field with prefix"
                          shortName="ShadowFieldPrefix"
                          groupName="Mixin"

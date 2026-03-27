@@ -23,44 +23,38 @@ package com.demonwav.mcdev.creator.custom.derivation
 import com.demonwav.mcdev.creator.custom.PropertyDerivation
 import com.demonwav.mcdev.creator.custom.TemplateValidationReporter
 import com.demonwav.mcdev.creator.custom.types.CreatorProperty
+import com.demonwav.mcdev.util.MinecraftVersions
 import com.demonwav.mcdev.util.SemanticVersion
 
-open class ExtractVersionMajorMinorPropertyDerivation : PreparedDerivation {
+class ExtractPaperApiVersionPropertyDerivation : ExtractVersionMajorMinorPropertyDerivation() {
 
     override fun derive(parentValues: List<Any?>): Any? {
         val from = parentValues[0] as SemanticVersion
-        if (from.parts.size < 2) {
-            return SemanticVersion(emptyList())
+        if (from >= MinecraftVersions.MC1_20_5) {
+            return from
         }
 
-        val (part1, part2) = from.parts
-        if (part1 is SemanticVersion.Companion.VersionPart.ReleasePart &&
-            part2 is SemanticVersion.Companion.VersionPart.ReleasePart
-        ) {
-            return SemanticVersion(listOf(part1, part2))
-        }
-
-        return SemanticVersion(emptyList())
+        return super.derive(parentValues);
     }
 
-    companion object : PropertyDerivationFactory {
+  companion object : PropertyDerivationFactory {
 
-        override fun create(
-            reporter: TemplateValidationReporter,
-            parents: List<CreatorProperty<*>?>?,
-            derivation: PropertyDerivation
-        ): PreparedDerivation? {
-            if (parents.isNullOrEmpty()) {
-                reporter.error("Expected a parent")
-                return null
-            }
+    override fun create(
+      reporter: TemplateValidationReporter,
+      parents: List<CreatorProperty<*>?>?,
+      derivation: PropertyDerivation
+    ): PreparedDerivation? {
+      if (parents.isNullOrEmpty()) {
+        reporter.error("Expected a parent")
+        return null
+      }
 
-            if (!parents[0]!!.acceptsType(SemanticVersion::class.java)) {
-                reporter.error("First parent must produce a semantic version")
-                return null
-            }
+      if (!parents[0]!!.acceptsType(SemanticVersion::class.java)) {
+        reporter.error("First parent must produce a semantic version")
+        return null
+      }
 
-            return ExtractVersionMajorMinorPropertyDerivation()
-        }
+      return ExtractPaperApiVersionPropertyDerivation()
     }
+  }
 }

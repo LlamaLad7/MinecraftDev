@@ -21,39 +21,28 @@
 package com.demonwav.mcdev.creator.custom.finalizers
 
 import com.demonwav.mcdev.creator.custom.TemplateValidationReporter
-import com.demonwav.mcdev.util.runGradleTaskAndWait
-import com.intellij.ide.util.projectWizard.WizardContext
-import com.intellij.openapi.diagnostic.thisLogger
-import com.intellij.openapi.project.Project
 
-class RunGradleTasksFinalizer : CreatorFinalizer {
+interface AddRunConfigFinalizer : CreatorFinalizer {
+
+    val executablesName: String
+    val Map<String, Any>.executables: List<String>
+        @Suppress("UNCHECKED_CAST")
+        get() = this[executablesName] as List<String>
 
     override fun validate(
         reporter: TemplateValidationReporter,
         properties: Map<String, Any>
     ) {
         @Suppress("UNCHECKED_CAST")
-        val tasks = properties["tasks"] as? List<String>
-        if (tasks == null) {
-            reporter.warn("Missing list of 'tasks' to execute")
+        val executables = properties[executablesName] as? List<String>
+        if (executables == null) {
+            reporter.warn("Missing list of '$executables' to execute")
         }
-    }
 
-    override suspend fun execute(
-        context: WizardContext,
-        project: Project,
-        properties: Map<String, Any>,
-        templateProperties: Map<String, Any?>
-    ) {
         @Suppress("UNCHECKED_CAST")
-        val tasks = properties["tasks"] as List<String>
-        val projectDir = context.projectDirectory
-
-        thisLogger().info("tasks = $tasks projectDir = $projectDir")
-        runGradleTaskAndWait(project, projectDir, toolWindow = true) { settings ->
-            settings.taskNames = tasks
+        val name = properties["name"] as? String
+        if (name == null) {
+            reporter.warn("Missing task name")
         }
-
-        thisLogger().info("Done running tasks")
     }
 }

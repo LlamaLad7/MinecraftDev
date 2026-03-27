@@ -46,6 +46,11 @@ class MixinSuperClassInspection : MixinInspection() {
                 return
             }
 
+            if (psiClass.isEnum || psiClass.isAnnotationType || psiClass.isRecord) {
+                // these will be reported by MixinClassTypeInspection
+                return
+            }
+
             val superClass = psiClass.superClass ?: return
             if (superClass.qualifiedName == CommonClassNames.JAVA_LANG_OBJECT) {
                 return
@@ -87,7 +92,7 @@ class MixinSuperClassInspection : MixinInspection() {
         }
 
         private fun reportSuperClass(psiClass: PsiClass, description: String) {
-            holder.registerProblem(psiClass.extendsList?.referenceElements?.firstOrNull() ?: psiClass, description)
+            holder.registerProblem(psiClass.extendsList?.referenceElements?.firstOrNull() ?: psiClass.nameIdentifier ?: psiClass, description)
         }
     }
 }

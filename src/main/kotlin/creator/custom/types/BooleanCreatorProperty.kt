@@ -22,6 +22,7 @@ package com.demonwav.mcdev.creator.custom.types
 
 import com.demonwav.mcdev.creator.custom.CreatorContext
 import com.demonwav.mcdev.creator.custom.TemplatePropertyDescriptor
+import com.demonwav.mcdev.creator.custom.TemplateValidationReporter
 import com.intellij.icons.AllIcons
 import com.intellij.ui.content.AlertIcon
 import com.intellij.ui.dsl.builder.Panel
@@ -39,6 +40,9 @@ class BooleanCreatorProperty(
 
     override fun deserialize(string: String): Boolean = string.toBoolean()
 
+    override fun handleForceValueProperty(original: Boolean, string: String): Boolean =
+        string.toBooleanStrictOrNull() ?: original
+
     override fun buildSimpleUi(panel: Panel) {
         val label = descriptor.translatedLabel
         panel.row(label) {
@@ -49,16 +53,21 @@ class BooleanCreatorProperty(
                     .comment(descriptor.translate(warning))
             }
 
-            this.checkBox(label.removeSuffix(":").trim())
+            val checkbox = this.checkBox(label.removeSuffix(":").trim())
                 .bindSelected(graphProperty)
                 .enabled(descriptor.editable != false)
+
+            val checkboxUpdater = createCheckboxEnabledToggleMethod(graphProperty, checkbox)
+            checkboxUpdater.update(forceValueProperty?.get())
+            forceValueProperty?.afterChange(checkboxUpdater::update)
         }.propertyVisibility()
     }
 
     class Factory : CreatorPropertyFactory {
         override fun create(
             descriptor: TemplatePropertyDescriptor,
-            context: CreatorContext
-        ): CreatorProperty<*> = BooleanCreatorProperty(descriptor, context)
+            context: CreatorContext,
+            reporter: TemplateValidationReporter
+        ): CreatorProperty<*> = BooleanCreatorProperty(descriptor, context).initForceValueProperty(reporter)
     }
 }

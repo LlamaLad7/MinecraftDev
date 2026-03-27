@@ -412,10 +412,10 @@ object LocalVariables {
     private val resurrectLocalsChange = SemanticVersion.release(0, 8, 3)
     private fun detectCurrentSettings(module: Module): Settings? {
         val mixinVersion = module.mixinVersion ?: return null
-        return if (mixinVersion < resurrectLocalsChange) {
-            Settings.NO_RESURRECT
-        } else {
-            Settings.DEFAULT
+        return when {
+            mixinVersion < resurrectLocalsChange -> Settings.NO_RESURRECT
+            module.fabricMixinCompatibility?.let { it >= 17000 } != true -> Settings.NO_NAMED_PARAMETERS
+            else -> Settings.DEFAULT
         }
     }
 
@@ -441,7 +441,6 @@ object LocalVariables {
         val frames = method.instructions.iterator().asSequence().filterIsInstance<FrameNode>().toList()
         val frame = arrayOfNulls<LocalVariable>(method.maxLocals)
         var local = 0
-        var index = 0
 
         // Initialise implicit "this" reference in non-static methods
         if (!method.hasAccess(Opcodes.ACC_STATIC)) {
@@ -449,8 +448,14 @@ object LocalVariables {
         }
 
         // Initialise method arguments
-        for (argType in Type.getArgumentTypes(method.desc)) {
-            frame[local] = LocalVariable("arg" + index++, argType.toString(), null, null, null, local, isNamed = false)
+        for ((index, argType) in Type.getArgumentTypes(method.desc).withIndex()) {
+            val localName = method.localVariables?.find { it.index == local }?.name
+            val name = if (localName == null || !settings.namedParameters) {
+                "arg$index"
+            } else {
+                localName
+            }
+            frame[local] = LocalVariable(name, argType.toString(), null, null, null, local, isNamed = localName != null && settings.namedParameters)
             local += argType.size
         }
 
@@ -836,6 +841,7 @@ object LocalVariables {
         val resurrectExposedOnLoad: Boolean,
         val resurrectExposedOnStore: Boolean,
         val resurrectForBogusTop: Boolean,
+        val namedParameters: Boolean,
     ) {
         companion object {
             val NO_RESURRECT = Settings(
@@ -846,6 +852,18 @@ object LocalVariables {
                 resurrectExposedOnLoad = false,
                 resurrectExposedOnStore = false,
                 resurrectForBogusTop = false,
+                namedParameters = false,
+            )
+
+            val NO_NAMED_PARAMETERS = Settings(
+                choppedInsnThreshold = -1,
+                choppedFrameThreshold = 1,
+                trimmedInsnThreshold = -1,
+                trimmedFrameThreshold = -1,
+                resurrectExposedOnLoad = true,
+                resurrectExposedOnStore = true,
+                resurrectForBogusTop = true,
+                namedParameters = false,
             )
 
             val DEFAULT = Settings(
@@ -856,6 +874,7 @@ object LocalVariables {
                 resurrectExposedOnLoad = true,
                 resurrectExposedOnStore = true,
                 resurrectForBogusTop = true,
+                namedParameters = true,
             )
         }
     }

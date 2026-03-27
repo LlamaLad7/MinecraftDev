@@ -21,7 +21,6 @@
 package com.demonwav.mcdev.creator.custom.types
 
 import com.demonwav.mcdev.asset.MCDevBundle
-import com.demonwav.mcdev.asset.MCDevBundle.invoke
 import com.demonwav.mcdev.creator.collectMavenVersions
 import com.demonwav.mcdev.creator.custom.BuiltinValidations
 import com.demonwav.mcdev.creator.custom.CreatorContext

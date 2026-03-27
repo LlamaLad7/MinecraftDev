@@ -24,6 +24,7 @@ import com.demonwav.mcdev.creator.custom.CreatorContext
 import com.demonwav.mcdev.creator.custom.PropertyDerivation
 import com.demonwav.mcdev.creator.custom.TemplatePropertyDescriptor
 import com.demonwav.mcdev.creator.custom.TemplateValidationReporter
+import com.demonwav.mcdev.creator.custom.derivation.ExtractPaperApiVersionPropertyDerivation
 import com.demonwav.mcdev.creator.custom.derivation.ExtractVersionMajorMinorPropertyDerivation
 import com.demonwav.mcdev.creator.custom.derivation.PreparedDerivation
 import com.demonwav.mcdev.creator.custom.derivation.SelectPropertyDerivation
@@ -62,6 +63,11 @@ open class SemanticVersionCreatorProperty(
         "extractVersionMajorMinor" -> {
             val parents = collectDerivationParents(reporter)
             ExtractVersionMajorMinorPropertyDerivation.create(reporter, parents, derives)
+        }
+
+        "extractPaperApiVersion" -> {
+            val parents = collectDerivationParents(reporter)
+            ExtractPaperApiVersionPropertyDerivation.create(reporter, parents, derives)
         }
 
         null -> {

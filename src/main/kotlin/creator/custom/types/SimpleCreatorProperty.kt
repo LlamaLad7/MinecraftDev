@@ -125,7 +125,7 @@ abstract class SimpleCreatorProperty<T>(
             isSelected: Boolean,
             cellHasFocus: Boolean
         ): Component {
-            val label = options!![value] ?: value.toString()
+            val label = options?.get(value) ?: value.toString()
             return super.getListCellRendererComponent(list, label, index, isSelected, cellHasFocus)
         }
     }
