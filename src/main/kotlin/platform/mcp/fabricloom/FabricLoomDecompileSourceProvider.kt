@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -72,7 +72,7 @@ class FabricLoomDecompileSourceProvider : AttachSourcesProvider {
         AttachSourcesProvider.AttachSourcesAction {
 
         override fun getName(): String = "Decompile with ${decompiler.name}"
-
+        @Suppress("DialogTitleCapitalization") // Minecraft is a proper noun
         override fun getBusyText(): String = "Decompiling Minecraft..."
 
         override fun perform(orderEntriesContainingFile: List<LibraryOrderEntry>): ActionCallback {

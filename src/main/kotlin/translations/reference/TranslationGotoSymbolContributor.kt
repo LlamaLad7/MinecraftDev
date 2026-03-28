@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -39,10 +39,10 @@ class TranslationGotoSymbolContributor : ChooseByNameContributor {
         } else {
             GlobalSearchScope.projectScope(project)
         }
-        val keys = FileBasedIndex.getInstance().getAllKeys(TranslationIndex.NAME, project)
+        val keys = FileBasedIndex.getInstance().getAllKeys(TranslationIndex.Util.NAME, project)
         val translations = keys
             .asSequence()
-            .flatMap { TranslationIndex.getEntries(scope, it).merge("").translations.asSequence() }
+            .flatMap { TranslationIndex.Util.getEntries(scope, it).merge("").translations.asSequence() }
 
         return translations.map { it.key }.distinct().filter { it.isNotEmpty() }.toTypedArray()
     }
@@ -59,7 +59,7 @@ class TranslationGotoSymbolContributor : ChooseByNameContributor {
             GlobalSearchScope.projectScope(project)
         }
         val deprecations = DeprecatedTranslations.getInstance(project)
-        val elements = TranslationInverseIndex.findElements(deprecations.inverseRenamed[name] ?: name, scope)
+        val elements = TranslationInverseIndex.Util.findElements(deprecations.inverseRenamed[name] ?: name, scope)
 
         return elements.mapToArray { it as NavigationItem }
     }

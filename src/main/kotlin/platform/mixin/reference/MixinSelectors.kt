@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -244,10 +244,10 @@ class MixinRegexParser : MixinSelectorParser {
             return null
         }
         var foundAny = false
-        var ownerPattern = MATCH_EVERYTHING
-        var namePattern = MATCH_EVERYTHING
-        var descPattern = MATCH_EVERYTHING
-        for (match in PATTERN.findAll(value)) {
+        var ownerPattern = Const.MATCH_EVERYTHING
+        var namePattern = Const.MATCH_EVERYTHING
+        var descPattern = Const.MATCH_EVERYTHING
+        for (match in Const.PATTERN.findAll(value)) {
             foundAny = true
             val pattern = match.groups[3]!!.value
             when (match.groups[2]?.value) {
@@ -275,8 +275,8 @@ class MixinRegexParser : MixinSelectorParser {
     private fun String.safeToRegex(): Regex {
         return try {
             toRegex()
-        } catch (e: PatternSyntaxException) {
-            MATCH_EVERYTHING
+        } catch (_: PatternSyntaxException) {
+            Const.MATCH_EVERYTHING
         }
     }
 
@@ -286,19 +286,19 @@ class MixinRegexParser : MixinSelectorParser {
             return null
         }
         var entirePattern = pattern.substring(1, pattern.length - 1)
-        if (SPECIAL_CHARS.containsMatchIn(entirePattern)) {
+        if (Const.SPECIAL_CHARS.containsMatchIn(entirePattern)) {
             return null
         }
-        entirePattern = entirePattern.replace(UNESCAPED_BACKSLASH, "")
+        entirePattern = entirePattern.replace(Const.UNESCAPED_BACKSLASH, "")
         entirePattern = entirePattern.replace("\\\\", "\\")
         return entirePattern
     }
 
-    companion object {
-        private val MATCH_EVERYTHING = ".*".toRegex()
-        private val PATTERN = "((owner|name|desc)\\s*=\\s*)?/(.*?)(?<!\\\\)/".toRegex()
-        private val SPECIAL_CHARS = "(?<!\\\\)(?:\\\\\\\\)*[\\^\$.|?*+()\\[\\]{}]".toRegex()
-        private val UNESCAPED_BACKSLASH = "(?<!\\\\)\\\\(?!(\\\\\\\\)*\\\\)".toRegex()
+    private object Const {
+        val MATCH_EVERYTHING = Regex(".*")
+        val PATTERN = Regex("((owner|name|desc)\\s*=\\s*)?/(.*?)(?<!\\\\)/")
+        val SPECIAL_CHARS = Regex("(?<!\\\\)(?:\\\\\\\\)*[\\^$.|?*+()\\[\\]{}]")
+        val UNESCAPED_BACKSLASH = Regex("(?<!\\\\)\\\\(?!(\\\\\\\\)*\\\\)")
     }
 }
 
@@ -438,7 +438,7 @@ abstract class DynamicSelectorParser(id: String, vararg aliases: String) : Mixin
 class DescSelectorParser : DynamicSelectorParser("Desc", "mixin:Desc") {
     override fun parseDynamic(args: String, context: PsiElement): MixinSelector? {
         val descAnnotation = findDescAnnotation(args.lowercase(Locale.ENGLISH), context) ?: return null
-        return descSelectorFromAnnotation(descAnnotation)
+        return Util.descSelectorFromAnnotation(descAnnotation)
     }
 
     private fun findDescAnnotation(id: String, context: PsiElement): PsiAnnotation? {
@@ -546,7 +546,7 @@ class DescSelectorParser : DynamicSelectorParser("Desc", "mixin:Desc") {
         }
     }
 
-    companion object {
+    object Util {
         fun descSelectorFromAnnotation(descAnnotation: PsiAnnotation): DescSelector? {
             val explicitOwner = descAnnotation.findAttributeValue("owner")
                 ?.resolveClass()?.fullQualifiedName?.replace('.', '/')

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -28,7 +28,6 @@ import com.demonwav.mcdev.translations.identification.TranslationInstance
 import com.demonwav.mcdev.translations.index.TranslationIndex
 import com.demonwav.mcdev.translations.index.TranslationInverseIndex
 import com.demonwav.mcdev.translations.lang.gen.psi.LangEntry
-import com.demonwav.mcdev.util.filterNotNull
 import com.demonwav.mcdev.util.mapToArray
 import com.demonwav.mcdev.util.toTypedArray
 import com.intellij.codeInsight.lookup.LookupElementBuilder
@@ -55,7 +54,7 @@ class TranslationReference(
     override fun multiResolve(incompleteCode: Boolean): Array<ResolveResult> {
         val project = myElement.project
         val deprecations = DeprecatedTranslations.getInstance(project)
-        val entries = TranslationInverseIndex.findElements(
+        val entries = TranslationInverseIndex.Util.findElements(
             deprecations.inverseRenamed[key.full] ?: key.full,
             GlobalSearchScope.allScope(project),
             TranslationConstants.DEFAULT_LOCALE,
@@ -65,7 +64,7 @@ class TranslationReference(
 
     override fun getVariants(): Array<Any?> {
         val project = myElement.project
-        val defaultTranslations = TranslationIndex.getAllDefaultTranslations(project)
+        val defaultTranslations = TranslationIndex.Util.getAllDefaultTranslations(project)
         val deprecations = DeprecatedTranslations.getInstance(project)
         val pattern = Regex("${Regex.escape(key.prefix)}(.*?)${Regex.escape(key.suffix)}")
         return defaultTranslations

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -47,7 +47,7 @@ import com.intellij.psi.util.PsiUtil
 class MixinClassCastInspectionSuppressor : InspectionSuppressor {
 
     override fun isSuppressedFor(element: PsiElement, toolId: String): Boolean {
-        if (toolId !in INSPECTIONS) {
+        if (toolId !in Const.INSPECTIONS) {
             return false
         }
 
@@ -98,7 +98,7 @@ class MixinClassCastInspectionSuppressor : InspectionSuppressor {
             is PsiClassType -> psiType.resolve()
             else -> null
         } ?: return typeConstraint
-        val mixins = FindMixinsAction.findMixins(targetClass, project) ?: return typeConstraint
+        val mixins = FindMixinsAction.Util.findMixins(targetClass, project) ?: return typeConstraint
         if (mixins.isEmpty()) return typeConstraint
         val elementFactory = JavaPsiFacade.getElementFactory(project)
         val mixinTypes = mixins.map { mixinClass ->
@@ -120,7 +120,7 @@ class MixinClassCastInspectionSuppressor : InspectionSuppressor {
     override fun getSuppressActions(element: PsiElement?, toolId: String): Array<out SuppressQuickFix> =
         SuppressQuickFix.EMPTY_ARRAY
 
-    companion object {
-        private val INSPECTIONS = setOf("ConstantConditions", "ConstantValue", "DataFlowIssue")
+    private object Const {
+        val INSPECTIONS = setOf("ConstantConditions", "ConstantValue", "DataFlowIssue")
     }
 }

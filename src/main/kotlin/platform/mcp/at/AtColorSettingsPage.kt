@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -31,12 +31,12 @@ class AtColorSettingsPage : ColorSettingsPage {
     override fun getIcon() = PlatformAssets.MCP_ICON
     override fun getHighlighter() = AtSyntaxHighlighter()
     override fun getDemoText() =
-        """
+        $$"""
         # Minecraft
 
         public net.minecraft.block.BlockFlowerPot func_149928_a(Lnet/minecraft/block/Block;I)Z # canNotContain
         private-f net.minecraft.inventory.ContainerChest field_7515F4_f # numRows
-        protected net.minecraft.block.state.BlockStateContainer${'$'}StateImplementation
+        protected net.minecraft.block.state.BlockStateContainer$StateImplementation
         public-f net.minecraft.item.Item func_77656_e(I)Lnet/minecraft/item/Item; # setMaxDamage
         public+f net.minecraft.server.management.UserList *
         default+f net.minecraft.item.Item *()
@@ -44,17 +44,17 @@ class AtColorSettingsPage : ColorSettingsPage {
         """.trimIndent()
 
     override fun getAdditionalHighlightingTagToDescriptorMap(): Map<String, TextAttributesKey>? = null
-    override fun getAttributeDescriptors() = DESCRIPTORS
+    override fun getAttributeDescriptors() = Constants.DESCRIPTORS
     override fun getColorDescriptors(): Array<out ColorDescriptor> = ColorDescriptor.EMPTY_ARRAY
     override fun getDisplayName() = "Access Transformers"
 
-    companion object {
-        private val DESCRIPTORS = arrayOf(
+    private object Constants {
+        val DESCRIPTORS = arrayOf(
             AttributesDescriptor("Keyword", AtSyntaxHighlighter.KEYWORD),
-            AttributesDescriptor("Class Name", AtSyntaxHighlighter.CLASS_NAME),
-            AttributesDescriptor("Class Value", AtSyntaxHighlighter.CLASS_VALUE),
-            AttributesDescriptor("Primitive Value", AtSyntaxHighlighter.PRIMITIVE),
-            AttributesDescriptor("Element Name", AtSyntaxHighlighter.ELEMENT_NAME),
+            AttributesDescriptor("Class name", AtSyntaxHighlighter.CLASS_NAME),
+            AttributesDescriptor("Class value", AtSyntaxHighlighter.CLASS_VALUE),
+            AttributesDescriptor("Primitive value", AtSyntaxHighlighter.PRIMITIVE),
+            AttributesDescriptor("Element name", AtSyntaxHighlighter.ELEMENT_NAME),
             AttributesDescriptor("Asterisk", AtSyntaxHighlighter.ASTERISK),
             AttributesDescriptor("Comment", AtSyntaxHighlighter.COMMENT),
         )

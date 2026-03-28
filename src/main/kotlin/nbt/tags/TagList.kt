@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -51,7 +51,7 @@ class TagList(val type: NbtTypeId, val tags: List<NbtTag>) : NbtTag {
             return false
         }
 
-        return (0 until this.tags.size).all { i -> other.tags[i] == this.tags[i] }
+        return this.tags.indices.all { i -> other.tags[i] == this.tags[i] }
     }
 
     override fun hashCode() = Objects.hash(type, tags)

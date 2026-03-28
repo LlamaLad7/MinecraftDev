@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -55,7 +55,7 @@ class TranslationFileAnnotator : Annotator {
     }
 
     private fun checkEntryDuplicates(element: PsiElement, translation: Translation, annotations: AnnotationHolder) {
-        val count = TranslationIndex.getTranslations(element.containingFile).count { it.key == translation.key }
+        val count = TranslationIndex.Util.getTranslations(element.containingFile).count { it.key == translation.key }
         if (count > 1) {
             annotations.newAnnotation(HighlightSeverity.WARNING, "Duplicate translation keys \"${translation.key}\".")
                 .newFix(RemoveDuplicatesIntention(translation, element)).universal().registerFix()
@@ -65,7 +65,7 @@ class TranslationFileAnnotator : Annotator {
 
     private fun checkEntryMatchesDefault(element: PsiElement, translation: Translation, annotations: AnnotationHolder) {
         val domain = element.containingFile?.virtualFile?.mcDomain
-        val defaultEntries = TranslationIndex.getAllDefaultEntries(element.project, domain)
+        val defaultEntries = TranslationIndex.Util.getAllDefaultEntries(element.project, domain)
         if (defaultEntries.any { it.contains(translation.key) }) {
             return
         }

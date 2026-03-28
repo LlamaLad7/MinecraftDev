@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -76,41 +76,6 @@ class WrapWithConditionValidNonVoidInspection : MixinInspection() {
             }
         }
     }
-
-    companion object {
-        private fun WrapWithConditionHandler.getReplaceWithWrapOpInfo(annotation: PsiAnnotation): ReplaceWithWrapOpInfo? {
-            var targetType: Type? = null
-            var requiredParameterCount: Int? = null
-
-            for (target in MixinAnnotationHandler.resolveTarget(annotation)) {
-                if (target !is MethodTargetMember) {
-                    continue
-                }
-
-                for (insn in resolveInstructions(annotation, target.classAndMethod.clazz, target.classAndMethod.method)) {
-                    val newTargetType = getValidTargetType(insn.insn) ?: continue
-                    if (targetType != null && targetType != newTargetType) {
-                        return null
-                    }
-                    targetType = newTargetType
-
-                    val newRequiredParameterCount = getRequiredParameterCount(insn.insn, target.classAndMethod.clazz, annotation)
-                    if (requiredParameterCount != null && requiredParameterCount != newRequiredParameterCount) {
-                        return null
-                    }
-                    requiredParameterCount = newRequiredParameterCount
-                }
-            }
-
-            if (targetType == null || requiredParameterCount == null) {
-                return null
-            }
-
-            return ReplaceWithWrapOpInfo(targetType, requiredParameterCount)
-        }
-    }
-
-    private class ReplaceWithWrapOpInfo(val targetType: Type, val requiredParameterCount: Int)
 
     private class ReplaceWithWrapOpFix(annotation: PsiAnnotation) : LocalQuickFixOnPsiElement(annotation) {
         override fun getFamilyName() = "Replace with @WrapOperation"
@@ -202,4 +167,37 @@ class WrapWithConditionValidNonVoidInspection : MixinInspection() {
             return factory.createExpressionFromText(expressionText, method)
         }
     }
+}
+
+private class ReplaceWithWrapOpInfo(val targetType: Type, val requiredParameterCount: Int)
+
+private fun WrapWithConditionHandler.getReplaceWithWrapOpInfo(annotation: PsiAnnotation): ReplaceWithWrapOpInfo? {
+    var targetType: Type? = null
+    var requiredParameterCount: Int? = null
+
+    for (target in MixinAnnotationHandler.resolveTarget(annotation)) {
+        if (target !is MethodTargetMember) {
+            continue
+        }
+
+        for (insn in resolveInstructions(annotation, target.classAndMethod.clazz, target.classAndMethod.method)) {
+            val newTargetType = getValidTargetType(insn.insn) ?: continue
+            if (targetType != null && targetType != newTargetType) {
+                return null
+            }
+            targetType = newTargetType
+
+            val newRequiredParameterCount = getRequiredParameterCount(insn.insn, target.classAndMethod.clazz, annotation)
+            if (requiredParameterCount != null && requiredParameterCount != newRequiredParameterCount) {
+                return null
+            }
+            requiredParameterCount = newRequiredParameterCount
+        }
+    }
+
+    if (targetType == null || requiredParameterCount == null) {
+        return null
+    }
+
+    return ReplaceWithWrapOpInfo(targetType, requiredParameterCount)
 }

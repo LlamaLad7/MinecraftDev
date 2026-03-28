@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -68,7 +68,7 @@ class BukkitModule<out T : AbstractModuleType<*>>(facet: MinecraftFacet, type: T
 
     override val moduleType: T = type
 
-    override val eventListenerGenSupport: EventListenerGenerationSupport? = BukkitEventListenerGenerationSupport()
+    override val eventListenerGenSupport: EventListenerGenerationSupport = BukkitEventListenerGenerationSupport()
 
     private val pluginParentClasses = listOf(
         BukkitConstants.PLUGIN,
@@ -174,26 +174,5 @@ class BukkitModule<out T : AbstractModuleType<*>>(facet: MinecraftFacet, type: T
         super.dispose()
 
         pluginYml = null
-    }
-
-    companion object {
-        fun generateBukkitStyleEventListenerMethod(
-            chosenClass: PsiClass,
-            chosenName: String,
-            project: Project,
-            annotationName: String,
-            setIgnoreCancelled: Boolean,
-        ): PsiMethod? {
-            val newMethod = createVoidMethodWithParameterType(project, chosenName, chosenClass) ?: return null
-            val modifierList = newMethod.modifierList
-            val annotation = modifierList.addAnnotation(annotationName)
-
-            if (setIgnoreCancelled) {
-                val value = JavaPsiFacade.getElementFactory(project).createExpressionFromText("true", annotation)
-                annotation.setDeclaredAttributeValue("ignoreCancelled", value)
-            }
-
-            return newMethod
-        }
     }
 }

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -54,7 +54,7 @@ class ModifyVariableArgsOnlyInspection : MixinInspection() {
                     MixinAnnotationHandler.forMixinAnnotation(MODIFY_VARIABLE) as? InjectorAnnotationHandler ?: return
                 val localInfo = LocalInfo.fromAnnotation(localType, modifyVariable)
 
-                if (shouldReport(localInfo, injector, modifyVariable)) {
+                if (Util.shouldReport(localInfo, injector, modifyVariable)) {
                     val description = "@ModifyVariable may be argsOnly = true"
                     holder.registerProblem(
                         problemElement,
@@ -66,7 +66,7 @@ class ModifyVariableArgsOnlyInspection : MixinInspection() {
         }
     }
 
-    companion object {
+    object Util {
         fun shouldReport(
             localInfo: LocalInfo,
             injector: InjectorAnnotationHandler,

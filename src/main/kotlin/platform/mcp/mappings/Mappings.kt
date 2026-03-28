@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -62,11 +62,9 @@ class Mappings(
 
     fun tryGetMappedField(reference: MemberReference) = fieldMap.inverse()[reference]
     fun getMappedField(reference: MemberReference) = tryGetMappedField(reference) ?: reference
-    fun tryGetMappedField(field: PsiField) = tryGetMappedField(field.qualifiedMemberReference)
 
     fun tryGetMappedMethod(reference: MemberReference) = methodMap.inverse()[reference]
     fun getMappedMethod(reference: MemberReference) = tryGetMappedMethod(reference) ?: reference
-    fun tryGetMappedMethod(method: PsiMethod) = tryGetMappedMethod(method.qualifiedMemberReference)
 
     fun mapIntermediaryToMapped(name: String) = intermediaryNames[name]
 }
@@ -112,7 +110,7 @@ fun Module.getMojangField(field: PsiField): String? {
 }
 
 fun Module.getMappedMethod(mojangMethod: MemberReference): String {
-    return namedToMojang?.tryGetMappedMethod(mojangMethod)?.name ?: return mojangMethod.name
+    return namedToMojang?.tryGetMappedMethod(mojangMethod)?.name ?: mojangMethod.name
 }
 
 fun Module.getMappedMethod(mojangClass: String, mojangMethod: String, mojangDescriptor: String): String {
@@ -127,7 +125,7 @@ fun Module.getMappedMethodCall(mojangClass: String, mojangMethod: String, mojang
 }
 
 fun Module.getMojangMethod(mappedMethod: MemberReference): String {
-    return namedToMojang?.getIntermediaryMethod(mappedMethod)?.name ?: return mappedMethod.name
+    return namedToMojang?.getIntermediaryMethod(mappedMethod)?.name ?: mappedMethod.name
 }
 
 fun Module.getMojangMethod(mappedClass: String, mappedMethod: String, mappedDescriptor: String): String {

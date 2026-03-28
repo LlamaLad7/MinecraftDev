@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -89,8 +89,8 @@ class JdkComboBoxWithPreference internal constructor(
             preferenceData.jdk = version
             reloadModel()
 
-            for (jdkVersion in version.ordinal until JavaSdkVersion.values().size) {
-                val jdk = JavaSdkVersion.values()[jdkVersion]
+            for (jdkVersion in version.ordinal until JavaSdkVersion.entries.size) {
+                val jdk = JavaSdkVersion.entries[jdkVersion]
 
                 val preferredSdkPath = preferenceData.sdkPathByJdk[jdk]
                 if (preferredSdkPath != null) {
@@ -145,7 +145,7 @@ fun Row.jdkComboBoxWithPreference(
         for (preferenceDataStr in preferenceDataStrs) {
             val parts = preferenceDataStr.split('=', limit = 2)
             val featureVersion = parts.firstOrNull()?.toIntOrNull() ?: continue
-            val knownJdkVersions = JavaSdkVersion.values()
+            val knownJdkVersions = JavaSdkVersion.entries
             if (featureVersion !in knownJdkVersions.indices) {
                 continue
             }

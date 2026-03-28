@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -32,6 +32,7 @@ import java.awt.Component
 import java.awt.event.KeyEvent
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
+import java.io.Serial
 import javax.swing.DefaultListCellRenderer
 import javax.swing.JComponent
 import javax.swing.JDialog
@@ -74,7 +75,7 @@ class TranslationSortOrderDialog(excludeDefaultOption: Boolean, defaultSelection
         title = MCDevBundle("translation_sort.title")
 
         // call onCancel() when cross is clicked
-        defaultCloseOperation = WindowConstants.DO_NOTHING_ON_CLOSE
+        defaultCloseOperation = DO_NOTHING_ON_CLOSE
         addWindowListener(
             object : WindowAdapter() {
                 override fun windowClosing(e: WindowEvent?) {
@@ -111,6 +112,9 @@ class TranslationSortOrderDialog(excludeDefaultOption: Boolean, defaultSelection
             val displayValue = (value as? Ordering)?.text
             return super.getListCellRendererComponent(list, displayValue, index, isSelected, cellHasFocus)
         }
+
+        @Serial
+        private fun readResolve(): Any = CellRenderer
     }
 
     companion object {

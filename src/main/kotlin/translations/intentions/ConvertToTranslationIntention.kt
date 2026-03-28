@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -95,7 +95,7 @@ class ConvertToTranslationIntention : PsiElementBaseIntentionAction() {
                 val documentManager = PsiDocumentManager.getInstance(project)
                 val psi = documentManager.getPsiFile(editor.document) ?: return
                 val callCode = if (translationSettings.isUseCustomConvertToTranslationTemplate) {
-                    translationSettings.convertToTranslationTemplate.replace("\$key", key)
+                    translationSettings.convertToTranslationTemplate.replace($$"$key", key)
                 } else {
                     element.findModule()?.getMappedMethodCall(
                         "net.minecraft.client.resource.language.I18n",

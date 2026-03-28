@@ -57,7 +57,7 @@ class VanillaGradleDecompileSourceProvider : AttachSourcesProvider {
 
         override fun getName(): String = "Decompile Minecraft"
 
-        override fun getBusyText(): String = "Decompiling Minecraft..."
+        override fun getBusyText(): String = @Suppress("DialogTitleCapitalization") "Decompiling Minecraft..."
 
         override fun perform(orderEntriesContainingFile: List<LibraryOrderEntry>): ActionCallback {
             val project = orderEntriesContainingFile.firstOrNull()?.ownerModule?.project

@@ -34,6 +34,7 @@ import com.intellij.unscramble.UnscrambleSupport
 import java.awt.Dimension
 import java.nio.file.Path
 import java.nio.file.Paths
+import javax.swing.ComboBoxModel
 import javax.swing.JPanel
 import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingReader
@@ -49,8 +50,9 @@ class TinyUnscrambler : UnscrambleSupport<TinyUnscrambler.SettingsComponent> {
 
     class SettingsComponent(mappings: Map<String, Path>) : JPanel(GridLayoutManager(1, 2)) {
 
-        val mappingsBoxModel = MapComboBoxModel(mappings)
-        val mappingsBox = ComboBox(mappingsBoxModel)
+        val mappingsBoxModel: MapComboBoxModel<String, Path> = MapComboBoxModel(mappings)
+        @Suppress("UNCHECKED_CAST")
+        val mappingsBox: ComboBox<String> = ComboBox(mappingsBoxModel as ComboBoxModel<String>)
 
         init {
             mappingsBox.renderer = SimpleListCellRenderer.create { label, value, _ ->

@@ -52,7 +52,7 @@ class MixinClassTypeInspection : MixinInspection() {
             }
 
             val classKeywordElement = mixinClass.children.firstOrNull {
-                (it as? PsiKeyword)?.tokenType in CLASS_KEYWORD_SET
+                (it as? PsiKeyword)?.tokenType in Const.CLASS_KEYWORD_SET
             }
             val problemElement = classKeywordElement ?: mixinClass.nameIdentifier ?: mixinClass
 
@@ -95,8 +95,8 @@ class MixinClassTypeInspection : MixinInspection() {
         }
     }
 
-    companion object {
-        private val CLASS_KEYWORD_SET = TokenSet.create(
+    private object Const {
+        val CLASS_KEYWORD_SET = TokenSet.create(
             JavaTokenType.CLASS_KEYWORD,
             JavaTokenType.INTERFACE_KEYWORD,
             JavaTokenType.ENUM_KEYWORD,

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -45,8 +45,8 @@ import com.intellij.psi.util.PsiUtilCore
 
 sealed class TranslationCompletionContributor : CompletionContributor() {
     protected fun handleKey(text: String, element: PsiElement, domain: String?, result: CompletionResultSet) {
-        val defaultEntries = TranslationIndex.getAllDefaultTranslations(element.project, domain)
-        val availableKeys = TranslationIndex.getTranslations(element.containingFile.originalFile).map { it.key }.toSet()
+        val defaultEntries = TranslationIndex.Util.getAllDefaultTranslations(element.project, domain)
+        val availableKeys = TranslationIndex.Util.getTranslations(element.containingFile.originalFile).map { it.key }.toSet()
         val prefixResult = result.withPrefixMatcher(text)
 
         for (entry in defaultEntries) {
@@ -123,14 +123,14 @@ class LangCompletionContributor : TranslationCompletionContributor() {
             return
         }
 
-        if (KEY_PATTERN.accepts(position) || DUMMY_PATTERN.accepts(position)) {
+        if (Const.KEY_PATTERN.accepts(position) || Const.DUMMY_PATTERN.accepts(position)) {
             val text = position.text.let { it.substring(0, it.length - CompletionUtil.DUMMY_IDENTIFIER.length) }
             val domain = file.mcDomain
             handleKey(text, position, domain, result)
         }
     }
 
-    companion object {
+    private object Const {
         val KEY_PATTERN = PlatformPatterns.psiElement()
             .withElementType(PlatformPatterns.elementType().oneOf(LangTypes.KEY))
         val DUMMY_PATTERN = PlatformPatterns.psiElement()

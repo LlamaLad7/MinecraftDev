@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -101,7 +101,7 @@ object TranslationIdentifier {
 
         val shouldFold = element is ULiteralExpression && element.isString && key !in deprecations.removed && key !in deprecations.renamed
 
-        val entries = TranslationIndex.getAllDefaultEntries(project).merge("")
+        val entries = TranslationIndex.Util.getAllDefaultEntries(project).merge("")
         val translation = entries[deprecations.inverseRenamed[key] ?: key]?.text
             ?: return TranslationInstance( // translation doesn't exist
                 null,
@@ -223,7 +223,7 @@ object TranslationIdentifier {
     fun UExpression.paramDisplayString(): String {
         val visited = mutableSetOf<UExpression?>()
 
-        fun eval(expr: UExpression, defaultValue: String = "\${${expr.asSourceString()}}"): String {
+        fun eval(expr: UExpression, defaultValue: String = $$"${$${expr.asSourceString()}}"): String {
             if (!visited.add(expr)) {
                 return defaultValue
             }
@@ -232,7 +232,7 @@ object TranslationIdentifier {
                 is UQualifiedReferenceExpression -> {
                     val selector = expr.selector
                     if (selector is UCallExpression) {
-                        return eval(selector, "\${${expr.asSourceString()}}")
+                        return eval(selector, $$"${$${expr.asSourceString()}}")
                     }
                 }
 

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -27,8 +27,8 @@ import com.intellij.openapi.options.colors.ColorDescriptor
 import com.intellij.openapi.options.colors.ColorSettingsPage
 
 class MEExpressionColorSettingsPage : ColorSettingsPage {
-    companion object {
-        private val DESCRIPTORS = arrayOf(
+    private object Const {
+        val DESCRIPTORS = arrayOf(
             AttributesDescriptor(
                 MCDevBundle.pointer("mixinextras.expression.lang.highlighting.string.display_name"),
                 MEExpressionSyntaxHighlighter.STRING
@@ -121,7 +121,7 @@ class MEExpressionColorSettingsPage : ColorSettingsPage {
             ),
         )
 
-        private val TAGS = mapOf(
+        val TAGS = mapOf(
             "call" to MEExpressionSyntaxHighlighter.IDENTIFIER_CALL,
             "class_name" to MEExpressionSyntaxHighlighter.IDENTIFIER_CLASS_NAME,
             "member_name" to MEExpressionSyntaxHighlighter.IDENTIFIER_MEMBER_NAME,
@@ -146,8 +146,8 @@ class MEExpressionColorSettingsPage : ColorSettingsPage {
         )[0]
     """.trimIndent()
 
-    override fun getAdditionalHighlightingTagToDescriptorMap() = TAGS
-    override fun getAttributeDescriptors() = DESCRIPTORS
+    override fun getAdditionalHighlightingTagToDescriptorMap() = Const.TAGS
+    override fun getAttributeDescriptors() = Const.DESCRIPTORS
     override fun getColorDescriptors(): Array<ColorDescriptor> = ColorDescriptor.EMPTY_ARRAY
     override fun getDisplayName() = MCDevBundle("mixinextras.expression.lang.display_name")
 }

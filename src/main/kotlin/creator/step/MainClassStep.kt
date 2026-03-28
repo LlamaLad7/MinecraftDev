@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -48,15 +48,6 @@ class MainClassStep(parent: NewProjectWizardStep) : AbstractNewProjectWizardStep
         return buildSystemProps.groupId.toPackageName() +
             "." + buildSystemProps.artifactId.toPackageName() +
             "." + findStep<AbstractModNameStep>().name.toJavaClassName()
-    }
-
-    private fun suggestGroupId(): String {
-        val parts = className.split('.').dropLast(2)
-        return if (parts.isEmpty()) {
-            findStep<BuildSystemPropertiesStep<*>>().groupId
-        } else {
-            parts.joinToString(".")
-        }
     }
 
     val classNameProperty = propertyGraph.lazyProperty(::suggestMainClassName)

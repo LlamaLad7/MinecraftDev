@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -79,7 +79,7 @@ object JsonTranslationProvider : TranslationProvider {
         val psiFile = PsiManager.getInstance(project).findFile(file) as? JsonFile ?: return emptyList()
         return CachedValuesManager.getCachedValue(
             psiFile,
-            Key<CachedValue<List<JsonProperty>>>("translation_lookup.$key"),
+            Key("translation_lookup.$key"),
         ) {
             val value = psiFile.topLevelValue as? JsonObject
             CachedValueProvider.Result.create(

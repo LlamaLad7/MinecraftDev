@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -46,9 +46,7 @@ import com.intellij.psi.search.searches.AnnotatedElementsSearch
 import com.intellij.psi.util.PsiModificationTracker
 
 class FindMixinsAction : AnAction() {
-    companion object {
-        private const val TOOL_WINDOW_ID = "Find Mixins"
-
+    object Util {
         fun findMixins(
             clazz: PsiClass,
             project: Project,
@@ -131,7 +129,7 @@ class FindMixinsAction : AnAction() {
         val classOfElement = element.findReferencedClass() ?: return
 
         invokeLater {
-            openFindMixinsUI(project, classOfElement, { showInBestPositionFor(e.dataContext) })
+            Util.openFindMixinsUI(project, classOfElement, { showInBestPositionFor(e.dataContext) })
         }
     }
 }

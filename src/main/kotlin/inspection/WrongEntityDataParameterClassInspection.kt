@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -51,11 +51,11 @@ class WrongEntityDataParameterClassInspection : AbstractBaseJavaLocalInspectionT
             val className = method.containingClass?.fullQualifiedName ?: return
             val methodName = method.name
 
-            if (className !in ENTITY_DATA_MANAGER_CLASSES || methodName !in DEFINE_ID_METHODS) return
+            if (className !in Const.ENTITY_DATA_MANAGER_CLASSES || methodName !in Const.DEFINE_ID_METHODS) return
 
             val containingClass = expression.findContainingClass() ?: return
 
-            if (!isEntitySubclass(containingClass)) return
+            if (!Const.isEntitySubclass(containingClass)) return
 
             val firstParameter = expression.argumentList.expressions.firstOrNull() ?: return
             val firstParameterGenericsClass =
@@ -91,23 +91,23 @@ class WrongEntityDataParameterClassInspection : AbstractBaseJavaLocalInspectionT
         override fun getFamilyName() = name
     }
 
-    companion object {
-        private val ENTITY_CLASSES = setOf(
+    private object Const {
+        val ENTITY_CLASSES = setOf(
             "net.minecraft.entity.Entity",
             "net.minecraft.world.entity.Entity",
         )
-        private val ENTITY_DATA_MANAGER_CLASSES = setOf(
+        val ENTITY_DATA_MANAGER_CLASSES = setOf(
             "net.minecraft.network.datasync.EntityDataManager",
             "net.minecraft.network.syncher.SynchedEntityData",
             "net.minecraft.entity.data.DataTracker",
         )
-        private val DEFINE_ID_METHODS = setOf(
+        val DEFINE_ID_METHODS = setOf(
             "defineId",
             "createKey",
             "registerData",
         )
 
-        private fun isEntitySubclass(clazz: PsiClass): Boolean =
+        fun isEntitySubclass(clazz: PsiClass): Boolean =
             InheritanceUtil.getSuperClasses(clazz).any { it.qualifiedName in ENTITY_CLASSES }
     }
 }

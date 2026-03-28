@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -39,6 +39,6 @@ enum class NbtTypeId(val typeIdByte: Byte, val tagName: String, val tagClass: KC
     ;
 
     companion object {
-        fun getById(id: Byte) = values().firstOrNull { it.typeIdByte == id }
+        fun getById(id: Byte) = entries.firstOrNull { it.typeIdByte == id }
     }
 }

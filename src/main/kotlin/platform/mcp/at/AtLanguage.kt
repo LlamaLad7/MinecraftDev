@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -21,5 +21,9 @@
 package com.demonwav.mcdev.platform.mcp.at
 
 import com.intellij.lang.Language
+import java.io.Serial
 
-object AtLanguage : Language("Access Transformers")
+object AtLanguage : Language("Access Transformers") {
+    @Serial
+    private fun readResolve(): Any = AtLanguage
+}

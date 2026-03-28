@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -39,10 +39,10 @@ object ForgeConstants {
     const val MODS_TOML = "mods.toml"
     const val PACK_MCMETA = "pack.mcmeta"
 
-    const val JAR_VERSION_VAR = "\${file.jarVersion}"
+    const val JAR_VERSION_VAR = $$"${file.jarVersion}"
 
     // From https://github.com/MinecraftForge/MinecraftForge/blob/0ff8a596fc1ef33d4070be89dd5cb4851f93f731/src/fmllauncher/java/net/minecraftforge/fml/loading/StringSubstitutor.java
-    val KNOWN_SUBSTITUTIONS = setOf(JAR_VERSION_VAR, "\${global.mcVersion}", "\${global.forgeVersion}")
+    val KNOWN_SUBSTITUTIONS = setOf(JAR_VERSION_VAR, $$"${global.mcVersion}", $$"${global.forgeVersion}")
 
     val DISPLAY_TESTS = setOf("MATCH_VERSION", "IGNORE_SERVER_VERSION", "IGNORE_ALL_VERSION", "NONE")
     val DEPENDENCY_SIDES = setOf("BOTH", "CLIENT", "SERVER")

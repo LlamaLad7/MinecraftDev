@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -79,7 +79,7 @@ inline fun <T : Any> PsiAnnotationMemberValue.parseArray(func: (PsiAnnotationMem
     return if (this is PsiArrayInitializerMemberValue) {
         initializers.mapNotNull(func)
     } else {
-        return listOfNotNull(func(this))
+        listOfNotNull(func(this))
     }
 }
 

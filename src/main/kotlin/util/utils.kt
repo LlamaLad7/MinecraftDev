@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -29,8 +29,6 @@ import com.intellij.openapi.application.WriteAction
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.module.Module
-import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
@@ -56,7 +54,7 @@ import org.jetbrains.annotations.NonNls
 import org.jetbrains.concurrency.Promise
 import org.jetbrains.concurrency.runAsync
 
-inline fun <T : Any?> runWriteTask(crossinline func: () -> T): T {
+inline fun <T> runWriteTask(crossinline func: () -> T): T {
     return invokeAndWait {
         ApplicationManager.getApplication().runWriteAction(Computable { func() })
     }
@@ -89,7 +87,7 @@ inline fun Project.runWriteTaskInSmartMode(crossinline func: () -> Unit) {
     dumbService.runWhenSmart(runnable)
 }
 
-fun <T : Any?> invokeAndWait(func: () -> T): T {
+fun <T> invokeAndWait(func: () -> T): T {
     val ref = Ref<T>()
     ApplicationManager.getApplication().invokeAndWait({ ref.set(func()) }, ModalityState.defaultModalityState())
     return ref.get()
@@ -103,18 +101,14 @@ fun invokeLater(expired: Condition<*>, func: () -> Unit) {
     ApplicationManager.getApplication().invokeLater(func, ModalityState.defaultModalityState(), expired)
 }
 
-fun invokeLaterAny(func: () -> Unit) {
-    ApplicationManager.getApplication().invokeLater(func, ModalityState.any())
-}
-
 inline fun <T> runWriteActionAndWait(crossinline action: () -> T): T {
     return WriteAction.computeAndWait(ThrowableComputable { action() })
 }
 
-inline fun <T : Any?> PsiFile.runWriteAction(crossinline func: () -> T) =
+inline fun <T> PsiFile.runWriteAction(crossinline func: () -> T) =
     applyWriteAction { func() }
 
-inline fun <T : Any?> PsiFile.applyWriteAction(crossinline func: PsiFile.() -> T): T {
+inline fun <T> PsiFile.applyWriteAction(crossinline func: PsiFile.() -> T): T {
     val result = WriteCommandAction.writeCommandAction(this).withGlobalUndo().compute<T, Throwable> { func() }
     val documentManager = PsiDocumentManager.getInstance(project)
     val document = documentManager.getDocument(this) ?: return result
@@ -234,40 +228,10 @@ inline fun <T> Iterable<T>.firstIndexOrNull(predicate: (T) -> Boolean): Int? {
     return null
 }
 
-fun Module.findChildren(): Set<Module> {
-    return runReadAction {
-        val manager = ModuleManager.getInstance(project)
-        val result = mutableSetOf<Module>()
-
-        for (m in manager.modules) {
-            if (m === this) {
-                continue
-            }
-
-            val path = manager.getModuleGrouper(null).getGroupPath(m)
-            if (path.isEmpty()) {
-                continue
-            }
-
-            val namedModule = manager.findModuleByName(path.last()) ?: continue
-
-            if (namedModule != this) {
-                continue
-            }
-
-            result.add(m)
-        }
-
-        return@runReadAction result
-    }
-}
-
 // Using the ugly TypeToken approach we can use any complex generic signature, including
 // nested generics
 inline fun <reified T : Any> Gson.fromJson(text: String): T = fromJson(text, object : TypeToken<T>() {}.type)
 fun <T : Any> Gson.fromJson(text: String, type: KClass<T>): T = fromJson(text, type.java)
-
-fun <K> Map<K, *>.containsAllKeys(vararg keys: K) = keys.all { this.containsKey(it) }
 
 /**
  * Splits a string into the longest prefix matching a predicate and the corresponding suffix *not* matching.
@@ -392,7 +356,7 @@ inline fun <T> runCatchingKtIdeaExceptions(action: () -> T): T? = try {
 }
 
 fun <T> Result<T>.getOrLogException(logger: Logger): T? {
-    return getOrLogException<T>(logger::error)
+    return getOrLogException(logger::error)
 }
 
 inline fun <T> Result<T>.getOrLogException(log: (Throwable) -> Unit): T? {
@@ -418,7 +382,7 @@ fun <S : CharSequence, R> S.ifNotBlank(block: (S) -> R): R? {
 inline fun <reified T : Enum<T>> enumValueOfOrNull(str: String): T? {
     return try {
         enumValueOf<T>(str)
-    } catch (e: IllegalArgumentException) {
+    } catch (_: IllegalArgumentException) {
         null
     }
 }

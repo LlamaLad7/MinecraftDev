@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -62,7 +62,7 @@ abstract class SrgActionBase : AnAction() {
         var parent = element.parent ?: return showBalloon(e, "Not a valid element")
 
         if (parent is PsiMember) {
-            val shadowTarget = ShadowHandler.getInstance()?.findFirstShadowTargetForReference(parent)?.element
+            val shadowTarget = ShadowHandler.Util.getInstance()?.findFirstShadowTargetForReference(parent)?.element
             if (shadowTarget != null) {
                 parent = shadowTarget
             }

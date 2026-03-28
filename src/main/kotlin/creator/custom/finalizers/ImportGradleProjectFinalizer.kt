@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -25,6 +25,7 @@ import com.intellij.openapi.application.EDT
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindowManager
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -67,7 +68,7 @@ suspend fun openBuildToolWindow(project: Project) = coroutineScope {
         // like normal here, we have to wait until after the build starts.
         val manager = ToolWindowManager.getInstance(project)
         for (i in 0 until 5) {
-            delay(250)
+            delay(250.milliseconds)
             manager.getToolWindow("Build")?.let {
                 withContext(Dispatchers.EDT) {
                     it.show()

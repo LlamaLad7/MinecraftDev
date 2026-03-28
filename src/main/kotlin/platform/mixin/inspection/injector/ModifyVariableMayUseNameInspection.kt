@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -69,7 +69,7 @@ class ModifyVariableMayUseNameInspection : MixinInspection() {
                 return
             }
 
-            val variableName = getVariableNameToIntroduce(localInfo, injector, modifyVariable) ?: return
+            val variableName = Util.getVariableNameToIntroduce(localInfo, injector, modifyVariable) ?: return
 
             val fixes = mutableListOf<LocalQuickFix>(ReplaceWithNameFix(modifyVariable, variableName))
 
@@ -103,7 +103,7 @@ class ModifyVariableMayUseNameInspection : MixinInspection() {
         }
     }
 
-    companion object {
+    object Util {
         fun getVariableNameToIntroduce(
             localInfo: LocalInfo,
             injector: InjectorAnnotationHandler,

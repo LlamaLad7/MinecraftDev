@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -635,7 +635,7 @@ object MEExpressionCompletionUtil {
         for (unresolvedName in unresolvedNames) {
             val startOffset = unresolvedName.textRange.startOffset
             if (cursorOffset.toInt() > startOffset) {
-                cursorOffset.setValue(cursorOffset.toInt() - unresolvedName.textLength + 1)
+                cursorOffset.value = cursorOffset.toInt() - unresolvedName.textLength + 1
             }
 
             unresolvedName.replace(project.meExpressionElementFactory.createName("?"))
@@ -659,7 +659,7 @@ object MEExpressionCompletionUtil {
             val textRange = capture.textRange
 
             if (cursorOffset.toInt() > textRange.startOffset) {
-                cursorOffset.setValue(cursorOffset.toInt() - if (cursorOffset.toInt() >= textRange.endOffset) 3 else 2)
+                cursorOffset.value = cursorOffset.toInt() - if (cursorOffset.toInt() >= textRange.endOffset) 3 else 2
             }
 
             capture.replace(innerExpr)
@@ -1045,7 +1045,7 @@ object MEExpressionCompletionUtil {
             localTypes[0] = null
         }
         val localType = localTypes.getOrNull(index) ?: return emptyList()
-        val ordinal = localTypes.asSequence().take(index).filter { it == localType }.count()
+        val ordinal = localTypes.asSequence().take(index).count { it == localType }
         val localName = localType.typeNameToInsert().replace("[]", "Array") + (ordinal + 1)
         val isImplicit = localTypes.count { it == localType } == 1
         return listOf(

@@ -3,7 +3,7 @@
 
     https://mcdev.io/
 
-    Copyright (C) 2025 minecraft-dev
+    Copyright (C) 2026 minecraft-dev
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -15,7 +15,7 @@
     GNU General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see https://www.gnu.org/licenses/.
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <idea-plugin require-restart="true">
@@ -496,7 +496,6 @@
             order="first"/>
 
         <applicationService serviceImplementation="com.demonwav.mcdev.MinecraftSettings"/>
-        <projectService serviceImplementation="com.demonwav.mcdev.TranslationSettings"/>
 
         <errorHandler implementation="com.demonwav.mcdev.errorreporter.ErrorReporter"/>
         <!--endregion-->

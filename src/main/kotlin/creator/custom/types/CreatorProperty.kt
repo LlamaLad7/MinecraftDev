@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -211,11 +211,8 @@ abstract class CreatorProperty<T>(
 
         into.putAll(TemplateEvaluator.baseProperties)
 
-        return if (names == null) {
-            properties.mapValuesTo(into) { (_, prop) -> prop.get() }
-        } else {
-            names.associateWithTo(mutableMapOf()) { properties[it]?.get() }
-        }
+        return names?.associateWithTo(mutableMapOf()) { properties[it]?.get() }
+            ?: properties.mapValuesTo(into) { (_, prop) -> prop.get() }
     }
 
     protected fun collectDerivationParents(reporter: TemplateValidationReporter? = null): List<CreatorProperty<*>?>? =
@@ -379,7 +376,7 @@ abstract class CreatorProperty<T>(
             val out = graph.property<String?>(null)
 
             if (forceValue == null) {
-                return out;
+                return out
             }
 
             if (forceValue !is Map<*, *>) {

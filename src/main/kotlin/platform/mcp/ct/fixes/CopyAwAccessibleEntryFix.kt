@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -64,6 +64,6 @@ class CopyAwAccessibleEntryFix(val target: PsiElement, val element: PsiElement) 
     override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean = true
 
     override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
-        CopyAwAction.doCopy(target, element, editor, null)
+        CopyAwAction.Util.doCopy(target, element, editor, null)
     }
 }

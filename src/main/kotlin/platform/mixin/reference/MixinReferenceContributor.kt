@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -23,10 +23,6 @@ package com.demonwav.mcdev.platform.mixin.reference
 import com.demonwav.mcdev.platform.mixin.reference.target.FieldDefinitionReference
 import com.demonwav.mcdev.platform.mixin.reference.target.MethodDefinitionReference
 import com.demonwav.mcdev.platform.mixin.reference.target.TargetReference
-import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.AT
-import com.demonwav.mcdev.util.insideAnnotationAttribute
-import com.intellij.patterns.PsiJavaPatterns
-import com.intellij.patterns.StandardPatterns
 import com.intellij.psi.PsiReferenceContributor
 import com.intellij.psi.PsiReferenceRegistrar
 

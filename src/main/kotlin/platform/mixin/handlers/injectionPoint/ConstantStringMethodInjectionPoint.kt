@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -50,8 +50,8 @@ import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
 
 class ConstantStringMethodInjectionPoint : AbstractMethodInjectionPoint() {
-    companion object {
-        private val ARGS_KEYS = arrayOf("ldc")
+    private object Const {
+        val ARGS_KEYS = arrayOf("ldc")
     }
 
     override fun onCompleted(editor: Editor, reference: PsiLiteral) {
@@ -91,7 +91,7 @@ class ConstantStringMethodInjectionPoint : AbstractMethodInjectionPoint() {
         return shift != 0 && shift != 1
     }
 
-    override fun getArgsKeys(at: PsiAnnotation) = ARGS_KEYS
+    override fun getArgsKeys(at: PsiAnnotation) = Const.ARGS_KEYS
 
     override fun getArgsValues(at: PsiAnnotation, key: String): Array<out Any> {
         if (key != "ldc") {

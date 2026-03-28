@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -46,8 +46,6 @@ import com.intellij.util.KeyedLazyInstance
 import com.intellij.util.xmlb.annotations.Attribute
 import java.util.ResourceBundle
 import javax.swing.JComponent
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 
 /**
  * Extensions responsible for creating a [TemplateDescriptor] based on whatever data it is provided in its configuration
@@ -73,7 +71,7 @@ interface TemplateProvider {
 
         fun get(key: String): TemplateProvider? = COLLECTOR.findSingle(key)
 
-        fun getAllKeys() = EP_NAME.extensionList.mapNotNull { it.key }
+        fun getAllKeys() = EP_NAME.extensionList.map { it.key }
 
         suspend fun findTemplates(
             modalityState: ModalityState,
@@ -194,7 +192,7 @@ interface TemplateProvider {
                 descriptor.translateOrNull("platform.${labelKey.lowercase()}.label") ?: descriptor.translate(labelKey)
 
             if (descriptor.inherit != null) {
-                val parent = templateRoot.findFileByRelativePath(descriptor.inherit!!)
+                val parent = templateRoot.findFileByRelativePath(descriptor.inherit)
                 if (parent != null) {
                     parent.refresh(false, false)
                     val parentDescriptor = Gson().fromJson<TemplateDescriptor>(parent.readText())
@@ -231,5 +229,5 @@ class TemplateProviderBean : BaseKeyedLazyInstance<TemplateProvider>(), KeyedLaz
 
     override fun getKey(): String = name
 
-    override fun getImplementationClassName(): String? = implementation
+    override fun getImplementationClassName(): String = implementation
 }

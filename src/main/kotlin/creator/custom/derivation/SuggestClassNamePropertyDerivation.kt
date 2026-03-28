@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -30,7 +30,7 @@ import com.demonwav.mcdev.util.decapitalize
 
 class SuggestClassNamePropertyDerivation : PreparedDerivation {
 
-    override fun derive(parentValues: List<Any?>): Any? {
+    override fun derive(parentValues: List<Any?>): Any {
         val coords = parentValues[0] as BuildSystemCoordinates
         val name = parentValues[1] as String
         val sanitizedName = name.split(NOT_JAVA_IDENTIFIER).joinToString("", transform = String::capitalize)

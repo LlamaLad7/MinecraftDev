@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -88,10 +88,10 @@ class AccessorMixinFoldingBuilder : CustomFoldingBuilder() {
         val method = expr.referencedMethod ?: return null
 
         if (method.hasAnnotation(INVOKER)) {
-            return InvokerHandler.getInstance()?.findInvokerTargetForReference(method)?.element?.name
+            return InvokerHandler.Util.getInstance()?.findInvokerTargetForReference(method)?.element?.name
         }
         if (method.hasAnnotation(ACCESSOR)) {
-            val name = AccessorHandler.getInstance()?.findAccessorTargetForReference(method)?.element?.name
+            val name = AccessorHandler.Util.getInstance()?.findAccessorTargetForReference(method)?.element?.name
                 ?: return null
             return if (method.returnType == PsiTypes.voidType()) {
                 "$name = "

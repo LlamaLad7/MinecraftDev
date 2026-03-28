@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -131,7 +131,7 @@ class InjectCouldBeOverwriteInspection : MixinInspection() {
 
     private fun isDefinitelyCancelled(project: Project, method: PsiMethod): Boolean {
         val methodBody = method.body ?: return false
-        val ciParam = method.parameterList.parameters.firstOrNull(::isCallbackInfoParam) ?: return false
+        val ciParam = method.parameterList.parameters.firstOrNull(Util::isCallbackInfoParam) ?: return false
         val ciClass = (ciParam.type as? PsiClassType)?.resolve() ?: return false
 
         val factory = DfaValueFactory(project)
@@ -300,7 +300,7 @@ class InjectCouldBeOverwriteInspection : MixinInspection() {
 
             // delete parameters not before the callback info parameter
             val paramsToDelete = oldMethod.parameterList.parameters.asSequence()
-                .dropWhile { !isCallbackInfoParam(it) }
+                .dropWhile { !Util.isCallbackInfoParam(it) }
                 .map { it.createSmartPointer() }
                 .toList()
             for (param in paramsToDelete) {
@@ -363,8 +363,8 @@ class InjectCouldBeOverwriteInspection : MixinInspection() {
         override fun getDisplayName() = "Unnecessary local variable"
     }
 
-    companion object {
-        private fun isCallbackInfoParam(param: PsiParameter): Boolean {
+    private object Util {
+        fun isCallbackInfoParam(param: PsiParameter): Boolean {
             val type = (param.type as? PsiClassType)?.resolve() ?: return false
             val qName = type.qualifiedName ?: return false
             return qName == MixinConstants.Classes.CALLBACK_INFO ||

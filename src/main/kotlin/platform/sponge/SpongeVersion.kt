@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -24,7 +24,7 @@ import com.demonwav.mcdev.creator.getVersionJson
 
 data class SpongeVersion(var versions: LinkedHashMap<String, String>, var selectedIndex: Int) {
     companion object {
-        suspend fun downloadData(): SpongeVersion? {
+        suspend fun downloadData(): SpongeVersion {
             return getVersionJson<SpongeVersion>("sponge_v2.json")
         }
     }

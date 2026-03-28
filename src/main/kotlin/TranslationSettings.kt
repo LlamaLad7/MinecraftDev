@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -21,18 +21,20 @@
 package com.demonwav.mcdev
 
 import com.intellij.openapi.components.PersistentStateComponent
+import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 
+@Service(Service.Level.PROJECT)
 @State(name = "TranslationSettings", storages = [Storage("minecraft_dev.xml")])
 class TranslationSettings : PersistentStateComponent<TranslationSettings.State> {
 
     data class State(
         var isForceJsonTranslationFile: Boolean = false,
         var isUseCustomConvertToTranslationTemplate: Boolean = false,
-        var convertToTranslationTemplate: String = "net.minecraft.client.resources.I18n.format(\"\$key\")",
+        var convertToTranslationTemplate: String = $$"net.minecraft.client.resources.I18n.format(\"$key\")",
     )
 
     private var state = State()

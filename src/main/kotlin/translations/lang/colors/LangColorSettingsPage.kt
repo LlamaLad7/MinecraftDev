@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -31,17 +31,17 @@ class LangColorSettingsPage : ColorSettingsPage {
     override fun getIcon() = PlatformAssets.MINECRAFT_ICON
     override fun getHighlighter() = LangSyntaxHighlighter(LangLexerAdapter())
     override fun getAdditionalHighlightingTagToDescriptorMap() = emptyMap<String, TextAttributesKey>()
-    override fun getAttributeDescriptors() = DESCRIPTORS
+    override fun getAttributeDescriptors() = Const.DESCRIPTORS
     override fun getColorDescriptors(): Array<out ColorDescriptor> = ColorDescriptor.EMPTY_ARRAY
-    override fun getDisplayName() = "Minecraft localization"
+    override fun getDisplayName() = "Minecraft Localization"
     override fun getDemoText() =
         """
         # This is a comment
         path.to.key=This is a value
         """.trimIndent()
 
-    companion object {
-        private val DESCRIPTORS = arrayOf(
+    private object Const {
+        val DESCRIPTORS = arrayOf(
             AttributesDescriptor("Key", LangSyntaxHighlighter.KEY),
             AttributesDescriptor("Separator", LangSyntaxHighlighter.EQUALS),
             AttributesDescriptor("Value", LangSyntaxHighlighter.VALUE),

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -58,9 +58,9 @@ private object NameColumn : ColumnInfo<MinecraftSettings.TemplateRepo, String>(
 private object ProviderColumn : ColumnInfo<MinecraftSettings.TemplateRepo, Any>(
     MCDevBundle("minecraft.settings.creator.repos.column.provider")
 ) {
-    override fun valueOf(item: MinecraftSettings.TemplateRepo?): ListWithSelection<String>? {
+    override fun valueOf(item: MinecraftSettings.TemplateRepo?): ListWithSelection<String> {
         val providers = TemplateProvider.getAllKeys()
-        val list = ListWithSelection<String>(providers)
+        val list = ListWithSelection(providers)
         list.select(item?.provider?.takeIf(providers::contains))
 
         return list
@@ -91,7 +91,7 @@ fun Row.templateRepoTable(
         }
     }
 
-    val table = TableView<MinecraftSettings.TemplateRepo>(model)
+    val table = TableView(model)
     table.setShowGrid(true)
     table.tableHeader.reorderingAllowed = false
 

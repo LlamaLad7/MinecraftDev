@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -84,7 +84,7 @@ class ModifyConstantHandler : InjectorAnnotationHandler() {
         annotation: PsiAnnotation,
         targetClass: ClassNode,
         targetMethod: MethodNode,
-    ): List<MethodSignature>? {
+    ): List<MethodSignature> {
         val constantInfos = getConstantInfos(annotation)
         if (constantInfos == null) {
             val method = annotation.parentOfType<PsiMethod>()

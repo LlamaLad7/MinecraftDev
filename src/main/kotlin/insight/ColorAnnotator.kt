@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -40,10 +40,10 @@ class ColorAnnotator : Annotator {
 
         val color = element.toUElementOfType<UIdentifier>()?.findColor { _, chosenEntry -> chosenEntry.value } ?: return
 
-        setColorAnnotator(color, element, holder)
+        Util.setColorAnnotator(color, element, holder)
     }
 
-    companion object {
+    object Util {
         fun setColorAnnotator(color: Color, element: PsiElement, holder: AnnotationHolder) {
             val textAttributes =
                 TextAttributes(null, null, color, MinecraftSettings.instance.underlineType.effectType, Font.PLAIN)
@@ -52,5 +52,6 @@ class ColorAnnotator : Annotator {
                 .enforcedTextAttributes(textAttributes)
                 .create()
         }
+
     }
 }

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -137,7 +137,7 @@ class FabricVersionChainStep(
             }
             YARN_VERSION -> {
                 val comboBox = super.createComboBox(row, index, items).bindEnabled(useOfficialMappingsProperty.not())
-                row.checkBox("Use Official Mappings").bindSelected(useOfficialMappingsProperty)
+                row.checkBox("Use official mappings").bindSelected(useOfficialMappingsProperty)
                 row.label("").bindText(
                     getVersionProperty(MINECRAFT_VERSION).transform { mcVersion ->
                         mcVersion as FabricMcVersion

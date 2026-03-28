@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -22,7 +22,6 @@ package com.demonwav.mcdev.platform.mixin.inspection.injector
 
 import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
-import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.AtResolver
 import com.demonwav.mcdev.platform.mixin.inspection.MixinInspection
 import com.demonwav.mcdev.platform.mixin.reference.MethodReference
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
@@ -186,7 +185,7 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
                         var isValid = false
                         for ((expectedParameters, expectedReturnType) in possibleSignatures) {
                             val paramsMatch =
-                                checkParameters(parameters, expectedParameters, handler.allowCoerce) == CheckResult.OK
+                                Util.checkParameters(parameters, expectedParameters, handler.allowCoerce) == CheckResult.OK
                             if (paramsMatch) {
                                 val methodReturnType = method.returnType
                                 if (methodReturnType != null &&
@@ -205,7 +204,7 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
                                 else -> expectedReturnType
                             }
 
-                            val paramsCheck = checkParameters(parameters, expectedParameters, handler.allowCoerce)
+                            val paramsCheck = Util.checkParameters(parameters, expectedParameters, handler.allowCoerce)
                             val isWarning = paramsCheck == CheckResult.WARNING
                             val methodReturnType = method.returnType
                             val returnTypeOk = methodReturnType != null &&
@@ -264,7 +263,7 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
         }
     }
 
-    companion object {
+    object Util {
         fun checkParameters(
             parameterList: PsiParameterList,
             expected: List<ParameterGroup>,

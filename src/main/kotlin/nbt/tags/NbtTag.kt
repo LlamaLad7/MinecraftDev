@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -60,7 +60,7 @@ val NbtTag.typeIdByte
     get() = typeId.typeIdByte
 
 val forbiddenCharacters = Regex("""[:(){}\[\],]""")
-val badFormat = Regex("""^[\d+\-\\\s\n:{}\[\](),].*|.*["\\:{}\[\]()\s\n,]${'$'}""")
+val badFormat = Regex("""^[\d+\-\\\s\n:{}\[\](),].*|.*["\\:{}\[\]()\s\n,]$""")
 
 fun writeString(sb: StringBuilder, s: String): StringBuilder {
     if (s.isBlank()) {

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -132,7 +132,7 @@ class MixinParameterNameInspection : MixinInspection() {
             var anyValidSignatures = false
 
             for ((expectedParams, _) in expectedSignatures) {
-                if (InvalidInjectorMethodSignatureInspection.checkParameters(
+                if (InvalidInjectorMethodSignatureInspection.Util.checkParameters(
                         method.parameterList,
                         expectedParams,
                         handler.allowCoerce

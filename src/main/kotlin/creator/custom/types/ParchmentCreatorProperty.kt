@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -69,7 +69,10 @@ class ParchmentCreatorProperty(
             return deserialize(raw)
         }
 
-        return ParchmentVersions(true, emptyVersion, emptyVersion, false, false)
+        return ParchmentVersions(true, emptyVersion, emptyVersion,
+            includeOlderMcVersions = false,
+            includeSnapshots = false
+        )
     }
 
     override fun serialize(value: ParchmentVersions): String {
@@ -90,6 +93,7 @@ class ParchmentCreatorProperty(
 
     override fun buildUi(panel: Panel) {
         panel.row(descriptor.translatedLabel) {
+            @Suppress("DialogTitleCapitalization")
             checkBox("Use Parchment")
                 .bindSelected(useParchmentProperty)
 
@@ -124,14 +128,12 @@ class ParchmentCreatorProperty(
 
         val platformMcVersionPropertyName = descriptor.parameters?.get("minecraftVersionProperty") as? String
         val platformMcVersionProperty = properties[platformMcVersionPropertyName]
-        if (platformMcVersionProperty != null) {
-            platformMcVersionProperty.graphProperty.afterChange {
-                val minecraftVersion = getPlatformMinecraftVersion()
-                if (mcVersionsModel.getIndexOf(minecraftVersion) == -1) {
-                    refreshVersionsLists(forceLatestVersions = true)
-                } else if (minecraftVersion != null) {
-                    graphProperty.set(graphProperty.get().copy(minecraftVersion = minecraftVersion))
-                }
+        platformMcVersionProperty?.graphProperty?.afterChange {
+            val minecraftVersion = getPlatformMinecraftVersion()
+            if (mcVersionsModel.getIndexOf(minecraftVersion) == -1) {
+                refreshVersionsLists(forceLatestVersions = true)
+            } else if (minecraftVersion != null) {
+                graphProperty.set(graphProperty.get().copy(minecraftVersion = minecraftVersion))
             }
         }
 

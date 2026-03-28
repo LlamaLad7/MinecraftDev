@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -123,9 +123,9 @@ private class NbtFileEditor(
 
     override fun getComponent() = editor.component
     override fun getPreferredFocusedComponent() = null
-    override fun <T : Any?> getUserData(key: Key<T>): T? = editor.getUserData(key)
+    override fun <T> getUserData(key: Key<T>): T? = editor.getUserData(key)
 
-    override fun <T : Any?> putUserData(key: Key<T>, value: T?) = editor.putUserData(key, value)
+    override fun <T> putUserData(key: Key<T>, value: T?) = editor.putUserData(key, value)
 
     override fun isValid() = true
     override fun removePropertyChangeListener(listener: PropertyChangeListener) = Unit

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -39,7 +39,7 @@ class LicenseStep(parent: NewProjectWizardStep) : AbstractNewProjectWizardStep(p
     override fun setupUI(builder: Panel) {
         with(builder) {
             row(MCDevBundle("creator.ui.license.label")) {
-                comboBox(License.values().toList())
+                comboBox(License.entries)
                     .bindItem(licenseProperty.transform({ License.byId(it) ?: License.ALL_RIGHTS_RESERVED }) { it.id })
             }
         }

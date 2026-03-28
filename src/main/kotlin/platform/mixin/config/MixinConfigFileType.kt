@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -40,7 +40,7 @@ interface MixinConfigFileType : FileTypeIdentifiableByVirtualFile {
     override fun getIcon() = PlatformAssets.MIXIN_ICON
 
     object Json : LanguageFileType(JsonLanguage.INSTANCE), MixinConfigFileType {
-        private val filenameRegex = "(^|\\.)mixins?(\\.[^.]+)*\\.json\$".toRegex()
+        private val filenameRegex = "(^|\\.)mixins?(\\.[^.]+)*\\.json$".toRegex()
 
         override fun getFilenameRegex(): Regex = filenameRegex
         override fun getName() = "Mixin Json Configuration"
@@ -48,7 +48,7 @@ interface MixinConfigFileType : FileTypeIdentifiableByVirtualFile {
     }
 
     object Json5 : LanguageFileType(Json5Language.INSTANCE), MixinConfigFileType {
-        private var filenameRegex = "(^|\\.)mixins?(\\.[^.]+)*\\.json5\$".toRegex()
+        private var filenameRegex = "(^|\\.)mixins?(\\.[^.]+)*\\.json5$".toRegex()
 
         override fun getFilenameRegex(): Regex = filenameRegex
         override fun getName() = "Mixin Json5 Configuration"

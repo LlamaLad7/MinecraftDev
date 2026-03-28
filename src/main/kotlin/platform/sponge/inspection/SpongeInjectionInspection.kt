@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -66,10 +66,10 @@ import org.jdom.Element
 
 class SpongeInjectionInspection : AbstractBaseJavaLocalInspectionTool() {
 
-    private val injectableTypesList = defaultInjectableTypes.toMutableList()
+    private val injectableTypesList = Const.defaultInjectableTypes.toMutableList()
 
     @JvmField
-    var injectableTypes: String = serializedDefaultInjectableTypes
+    var injectableTypes: String = Const.serializedDefaultInjectableTypes
 
     override fun getStaticDescription() = "Invalid @Inject usage in Sponge plugin class."
 
@@ -317,7 +317,7 @@ class SpongeInjectionInspection : AbstractBaseJavaLocalInspectionTool() {
         }
     }
 
-    companion object {
+    object Const {
 
         val defaultInjectableTypes = listOf(
             // https://github.com/SpongePowered/SpongeCommon/blob/f92cef4/src/main/java/org/spongepowered/common/inject/SpongeImplementationModule.java
@@ -472,7 +472,7 @@ class SpongeInjectionInspection : AbstractBaseJavaLocalInspectionTool() {
         val chooserList = UiUtils.createTreeClassChooserList(
             injectableTypesList,
             "Injectable types",
-            "Choose injectable type",
+            "Choose Injectable Type",
         )
         UiUtils.setComponentSize(chooserList, 7, 25)
         return chooserList
@@ -485,7 +485,7 @@ class SpongeInjectionInspection : AbstractBaseJavaLocalInspectionTool() {
 
     override fun writeSettings(node: Element) {
         injectableTypes = if (injectableTypesList.isEmpty()) {
-            serializedDefaultInjectableTypes
+            Const.serializedDefaultInjectableTypes
         } else {
             formatString(injectableTypesList)
         }

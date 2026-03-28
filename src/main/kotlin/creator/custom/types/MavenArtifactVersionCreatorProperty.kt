@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -160,7 +160,7 @@ class MavenArtifactVersionCreatorProperty(
             val scope = context.childScope("MavenArtifactVersionCreatorProperty")
             scope.launch(Dispatchers.Default) {
                 val result = withContext(Dispatchers.IO) {
-                    var requestCustomizer = CreatorCredentials.findMavenRepoCredentials(url)?.let { (user, pass) ->
+                    val requestCustomizer = CreatorCredentials.findMavenRepoCredentials(url)?.let { (user, pass) ->
                         Function<Request, Request> { request -> request.authentication().basic(user, pass) }
                     }
 

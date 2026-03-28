@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -51,7 +51,7 @@ class VelocityModule(facet: MinecraftFacet) : AbstractModule(facet) {
         val psiClass = runCatchingKtIdeaExceptions { identifier.uastParent as? UClass }
             ?: return false
 
-        return !psiClass.hasModifier(JvmModifier.ABSTRACT) &&
+        return !psiClass.javaPsi.hasModifier(JvmModifier.ABSTRACT) &&
             psiClass.findAnnotation(VelocityConstants.PLUGIN_ANNOTATION) != null
     }
 }

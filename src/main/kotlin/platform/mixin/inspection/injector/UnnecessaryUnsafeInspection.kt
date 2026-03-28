@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -80,7 +80,7 @@ class UnnecessaryUnsafeInspection : MixinInspection() {
                     return
                 }
 
-                if (alwaysUnnecessary || !mightTargetConstructor(annotation)) {
+                if (alwaysUnnecessary || !Util.mightTargetConstructor(annotation)) {
                     holder.registerProblem(
                         unsafeValue,
                         "Unnecessary unsafe = true",
@@ -91,7 +91,7 @@ class UnnecessaryUnsafeInspection : MixinInspection() {
         }
     }
 
-    companion object {
+    object Util {
         fun mightTargetConstructor(at: PsiAnnotation): Boolean {
             val injectorAnnotation = AtResolver.findInjectorAnnotation(at) ?: return true
 

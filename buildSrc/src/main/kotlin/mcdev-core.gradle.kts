@@ -67,6 +67,7 @@ kotlin {
     compilerOptions {
         jvmTarget = JvmTarget.JVM_21
         languageVersion = KotlinVersion.KOTLIN_2_2
+        apiVersion = KotlinVersion.KOTLIN_2_2
         jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
         freeCompilerArgs = listOf("-Xjdk-release=21")
         optIn.add("kotlin.contracts.ExperimentalContracts")

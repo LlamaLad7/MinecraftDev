@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -54,7 +54,7 @@ interface EventGenHelper {
         val EP_NAME = ExtensionPointName.create<LanguageExtensionPoint<EventGenHelper>>(
             "com.demonwav.minecraft-dev.eventGenHelper"
         )
-        val COLLECTOR = LanguageExtension<EventGenHelper>(EP_NAME, JvmEventGenHelper())
+        val COLLECTOR = LanguageExtension(EP_NAME, JvmEventGenHelper())
     }
 }
 
@@ -121,7 +121,9 @@ class KotlinEventGenHelper : EventGenHelper {
     }
 
     override fun reformatAndShortenRefs(file: PsiFile, startOffset: Int, endOffset: Int) {
-        file as? KtFile ?: return
+        if (file !is KtFile) {
+            return
+        }
         val project = file.project
 
         val marker = JvmEventGenHelper.doReformat(project, file, startOffset, endOffset) ?: return

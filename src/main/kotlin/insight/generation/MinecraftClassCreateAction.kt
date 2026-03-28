@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -52,17 +52,17 @@ import org.jetbrains.jps.model.java.JavaModuleSourceRootTypes
 
 class MinecraftClassCreateAction :
     CreateTemplateInPackageAction<PsiClass>(
-        CAPTION,
+        Const.CAPTION,
         MCDevBundle("generate.class.description"),
         GeneralAssets.MC_TEMPLATE,
         JavaModuleSourceRootTypes.SOURCES,
     ),
     DumbAware {
 
-    override fun getActionName(directory: PsiDirectory?, newName: String, templateName: String?): String = CAPTION
+    override fun getActionName(directory: PsiDirectory?, newName: String, templateName: String?): String = Const.CAPTION
 
     override fun buildDialog(project: Project, directory: PsiDirectory, builder: CreateFileFromTemplateDialog.Builder) {
-        builder.setTitle(CAPTION)
+        builder.setTitle(Const.CAPTION)
         builder.setValidator(ClassInputValidator(project, directory))
 
         val module = directory.findModule() ?: return
@@ -84,13 +84,13 @@ class MinecraftClassCreateAction :
                 builder.addKind("Block", icon, MinecraftTemplates.FORGE_1_17_BLOCK_TEMPLATE)
                 builder.addKind("Enchantment", icon, MinecraftTemplates.FORGE_1_17_ENCHANTMENT_TEMPLATE)
                 builder.addKind("Item", icon, MinecraftTemplates.FORGE_1_17_ITEM_TEMPLATE)
-                builder.addKind("Mob Effect", icon, MinecraftTemplates.FORGE_1_17_MOB_EFFECT_TEMPLATE)
+                builder.addKind("Mob effect", icon, MinecraftTemplates.FORGE_1_17_MOB_EFFECT_TEMPLATE)
                 builder.addKind("Packet", icon, MinecraftTemplates.FORGE_1_17_PACKET_TEMPLATE)
             } else {
                 builder.addKind("Block", icon, MinecraftTemplates.FORGE_1_17_BLOCK_TEMPLATE)
                 builder.addKind("Enchantment", icon, MinecraftTemplates.FORGE_1_17_ENCHANTMENT_TEMPLATE)
                 builder.addKind("Item", icon, MinecraftTemplates.FORGE_1_17_ITEM_TEMPLATE)
-                builder.addKind("Mob Effect", icon, MinecraftTemplates.FORGE_1_17_MOB_EFFECT_TEMPLATE)
+                builder.addKind("Mob effect", icon, MinecraftTemplates.FORGE_1_17_MOB_EFFECT_TEMPLATE)
                 builder.addKind("Packet", icon, MinecraftTemplates.FORGE_1_18_PACKET_TEMPLATE)
             }
         }
@@ -100,7 +100,7 @@ class MinecraftClassCreateAction :
             builder.addKind("Block", icon, MinecraftTemplates.NEOFORGE_BLOCK_TEMPLATE)
             builder.addKind("Enchantment", icon, MinecraftTemplates.NEOFORGE_ENCHANTMENT_TEMPLATE)
             builder.addKind("Item", icon, MinecraftTemplates.NEOFORGE_ITEM_TEMPLATE)
-            builder.addKind("Mob Effect", icon, MinecraftTemplates.NEOFORGE_MOB_EFFECT_TEMPLATE)
+            builder.addKind("Mob effect", icon, MinecraftTemplates.NEOFORGE_MOB_EFFECT_TEMPLATE)
             builder.addKind("Packet", icon, MinecraftTemplates.NEOFORGE_PACKET_TEMPLATE)
         }
 
@@ -110,7 +110,7 @@ class MinecraftClassCreateAction :
             builder.addKind("Block", icon, MinecraftTemplates.FABRIC_BLOCK_TEMPLATE)
             builder.addKind("Enchantment", icon, MinecraftTemplates.FABRIC_ENCHANTMENT_TEMPLATE)
             builder.addKind("Item", icon, MinecraftTemplates.FABRIC_ITEM_TEMPLATE)
-            builder.addKind("Status Effect", icon, MinecraftTemplates.FABRIC_STATUS_EFFECT_TEMPLATE)
+            builder.addKind("Status effect", icon, MinecraftTemplates.FABRIC_STATUS_EFFECT_TEMPLATE)
         }
     }
 
@@ -165,8 +165,8 @@ class MinecraftClassCreateAction :
             checkInput(inputString)
     }
 
-    private companion object {
-        private val CAPTION
+    private object Const {
+        val CAPTION
             get() = MCDevBundle("generate.class.caption")
     }
 }

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -47,10 +47,10 @@ import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.MethodNode
 
 class FieldInjectionPoint : QualifiedInjectionPoint<PsiField>() {
-    companion object {
-        private val VALID_OPCODES = setOf(Opcodes.GETFIELD, Opcodes.GETSTATIC, Opcodes.PUTFIELD, Opcodes.PUTSTATIC)
-        private val ARGS_KEYS = arrayOf("array")
-        private val ARRAY_VALUES = arrayOf("length", "get", "set")
+    private object Const {
+        val VALID_OPCODES = setOf(Opcodes.GETFIELD, Opcodes.GETSTATIC, Opcodes.PUTFIELD, Opcodes.PUTSTATIC)
+        val ARGS_KEYS = arrayOf("array")
+        val ARRAY_VALUES = arrayOf("length", "get", "set")
     }
 
     override fun onCompleted(editor: Editor, reference: PsiLiteral) {
@@ -62,10 +62,10 @@ class FieldInjectionPoint : QualifiedInjectionPoint<PsiField>() {
         return shift != 0 && shift != 1
     }
 
-    override fun getArgsKeys(at: PsiAnnotation) = ARGS_KEYS
+    override fun getArgsKeys(at: PsiAnnotation) = Const.ARGS_KEYS
 
     override fun getArgsValues(at: PsiAnnotation, key: String): Array<out Any> =
-        ARRAY_VALUES.takeIf { key == "array" } ?: ArrayUtilRt.EMPTY_OBJECT_ARRAY
+        Const.ARRAY_VALUES.takeIf { key == "array" } ?: ArrayUtilRt.EMPTY_OBJECT_ARRAY
 
     private fun getArrayAccessType(args: Map<String, String>): ArrayAccessType? {
         return when (args["array"]) {
@@ -76,7 +76,7 @@ class FieldInjectionPoint : QualifiedInjectionPoint<PsiField>() {
         }
     }
 
-    override val validOpcodes = VALID_OPCODES
+    override val validOpcodes = Const.VALID_OPCODES
 
     override fun createNavigationVisitor(
         at: PsiAnnotation,
@@ -84,7 +84,7 @@ class FieldInjectionPoint : QualifiedInjectionPoint<PsiField>() {
         targetClass: PsiClass,
     ): NavigationVisitor? {
         val opcode = (at.findDeclaredAttributeValue("opcode")?.constantValue as? Int)
-            ?.takeIf { it in VALID_OPCODES } ?: -1
+            ?.takeIf { it in Const.VALID_OPCODES } ?: -1
         val args = AtResolver.getArgs(at)
         val arrayAccess = getArrayAccessType(args)
         return target?.let { MyNavigationVisitor(targetClass, it, opcode, arrayAccess) }
@@ -100,7 +100,7 @@ class FieldInjectionPoint : QualifiedInjectionPoint<PsiField>() {
             return MyCollectVisitor(mode, at.project, MemberReference(""), -1, null, 8)
         }
         val opcode = (at.findDeclaredAttributeValue("opcode")?.constantValue as? Int)
-            ?.takeIf { it in VALID_OPCODES } ?: -1
+            ?.takeIf { it in Const.VALID_OPCODES } ?: -1
         val args = AtResolver.getArgs(at)
         val arrayAccess = getArrayAccessType(args)
         val fuzz = args["fuzz"]?.toIntOrNull()?.coerceIn(1, 32) ?: 8

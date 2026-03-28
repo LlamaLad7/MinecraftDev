@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -105,7 +105,7 @@ class ShadowHandler : MixinMemberAnnotationHandler {
 
     override val icon = MixinAssets.MIXIN_SHADOW_ICON
 
-    companion object {
+    object Util {
         fun getInstance(): ShadowHandler? {
             return MixinAnnotationHandler.forMixinAnnotation(SHADOW) as? ShadowHandler
         }

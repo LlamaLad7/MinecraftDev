@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -265,12 +265,12 @@ fun isAssignable(left: PsiType, right: PsiType, allowPrimitiveConversion: Boolea
                 }
             }
 
-            val mixins = FindMixinsAction.findMixins(rightClass, rightClass.project) ?: return false
+            val mixins = FindMixinsAction.Util.findMixins(rightClass, rightClass.project) ?: return false
             if (mixins.any { isClassAssignable(leftClass, it) }) {
                 return true
             }
 
-            return isClassAssignable(leftClass, rightClass)
+            isClassAssignable(leftClass, rightClass)
         }
     }
 }

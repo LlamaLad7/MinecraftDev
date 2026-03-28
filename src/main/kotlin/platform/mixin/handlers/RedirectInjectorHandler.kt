@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -380,7 +380,7 @@ class RedirectInjectorHandler : InjectorAnnotationHandler() {
 
     private object Constructor : RedirectType {
         override fun isInsnAllowed(node: AbstractInsnNode): Boolean {
-            return NewInsnInjectionPoint.findInitCall(node as TypeInsnNode) != null
+            return NewInsnInjectionPoint.Util.findInitCall(node as TypeInsnNode) != null
         }
 
         override fun expectedMethodSignature(
@@ -406,7 +406,7 @@ class RedirectInjectorHandler : InjectorAnnotationHandler() {
                 targetClass,
                 targetMethod,
                 insns.mapNotNull {
-                    NewInsnInjectionPoint.findInitCall(it as TypeInsnNode)
+                    NewInsnInjectionPoint.Util.findInitCall(it as TypeInsnNode)
                 },
             ).map { (paramGroups, _) ->
                 // drop the instance parameter, return the constructed type

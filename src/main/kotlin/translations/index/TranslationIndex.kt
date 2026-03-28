@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -40,7 +40,7 @@ import java.io.DataInput
 import java.io.DataOutput
 
 class TranslationIndex : FileBasedIndexExtension<String, TranslationIndexEntry>() {
-    override fun getName() = NAME
+    override fun getName() = Util.NAME
 
     override fun getVersion() = 6
 
@@ -54,7 +54,7 @@ class TranslationIndex : FileBasedIndexExtension<String, TranslationIndexEntry>(
 
     override fun getKeyDescriptor(): KeyDescriptor<String> = EnumeratorStringDescriptor.INSTANCE
 
-    companion object {
+    object Util {
         val NAME = ID.create<String, TranslationIndexEntry>("TranslationIndex")
 
         fun getAllDefaultTranslations(project: Project, domain: String? = null) =
@@ -98,7 +98,7 @@ class TranslationIndex : FileBasedIndexExtension<String, TranslationIndexEntry>(
             getEntries(GlobalSearchScope.projectScope(project), TranslationConstants.DEFAULT_LOCALE, domain)
 
         fun getEntries(scope: GlobalSearchScope, locale: String, domain: String? = null) =
-            FileBasedIndex.getInstance().getValues(NAME, locale, scope,).asSequence()
+            FileBasedIndex.getInstance().getValues(NAME, locale, scope).asSequence()
                 .filter { domain == null || it.sourceDomain == domain }
 
         private fun Sequence<TranslationIndexEntry>.flatten() = this.flatMap { it.translations.asSequence() }

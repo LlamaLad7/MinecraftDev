@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -44,7 +44,7 @@ class AccessorTargetCodeVisionProvider : AbstractMixinTargetCodeVisionProvider()
 
     override fun getHint(element: PsiElement, file: PsiFile): String? {
         val targetClass = element as? PsiClass ?: return null
-        val numberOfMixins = FindMixinsAction.findMixins(targetClass, element.project)?.count { it.isAccessorMixin }
+        val numberOfMixins = FindMixinsAction.Util.findMixins(targetClass, element.project)?.count { it.isAccessorMixin }
             ?: return null
         if (numberOfMixins == 0) {
             return null
@@ -55,7 +55,7 @@ class AccessorTargetCodeVisionProvider : AbstractMixinTargetCodeVisionProvider()
     override fun handleClick(editor: Editor, element: PsiElement, event: MouseEvent?) {
         val project = editor.project ?: return
         val targetClass = element.findReferencedClass() ?: return
-        FindMixinsAction.openFindMixinsUI(
+        FindMixinsAction.Util.openFindMixinsUI(
             project,
             targetClass,
             {

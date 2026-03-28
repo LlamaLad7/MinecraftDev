@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -70,7 +70,6 @@ val UMethod.uastEventParameterPair: Pair<UParameter, UClass>?
 
         // Get the type of the parameter so we can start resolving it
 
-        @Suppress("UElementAsPsi") // UVariable overrides getType so it should be fine to use on UElements...
         val type = firstParameter.type as? PsiClassType ?: return null
         // Validate that it is a class reference type
         // And again, make sure that we can at least resolve the type, otherwise it's not a valid

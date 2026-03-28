@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -71,9 +71,10 @@ fun UMethod.isValidSpongeListener(): Boolean {
     }
 
     val eventClass = this.uastParameters[0].typeReference?.resolve() ?: return false
-    val baseEventClass = JavaPsiFacade.getInstance(this.project)
-        .findClass(SpongeConstants.EVENT, ProjectScope.getAllScope(this.project)) ?: return false
-    return eventClass.isInheritor(baseEventClass, true)
+    val project = this.sourcePsi?.project ?: return false
+    val baseEventClass = JavaPsiFacade.getInstance(project)
+        .findClass(SpongeConstants.EVENT, ProjectScope.getAllScope(project)) ?: return false
+    return eventClass.javaPsi.isInheritor(baseEventClass, true)
 }
 
 fun UMethod.resolveSpongeEventClass(): UClass? {
@@ -83,7 +84,7 @@ fun UMethod.resolveSpongeEventClass(): UClass? {
 
 fun UAnnotation.resolveSpongeGetterTarget(): UMethod? {
     val method = this.getContainingUMethod() ?: return null
-    val eventClass = method.resolveSpongeEventClass() ?: return null
+    val eventClass = method.resolveSpongeEventClass()?.javaPsi ?: return null
     val getterMethodName = this.findAttributeValue("value")?.evaluateString() ?: return null
     return eventClass.findMethodsByName(getterMethodName, true)
         .firstOrNull { !it.isConstructor && !it.hasParameters() }

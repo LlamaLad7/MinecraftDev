@@ -65,7 +65,6 @@ import com.intellij.psi.PsiEnumConstant
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.PsiJavaFile
-import com.intellij.psi.PsiKeyword
 import com.intellij.psi.PsiLambdaExpression
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethod

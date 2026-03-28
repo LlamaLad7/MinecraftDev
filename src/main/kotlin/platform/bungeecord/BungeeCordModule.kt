@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -65,7 +65,7 @@ class BungeeCordModule<out T : AbstractModuleType<*>>(facet: MinecraftFacet, typ
 
     override val moduleType: T = type
 
-    override val eventListenerGenSupport: EventListenerGenerationSupport? = BungeeCordEventListenerGenerationSupport()
+    override val eventListenerGenSupport: EventListenerGenerationSupport = BungeeCordEventListenerGenerationSupport()
 
     override fun isEventClassValid(eventClass: PsiClass, method: PsiMethod?) =
         BungeeCordConstants.EVENT_CLASS == eventClass.qualifiedName

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -43,7 +43,7 @@ class BungeeProjectFilesStep(parent: NewProjectWizardStep) : AbstractLongRunning
     override fun setupAssets(project: Project) {
         val mainClass = data.getUserData(MainClassStep.KEY) ?: return
         val (packageName, className) = splitPackage(mainClass)
-        val versionRef = data.getUserData(VERSION_REF_KEY) ?: "\${version}"
+        val versionRef = data.getUserData(VERSION_REF_KEY) ?: $$"${version}"
         val pluginName = data.getUserData(AbstractModNameStep.KEY) ?: return
         val authors = data.getUserData(AuthorsStep.KEY) ?: emptyList()
         val description = data.getUserData(DescriptionStep.KEY) ?: ""

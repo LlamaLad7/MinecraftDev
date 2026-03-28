@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -61,7 +61,7 @@ abstract class InjectorAnnotationHandler : MixinAnnotationHandler {
         val method = methodAttr?.computeStringArray() ?: emptyList()
         val desc = annotation.findAttributeValue("desc")?.findAnnotations() ?: emptyList()
         val selectors = method.mapNotNull { parseMixinSelector(it, methodAttr!!) } +
-            desc.mapNotNull { DescSelectorParser.descSelectorFromAnnotation(it) }
+            desc.mapNotNull { DescSelectorParser.Util.descSelectorFromAnnotation(it) }
 
         val targetClassMethods = selectors.associateWith { selector ->
             val actualTarget = selector.getCustomOwner(targetClass)

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -57,8 +57,8 @@ import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.MethodNode
 
 class CtorHeadInjectionPoint : InjectionPoint<PsiElement>() {
-    companion object {
-        private val ARGS_KEYS = arrayOf("enforce")
+    private object Const {
+        val ARGS_KEYS = arrayOf("enforce")
     }
 
     override fun onCompleted(editor: Editor, reference: PsiLiteral) {
@@ -79,7 +79,7 @@ class CtorHeadInjectionPoint : InjectionPoint<PsiElement>() {
         CodeStyleManager.getInstance(project).reformat(at)
     }
 
-    override fun getArgsKeys(at: PsiAnnotation) = ARGS_KEYS
+    override fun getArgsKeys(at: PsiAnnotation) = Const.ARGS_KEYS
     override fun getArgsValues(at: PsiAnnotation, key: String): Array<out Any> = if (key == "enforce") {
         EnforceMode.entries.mapToArray { it.name }
     } else {

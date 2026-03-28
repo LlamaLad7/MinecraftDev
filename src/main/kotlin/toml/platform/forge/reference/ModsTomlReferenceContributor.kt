@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -118,7 +118,7 @@ object ModsTomlModIdReferenceProvider : PsiReferenceProvider() {
     override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<PsiReference> {
         val value = element as? TomlValue ?: return PsiReference.EMPTY_ARRAY
         val stringValue = value.stringValue()
-        if (stringValue != null && stringValue.startsWith("\${") && stringValue.endsWith("}")) {
+        if (stringValue != null && stringValue.startsWith($$"${") && stringValue.endsWith("}")) {
             return PsiReference.EMPTY_ARRAY
         }
 

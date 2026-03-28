@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -65,8 +65,8 @@ import org.objectweb.asm.tree.MethodNode
 import org.objectweb.asm.tree.TypeInsnNode
 
 class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
-    companion object {
-        private val ARGS_KEYS = arrayOf(
+    private object Const {
+        val ARGS_KEYS = arrayOf(
             "nullValue=true",
             "intValue",
             "floatValue",
@@ -77,14 +77,14 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
             "expandZeroConditions"
         )
 
-        private val COMMA_LIST_DELIMITER = ",".toRegex()
+        val COMMA_LIST_DELIMITER = ",".toRegex()
     }
 
     override fun onCompleted(editor: Editor, reference: PsiLiteral) {
         completeExtraStringAtAttribute(editor, reference, "args")
     }
 
-    override fun getArgsKeys(at: PsiAnnotation) = ARGS_KEYS
+    override fun getArgsKeys(at: PsiAnnotation) = Const.ARGS_KEYS
 
     override fun getArgsValues(at: PsiAnnotation, key: String): Array<out Any> {
         fun collectTargets(constantToCompletion: (Any) -> Any?): Array<Any> {
@@ -127,7 +127,7 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
     }
 
     override fun getArgValueListDelimiter(at: PsiAnnotation, key: String) =
-        COMMA_LIST_DELIMITER.takeIf { key == "expandZeroConditions" }
+        Const.COMMA_LIST_DELIMITER.takeIf { key == "expandZeroConditions" }
 
     fun getConstantInfo(at: PsiAnnotation): ConstantInfo? {
         val args = AtResolver.getArgs(at)

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -35,23 +35,23 @@ import com.intellij.psi.tree.TokenSet
 class AtParserDefinition : ParserDefinition {
 
     override fun createLexer(project: Project) = AtLexerAdapter()
-    override fun getCommentTokens() = COMMENTS
+    override fun getCommentTokens() = TokenSets.COMMENTS
     override fun getStringLiteralElements(): TokenSet = TokenSet.EMPTY
     override fun createParser(project: Project) = AtParser()
-    override fun getFileNodeType() = FILE
+    override fun getFileNodeType() = TokenSets.FILE
     override fun createFile(viewProvider: FileViewProvider) = AtFile(viewProvider)
     override fun createElement(node: ASTNode): PsiElement = AtTypes.Factory.createElement(node)
 
     override fun spaceExistenceTypeBetweenTokens(left: ASTNode, right: ASTNode) =
-        map.entries.firstOrNull { e -> left.elementType == e.key.first || right.elementType == e.key.second }?.value
+        TokenSets.MAP.entries.firstOrNull { e -> left.elementType == e.key.first || right.elementType == e.key.second }?.value
             ?: ParserDefinition.SpaceRequirements.MUST_NOT
 
-    companion object {
-        private val COMMENTS = TokenSet.create(AtTypes.COMMENT)
+    object TokenSets {
+        val COMMENTS = TokenSet.create(AtTypes.COMMENT)
 
-        private val FILE = IFileElementType(Language.findInstance(AtLanguage::class.java))
+        val FILE = IFileElementType(Language.findInstance(AtLanguage::class.java))
 
-        private val map: Map<Pair<IElementType, IElementType>, ParserDefinition.SpaceRequirements> = mapOf(
+        val MAP: Map<Pair<IElementType, IElementType>, ParserDefinition.SpaceRequirements> = mapOf(
             (AtTypes.KEYWORD to AtTypes.CLASS_NAME) to ParserDefinition.SpaceRequirements.MUST,
             (AtTypes.CLASS_NAME to AtTypes.FIELD_NAME) to ParserDefinition.SpaceRequirements.MUST,
             (AtTypes.CLASS_NAME to AtTypes.FUNCTION) to ParserDefinition.SpaceRequirements.MUST,

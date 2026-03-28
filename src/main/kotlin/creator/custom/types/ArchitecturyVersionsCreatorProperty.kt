@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -66,9 +66,9 @@ class ArchitecturyVersionsCreatorProperty(
         FabricVersions.YarnVersion("", -1),
         true,
         emptyVersion,
-        true,
-        true,
-        emptyVersion,
+        useOfficialMappings = true,
+        useArchitecturyApi = true,
+        architecturyApi = emptyVersion,
     )
     private val defaultValue = createDefaultValue(descriptor.default)
 
@@ -291,7 +291,7 @@ class ArchitecturyVersionsCreatorProperty(
                 loomVersionModel.removeAllElements()
                 loomVersionModel.addAll(loomVersions)
                 val defaultValue = loomVersions.find {
-                    it.parts.any { it is SemanticVersion.Companion.VersionPart.PreReleasePart }
+                    it.parts.any { p -> p is SemanticVersion.Companion.VersionPart.PreReleasePart }
                 } ?: loomVersions.firstOrNull() ?: emptyVersion
 
                 loomVersionProperty.set(defaultValue)
