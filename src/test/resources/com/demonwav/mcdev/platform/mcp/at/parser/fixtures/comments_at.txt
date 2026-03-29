@@ -1,4 +1,4 @@
-Access Transformers(0,350)
+Access transformers(0,350)
   PsiComment(COMMENT)('# Comment one')(0,13)
   PsiElement(CRLF)('\n')(13,14)
   PsiComment(COMMENT)('# Comment two')(14,27)

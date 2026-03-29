@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -34,8 +34,8 @@ import org.objectweb.asm.tree.JumpInsnNode
 import org.objectweb.asm.tree.MethodNode
 
 class JumpInjectionPoint : InjectionPoint<PsiElement>() {
-    companion object {
-        private val VALID_OPCODES = setOf(
+    private object Const {
+        val VALID_OPCODES = setOf(
             Opcodes.IFEQ,
             Opcodes.IFNE,
             Opcodes.IFLT,
@@ -75,7 +75,7 @@ class JumpInjectionPoint : InjectionPoint<PsiElement>() {
         mode: CollectVisitor.Mode
     ): CollectVisitor<PsiElement> {
         val opcode = (at.findDeclaredAttributeValue("opcode")?.constantValue as? Int)
-            ?.takeIf { it in VALID_OPCODES } ?: -1
+            ?.takeIf { it in Const.VALID_OPCODES } ?: -1
         return MyCollectVisitor(at.project, targetClass, mode, opcode)
     }
 

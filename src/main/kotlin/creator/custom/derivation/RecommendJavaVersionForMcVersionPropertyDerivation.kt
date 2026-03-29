@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -29,7 +29,7 @@ import com.demonwav.mcdev.util.SemanticVersion
 
 class RecommendJavaVersionForMcVersionPropertyDerivation(val default: Int) : PreparedDerivation {
 
-    override fun derive(parentValues: List<Any?>): Any? {
+    override fun derive(parentValues: List<Any?>): Any {
         val mcVersion: SemanticVersion = when (val version = parentValues[0]) {
             is SemanticVersion -> version
             is HasMinecraftVersion -> version.minecraftVersion

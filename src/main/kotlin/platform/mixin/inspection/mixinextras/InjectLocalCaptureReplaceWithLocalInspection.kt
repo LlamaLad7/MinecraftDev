@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -94,7 +94,7 @@ class InjectLocalCaptureReplaceWithLocalInspection : MixinInspection() {
 
                 // find the start of the locals in the parameter list
                 val parameters = method.parameterList.parameters
-                val callbackInfoIndex = UnusedLocalCaptureInspection.findCallbackInfoParam(parameters)
+                val callbackInfoIndex = UnusedLocalCaptureInspection.Util.findCallbackInfoParam(parameters)
                 if (callbackInfoIndex == -1) {
                     return
                 }

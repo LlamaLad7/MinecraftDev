@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -60,12 +60,12 @@ class UnnecessaryQualifiedMemberReferenceInspection : MixinAnnotationAttributeIn
             holder.registerProblem(
                 value,
                 "Unnecessary qualified reference to '${selector.displayName}' in target class",
-                QuickFix(selector),
+                QuickFix(selector.withoutOwner.toMixinString()),
             )
         }
     }
 
-    private class QuickFix(private val reference: MemberReference) : LocalQuickFix {
+    private class QuickFix(private val replacement: String) : LocalQuickFix {
 
         override fun getFamilyName() = "Remove qualifier"
 
@@ -73,7 +73,7 @@ class UnnecessaryQualifiedMemberReferenceInspection : MixinAnnotationAttributeIn
             val element = descriptor.psiElement
             element.replace(
                 JavaPsiFacade.getElementFactory(project)
-                    .createExpressionFromText("\"${reference.withoutOwner.toMixinString()}\"", element),
+                    .createExpressionFromText("\"${replacement}\"", element),
             )
         }
     }

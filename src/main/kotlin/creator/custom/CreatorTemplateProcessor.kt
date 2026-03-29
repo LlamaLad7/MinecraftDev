@@ -176,7 +176,7 @@ class CreatorTemplateProcessor(
 
             val factory = Consumer<Panel> { panel ->
                 val label = descriptor.translatedLabel
-                if (descriptor.collapsible == false) {
+                val group = if (descriptor.collapsible == false) {
                     panel.group(label) {
                         for (childFactory in childrenUiFactories) {
                             childFactory.accept(this@group)
@@ -190,7 +190,11 @@ class CreatorTemplateProcessor(
                     }
 
                     group.expanded = descriptor.default as? Boolean ?: false
+                    group
                 }
+
+                val isVisible = CreatorProperty.setupVisibleProperty(context.graph, context.properties, reporter, descriptor.visible)
+                group.visibleIf(isVisible)
             }
 
             val order = descriptor.order ?: 0
@@ -201,10 +205,8 @@ class CreatorTemplateProcessor(
             reporter.fatal("Duplicate property name ${descriptor.name}")
         }
 
-        val prop = CreatorPropertyFactory.createFromType(descriptor.type, descriptor, context)
-        if (prop == null) {
-            reporter.fatal("Unknown template property type ${descriptor.type}")
-        }
+        val prop = CreatorPropertyFactory.createFromType(descriptor.type, descriptor, context, reporter)
+            ?: reporter.fatal("Unknown template property type ${descriptor.type}")
 
         prop.setupProperty(reporter)
 

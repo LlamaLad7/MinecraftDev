@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -42,8 +42,8 @@ class NbttColorSettingsPage : ColorSettingsPage {
 
     override fun getIcon() = PlatformAssets.MINECRAFT_ICON
     override fun getHighlighter() = NbttSyntaxHighlighter()
-    override fun getAdditionalHighlightingTagToDescriptorMap() = map
-    override fun getAttributeDescriptors() = DESCRIPTORS
+    override fun getAdditionalHighlightingTagToDescriptorMap() = Const.map
+    override fun getAttributeDescriptors() = Const.DESCRIPTORS
     override fun getColorDescriptors(): Array<out ColorDescriptor> = ColorDescriptor.EMPTY_ARRAY
     override fun getDisplayName() = MCDevBundle("nbt.lang.display_name")
     override fun getDemoText() =
@@ -86,8 +86,8 @@ class NbttColorSettingsPage : ColorSettingsPage {
         }
         """.trimIndent()
 
-    companion object {
-        private val DESCRIPTORS = arrayOf(
+    private object Const {
+        val DESCRIPTORS = arrayOf(
             AttributesDescriptor(MCDevBundle.pointer("nbt.lang.highlighting.keyword.display_name"), KEYWORD),
             AttributesDescriptor(MCDevBundle.pointer("nbt.lang.highlighting.string.display_name"), STRING),
             AttributesDescriptor(
@@ -108,10 +108,10 @@ class NbttColorSettingsPage : ColorSettingsPage {
             AttributesDescriptor(MCDevBundle.pointer("nbt.lang.highlighting.material.display_name"), MATERIAL),
         )
 
-        private val map = mapOf(
-            "name" to NbttSyntaxHighlighter.STRING_NAME,
-            "uname" to NbttSyntaxHighlighter.UNQUOTED_STRING_NAME,
-            "material" to NbttSyntaxHighlighter.MATERIAL,
+        val map = mapOf(
+            "name" to STRING_NAME,
+            "uname" to UNQUOTED_STRING_NAME,
+            "material" to MATERIAL,
         )
     }
 }

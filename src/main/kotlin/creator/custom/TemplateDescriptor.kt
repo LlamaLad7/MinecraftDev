@@ -40,7 +40,7 @@ data class TemplateDescriptor(
 
     companion object {
 
-        const val FORMAT_VERSION = 1
+        const val FORMAT_VERSION = 2
     }
 }
 
@@ -56,6 +56,7 @@ data class TemplatePropertyDescriptor(
     val groupProperties: List<TemplatePropertyDescriptor>? = null,
     val remember: Any? = null,
     val visible: Any? = null,
+    val forceValue: Any? = null,
     val editable: Boolean? = null,
     val collapsible: Boolean? = null,
     val warning: String? = null,

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -30,31 +30,31 @@ import org.junit.jupiter.api.extension.ReflectiveInvocationContext
 
 class EdtInterceptor : InvocationInterceptor {
     override fun interceptBeforeEachMethod(
-        invocation: InvocationInterceptor.Invocation<Void>,
+        invocation: InvocationInterceptor.Invocation<Void?>,
         invocationContext: ReflectiveInvocationContext<Method>,
-        extensionContext: ExtensionContext,
+        extensionContext: ExtensionContext
     ) {
         exec(invocation, invocationContext)
     }
 
     override fun interceptAfterEachMethod(
-        invocation: InvocationInterceptor.Invocation<Void>,
+        invocation: InvocationInterceptor.Invocation<Void?>,
         invocationContext: ReflectiveInvocationContext<Method>,
-        extensionContext: ExtensionContext,
+        extensionContext: ExtensionContext
     ) {
         exec(invocation, invocationContext)
     }
 
     override fun interceptTestMethod(
-        invocation: InvocationInterceptor.Invocation<Void>,
+        invocation: InvocationInterceptor.Invocation<Void?>,
         invocationContext: ReflectiveInvocationContext<Method>,
-        extensionContext: ExtensionContext,
+        extensionContext: ExtensionContext
     ) {
         exec(invocation, invocationContext)
     }
 
     private fun exec(
-        invocation: InvocationInterceptor.Invocation<Void>,
+        invocation: InvocationInterceptor.Invocation<Void?>,
         invocationContext: ReflectiveInvocationContext<Method>,
     ) {
         if (invocationContext.executable.getAnnotation(NoEdt::class.java) != null) {

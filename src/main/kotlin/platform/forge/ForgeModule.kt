@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -86,7 +86,7 @@ class ForgeModule internal constructor(facet: MinecraftFacet) : AbstractModule(f
                     val annotatedFields = AnnotatedElementsSearch.searchPsiFields(sidedProxy, scope).findAll()
 
                     for (field in annotatedFields) {
-                        SidedProxyAnnotator.check(field)
+                        SidedProxyAnnotator.Util.check(field)
                     }
                 }
             ).inSmartMode(project).submit(AppExecutorUtil.getAppExecutorService())
@@ -160,7 +160,7 @@ class ForgeModule internal constructor(facet: MinecraftFacet) : AbstractModule(f
         val psiClass = runCatchingKtIdeaExceptions { identifier.uastParent as? UClass }
             ?: return false
 
-        return !psiClass.hasModifier(JvmModifier.ABSTRACT) &&
+        return !psiClass.javaPsi.hasModifier(JvmModifier.ABSTRACT) &&
             psiClass.findAnnotation(ForgeConstants.MOD_ANNOTATION) != null
     }
 

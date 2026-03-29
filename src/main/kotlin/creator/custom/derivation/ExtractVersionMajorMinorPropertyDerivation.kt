@@ -25,7 +25,7 @@ import com.demonwav.mcdev.creator.custom.TemplateValidationReporter
 import com.demonwav.mcdev.creator.custom.types.CreatorProperty
 import com.demonwav.mcdev.util.SemanticVersion
 
-class ExtractVersionMajorMinorPropertyDerivation : PreparedDerivation {
+open class ExtractVersionMajorMinorPropertyDerivation : PreparedDerivation {
 
     override fun derive(parentValues: List<Any?>): Any? {
         val from = parentValues[0] as SemanticVersion

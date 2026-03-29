@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -122,7 +122,7 @@ object AsmDfaUtil {
         private val currentSuperClass: Type?,
         currentClassInterfaces: List<Type>,
         private val isInterface: Boolean,
-    ) : SimpleVerifier(Opcodes.ASM7, currentClass, currentSuperClass, currentClassInterfaces, isInterface) {
+    ) : SimpleVerifier(ASM7, currentClass, currentSuperClass, currentClassInterfaces, isInterface) {
         override fun getClass(type: Type?): Class<*> {
             // should never be called given we have overridden the other methods
             throw UnsupportedOperationException()

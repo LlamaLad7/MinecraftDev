@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -44,22 +44,21 @@ import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiUtil
 import com.intellij.psi.util.parentOfType
 import com.intellij.util.SmartList
+import java.lang.reflect.Method
 
 class MEExpressionInjector : MultiHostInjector {
-    companion object {
-        private val ELEMENTS = listOf(PsiLiteralExpression::class.java)
-        private val ME_EXPRESSION_INJECTION = Key.create<MEExpressionInjection>("mcdev.meExpressionInjection")
+    private object Const {
+        val ELEMENTS = listOf(PsiLiteralExpression::class.java)
+        val ME_EXPRESSION_INJECTION = Key.create<MEExpressionInjection>("mcdev.meExpressionInjection")
 
-        private val CLASS_INJECTION_RESULT =
+        val CLASS_INJECTION_RESULT: Class<*> =
             Class.forName("com.intellij.psi.impl.source.tree.injected.InjectionResult")
-        private val CLASS_INJECTION_REGISTRAR_IMPL =
+        val CLASS_INJECTION_REGISTRAR_IMPL: Class<*> =
             Class.forName("com.intellij.psi.impl.source.tree.injected.InjectionRegistrarImpl")
-        @JvmStatic
-        private val METHOD_ADD_TO_RESULTS =
+        val METHOD_ADD_TO_RESULTS: Method =
             CLASS_INJECTION_REGISTRAR_IMPL.getDeclaredMethod("addToResults", CLASS_INJECTION_RESULT)
                 .also { it.isAccessible = true }
-        @JvmStatic
-        private val METHOD_GET_INJECTED_RESULT =
+        val METHOD_GET_INJECTED_RESULT: Method =
             CLASS_INJECTION_REGISTRAR_IMPL.getDeclaredMethod("getInjectedResult")
                 .also { it.isAccessible = true }
     }
@@ -88,9 +87,9 @@ class MEExpressionInjector : MultiHostInjector {
         val modifierList = anchor.findContainingModifierList() ?: return
 
         val modCount = PsiModificationTracker.getInstance(project).modificationCount
-        val primaryElement = modifierList.getUserData(ME_EXPRESSION_INJECTION)
+        val primaryElement = modifierList.getUserData(Const.ME_EXPRESSION_INJECTION)
         if (primaryElement != null && primaryElement.modCount == modCount) {
-            METHOD_ADD_TO_RESULTS.invoke(registrar, primaryElement.injectionResult)
+            Const.METHOD_ADD_TO_RESULTS.invoke(registrar, primaryElement.injectionResult)
             return
         }
 
@@ -144,8 +143,8 @@ class MEExpressionInjector : MultiHostInjector {
         registrar.doneInjecting()
 
         modifierList.putUserData(
-            ME_EXPRESSION_INJECTION,
-            MEExpressionInjection(modCount, METHOD_GET_INJECTED_RESULT.invoke(registrar))
+            Const.ME_EXPRESSION_INJECTION,
+            MEExpressionInjection(modCount, Const.METHOD_GET_INJECTED_RESULT.invoke(registrar))
         )
     }
 
@@ -196,5 +195,5 @@ class MEExpressionInjector : MultiHostInjector {
         }
     }
 
-    override fun elementsToInjectIn() = ELEMENTS
+    override fun elementsToInjectIn() = Const.ELEMENTS
 }

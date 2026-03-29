@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -136,7 +136,7 @@ class FabricModule internal constructor(facet: MinecraftFacet) : AbstractModule(
 
         override fun visitMethodArg(argPosition: Int, lvIndex: Int, srcName: String?) = false
 
-        override fun visitMethodVar(lvtRowIndex: Int, lvIndex: Int, startOpIdx: Int, srcName: String?) = false
+        override fun visitMethodVar(lvtRowIndex: Int, lvIndex: Int, startOpIdx: Int, endOpIdx: Int, srcName: String?) = false
 
         override fun visitDstName(targetKind: MappedElementKind?, namespace: Int, name: String) {
             if (namespace == namedIndex && name == "net/minecraft/client/MinecraftClient") {

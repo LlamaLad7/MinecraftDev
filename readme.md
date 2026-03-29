@@ -1,4 +1,4 @@
-<p align="center"><a href="https://minecraftdev.org/"><img src="https://minecraftdev.org/assets/icon.svg" height="120" alt="logo"/></a></p>
+<p align="center"><a href="https://mcdev.io/"><img src="https://mcdev.io/assets/icon.svg" height="120" alt="logo"/></a></p>
 
 Minecraft Development for IntelliJ
 ==================================
@@ -12,31 +12,27 @@ Minecraft Development for IntelliJ
         <td colspan="2"><a href="https://ci.mcdev.io/viewType.html?buildTypeId=MinecraftDev_Build"><img src="https://ci.mcdev.io/app/rest/builds/buildType:(id:MinecraftDev_Build)/statusIcon.svg" alt="Teamcity Build Status" /></a></td>
     </tr>
     <tr>
-        <td align="left">2024.3</td>
-        <td align="left"><a href="https://ci.mcdev.io/viewType.html?buildTypeId=MinecraftDev_Nightly_20243"><img src="https://ci.mcdev.io/app/rest/builds/buildType:(id:MinecraftDev_Nightly_20243)/statusIcon.svg" alt="2024.3 Nightly Status" /></a></td>
-    </tr>
-    <tr>
-        <td align="left">2025.1</td>
-        <td align="left"><a href="https://ci.mcdev.io/viewType.html?buildTypeId=MinecraftDev_Nightly_20251"><img src="https://ci.mcdev.io/app/rest/builds/buildType:(id:MinecraftDev_Nightly_20251)/statusIcon.svg" alt="2025.1 Nightly Status" /></a></td>
-    </tr>
-    <tr>
         <td align="left">2025.2</td>
         <td align="left"><a href="https://ci.mcdev.io/viewType.html?buildTypeId=MinecraftDev_Nightly_20252"><img src="https://ci.mcdev.io/app/rest/builds/buildType:(id:MinecraftDev_Nightly_20252)/statusIcon.svg" alt="2025.2 Nightly Status" /></a></td>
     </tr>
     <tr>
-        <td align="right"><b>OS Tests</b></td>
+        <td align="left">2025.3</td>
+        <td align="left"><a href="https://ci.mcdev.io/viewType.html?buildTypeId=MinecraftDev_Nightly_20253"><img src="https://ci.mcdev.io/app/rest/builds/buildType:(id:MinecraftDev_Nightly_20253)/statusIcon.svg" alt="2025.3 Nightly Status" /></a></td>
+    </tr>
+    <tr>
+        <td align="left"><b>OS Tests</b></td>
         <td align="left" colspan="2">
             <a href="https://github.com/minecraft-dev/MinecraftDev/actions?query=workflow%3A%22Test%22"><img src="https://github.com/minecraft-dev/MinecraftDev/workflows/Test/badge.svg?branch=dev&event=push" alt="GitHub Action Status" /></a>
          </td>
     </tr>
 </table>
 
-Info and Documentation [![Current Release](https://img.shields.io/badge/release-1.8.11-orange.svg?style=flat-square)](https://plugins.jetbrains.com/plugin/8327)
+Info and Documentation [![Current Release](https://img.shields.io/badge/release-1.8.12-orange.svg?style=flat-square)](https://plugins.jetbrains.com/plugin/8327)
 ----------------------
 
 <a href="https://discord.gg/j6UNcfr"><img src="https://i.imgur.com/JXu9C1G.png" height="48px"></img></a>
 
-Visit [https://minecraftdev.org](https://minecraftdev.org) for some information about the project.
+Visit [https://mcdev.io](https://mcdev.io) for some information about the project.
 
 
 Installation
@@ -101,18 +97,6 @@ IDE with `ktlint` style settings and to automatically format this project's code
 ```
 ./gradlew ktlintApplyToIdea addKtlintFormatGitPreCommitHook
 ```
-
-IntelliJ includes a lot of dependencies transitively, including common dependencies that are used a lot, such as Kotlin,
-Commons Lang3, Guava, etc. Unfortunately, the source distribution for IntelliJ does not contain sources for libraries as
-well, so these libraries are imported into the IDE without sources by default. If you want to attach sources for (most)
-of the dependencies IntelliJ includes, run the `resolveIntellijLibSources` task and refresh the Gradle project in
-IntelliJ:
-
-```
-./gradlew resolveIntellijLibSources
-```
-
-If you're curious about that task, it is implemented in `buildSrc`.
 
 License
 -------

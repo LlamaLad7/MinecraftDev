@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -124,5 +124,5 @@ class CreatorFinalizerBean : BaseKeyedLazyInstance<CreatorFinalizer>(), KeyedLaz
 
     override fun getKey(): String = type
 
-    override fun getImplementationClassName(): String? = implementation
+    override fun getImplementationClassName(): String = implementation
 }

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -25,6 +25,7 @@ import com.demonwav.mcdev.asset.PlatformAssets
 import com.intellij.ide.fileTemplates.FileTemplateDescriptor
 import com.intellij.ide.fileTemplates.FileTemplateGroupDescriptor
 import com.intellij.ide.fileTemplates.FileTemplateGroupDescriptorFactory
+import kotlin.enums.enumEntries
 
 class MinecraftTemplates : FileTemplateGroupDescriptorFactory {
 
@@ -169,7 +170,7 @@ class MinecraftTemplates : FileTemplateGroupDescriptorFactory {
 
         FileTemplateGroupDescriptor("Licenses", null).let { licenseGroup ->
             group.addTemplate(licenseGroup)
-            enumValues<License>().forEach { license ->
+            enumEntries<License>().forEach { license ->
                 licenseGroup.addTemplate(FileTemplateDescriptor(license.id))
             }
         }

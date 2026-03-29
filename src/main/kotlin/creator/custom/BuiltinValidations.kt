@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -65,7 +65,7 @@ object BuiltinValidations {
     }
 
     fun byRegex(regex: Regex): DialogValidation.WithParameter<() -> String> =
-        validationErrorIf<String>(MCDevBundle("creator.validation.regex", regex)) { !it.matches(regex) }
+        validationErrorIf(MCDevBundle("creator.validation.regex", regex)) { !it.matches(regex) }
 
     fun <T> isAnyOf(
         selectionGetter: () -> T,

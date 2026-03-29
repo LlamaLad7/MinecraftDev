@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -336,8 +336,7 @@ class GenerateAccessorHandler : GenerateMembersHandlerBase("Generate Accessor/In
             .flatMap {
                 JavaPsiFacade.getInstance(project).findClasses(it, GlobalSearchScope.projectScope(project)).asSequence()
             }
-            .filter { it.isAccessorMixin }
-            .count()
+            .count { it.isAccessorMixin }
     }
 
     private fun chooseAccessorMixin(project: Project, mixins: List<PsiClass>): PsiClass? {

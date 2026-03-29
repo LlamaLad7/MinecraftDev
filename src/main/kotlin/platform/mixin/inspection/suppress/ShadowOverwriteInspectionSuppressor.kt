@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -32,7 +32,7 @@ import com.intellij.psi.PsiMethod
 class ShadowOverwriteInspectionSuppressor : InspectionSuppressor {
 
     override fun isSuppressedFor(element: PsiElement, toolId: String): Boolean {
-        if (toolId !in SUPPRESSED_INSPECTIONS) {
+        if (toolId !in Const.SUPPRESSED_INSPECTIONS) {
             return false
         }
 
@@ -43,8 +43,8 @@ class ShadowOverwriteInspectionSuppressor : InspectionSuppressor {
     override fun getSuppressActions(element: PsiElement?, toolId: String): Array<SuppressQuickFix> =
         SuppressQuickFix.EMPTY_ARRAY
 
-    companion object {
-        private val SUPPRESSED_INSPECTIONS = setOf(
+    private object Const {
+        val SUPPRESSED_INSPECTIONS = setOf(
             "UnusedReturnValue",
             "SameParameterValue",
             "Guava",

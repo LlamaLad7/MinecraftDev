@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -31,6 +31,7 @@ import com.demonwav.mcdev.platform.mixin.util.MixinConstants.MixinExtras.OPERATI
 import com.demonwav.mcdev.util.SemanticVersion
 import com.demonwav.mcdev.util.cached
 import com.demonwav.mcdev.util.computeStringArray
+import com.demonwav.mcdev.util.constantValue
 import com.demonwav.mcdev.util.findModule
 import com.demonwav.mcdev.util.resolveClassArray
 import com.intellij.openapi.module.Module
@@ -116,7 +117,7 @@ val PsiClass.bytecode: ClassNode?
  * 1. The class given is a Mixin.
  * 2. The class given is an interface.
  * 3. All member methods are decorated with either `@Accessor` or `@Invoker`.
- * 4. All Mixin targets are classes.
+ * 4. None of the Mixin targets are interfaces.
  *
  * @receiver The class to check
  * @return True if the above checks are satisfied.
@@ -264,12 +265,12 @@ fun isAssignable(left: PsiType, right: PsiType, allowPrimitiveConversion: Boolea
                 }
             }
 
-            val mixins = FindMixinsAction.findMixins(rightClass, rightClass.project) ?: return false
+            val mixins = FindMixinsAction.Util.findMixins(rightClass, rightClass.project) ?: return false
             if (mixins.any { isClassAssignable(leftClass, it) }) {
                 return true
             }
 
-            return isClassAssignable(leftClass, rightClass)
+            isClassAssignable(leftClass, rightClass)
         }
     }
 }
@@ -289,6 +290,15 @@ private fun isClassAssignable(leftClass: PsiClass, rightClass: PsiClass): Boolea
 
 val PsiElement.isFabricMixin: Boolean get() =
     JavaPsiFacade.getInstance(project).findClass(MixinConstants.Classes.FABRIC_UTIL, resolveScope) != null
+
+val Module.fabricMixinCompatibility: Int?
+    get() {
+        val facade = JavaPsiFacade.getInstance(project)
+        val fabricUtil = facade.findClass(MixinConstants.Classes.FABRIC_UTIL, moduleWithLibrariesScope)
+            ?: return null
+        val compatibilityLatestField = fabricUtil.findFieldByName("COMPATIBILITY_LATEST", false) ?: return null
+        return compatibilityLatestField.initializer?.constantValue as? Int
+    }
 
 val Module.mixinVersion: SemanticVersion?
     get() {

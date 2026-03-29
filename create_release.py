@@ -13,12 +13,11 @@ Example:
 
 from __future__ import annotations
 import argparse
-import shlex
 import subprocess
 import sys
 from typing import List, Tuple
 
-BRANCHES=["2024.3", "2025.1", "2025.2", "2025.3"]
+BRANCHES=["2025.2", "2025.3", "2026.1"]
 
 def check_file_contains_version(path: str, version: str) -> bool:
     try:

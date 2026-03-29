@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -36,7 +36,7 @@ import com.intellij.util.io.KeyDescriptor
 import com.intellij.util.io.VoidDataExternalizer
 
 class TranslationInverseIndex : FileBasedIndexExtension<String, Void>() {
-    override fun getName() = NAME
+    override fun getName() = Util.NAME
 
     override fun getVersion() = 1
 
@@ -50,7 +50,7 @@ class TranslationInverseIndex : FileBasedIndexExtension<String, Void>() {
 
     override fun getKeyDescriptor(): KeyDescriptor<String> = EnumeratorStringDescriptor.INSTANCE
 
-    companion object {
+    object Util {
         val NAME = ID.create<String, Void>("TranslationInverseIndex")
 
         fun findElements(key: String, filter: GlobalSearchScope, locale: String? = null): List<PsiElement> {

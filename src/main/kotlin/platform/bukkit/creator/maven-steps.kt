@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -54,7 +54,7 @@ class BukkitMavenFilesStep(parent: NewProjectWizardStep) : AbstractLongRunningAs
     override val description = "Creating Maven files"
 
     override fun setupAssets(project: Project) {
-        data.putUserData(BukkitProjectFilesStep.VERSION_REF_KEY, "\${project.version}")
+        data.putUserData(BukkitProjectFilesStep.VERSION_REF_KEY, $$"${project.version}")
         assets.addDefaultMavenProperties()
         assets.addTemplates(project, "pom.xml" to MinecraftTemplates.BUKKIT_POM_TEMPLATE)
         if (gitEnabled) {

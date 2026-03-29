@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -170,7 +170,7 @@ object SideOnlyUtil {
             ?: (null to Side.NONE)
     }
 
-    fun <T : Any?> getSubArray(infos: Array<T>): Array<T> {
+    fun <T> getSubArray(infos: Array<T>): Array<T> {
         return infos.copyOfRange(1, infos.size - 1)
     }
 }

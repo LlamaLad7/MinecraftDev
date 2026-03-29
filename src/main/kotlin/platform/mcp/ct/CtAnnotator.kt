@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -41,7 +41,7 @@ class CtAnnotator : Annotator {
         if (element is CtAccess) {
             val access = element.text
             val target = PsiTreeUtil.skipSiblingsForward(element, PsiWhiteSpace::class.java)?.text
-            if (!compatibleByAccessMap.get(access).contains(target)) {
+            if (!TokenSets.compatibleByAccessMap.get(access).contains(target)) {
                 holder.newAnnotation(HighlightSeverity.ERROR, "Access '$access' cannot be used on '$target'").create()
             }
 
@@ -53,14 +53,13 @@ class CtAnnotator : Annotator {
         } else if (element is CtFieldLiteral || element is CtMethodLiteral || element is CtClassLiteral) {
             val target = element.text
             val access = PsiTreeUtil.skipSiblingsBackward(element, PsiWhiteSpace::class.java)?.text
-            if (!compatibleByTargetMap.get(target).contains(access)) {
+            if (!TokenSets.compatibleByTargetMap.get(target).contains(access)) {
                 holder.newAnnotation(HighlightSeverity.ERROR, "'$target' cannot be used with '$access'").create()
             }
         }
     }
 
-    companion object {
-
+    object TokenSets {
         val compatibleByAccessMap = HashMultimap.create<String, String>()
         val compatibleByTargetMap = HashMultimap.create<String, String>()
 

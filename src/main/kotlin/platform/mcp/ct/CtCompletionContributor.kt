@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -126,7 +126,7 @@ object CtAwTargetCompletionProvider : CompletionProvider<CompletionParameters>()
     ) {
         val text = parameters.position
             .prevLeaf { it.elementType == CtTypes.ACCESS_ELEMENT || it.elementType == CtTypes.CRLF }?.text ?: return
-        val elements = CtAnnotator.compatibleByAccessMap.get(text)
+        val elements = CtAnnotator.TokenSets.compatibleByAccessMap.get(text)
             .map { LookupElementBuilder.create(it).withInsertHandler { ctx, _ -> insertWhitespace(ctx) } }
         result.addAllElements(elements)
     }

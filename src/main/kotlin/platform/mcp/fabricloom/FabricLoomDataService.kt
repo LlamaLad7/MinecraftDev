@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -144,10 +144,10 @@ class FabricLoomDataService : AbstractProjectDataService<FabricLoomData, Module>
 
             (json.findProperty("contact")?.value as? JsonObject)?.let { contactObject ->
                 val properties = mutableListOf<Pair<String, String>>()
-                if (!website.isNullOrBlank()) {
+                if (website.isNotBlank()) {
                     properties += "website" to website
                 }
-                if (!repo.isNullOrBlank()) {
+                if (repo.isNotBlank()) {
                     properties += "repo" to repo
                 }
                 for (i in properties.indices) {

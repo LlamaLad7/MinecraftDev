@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -36,7 +36,7 @@ import javax.swing.JComponent
 
 class BuiltinTemplateProvider : RemoteTemplateProvider() {
 
-    private val builtinRepoUrl = "https://github.com/minecraft-dev/templates/archive/refs/heads/v\$version.zip"
+    private val builtinRepoUrl = $$"https://github.com/minecraft-dev/templates/archive/refs/heads/v$version.zip"
     private val builtinTemplatesPath = PluginUtil.plugin.pluginPath.resolve("lib/resources/builtin-templates")
     private val builtinTemplatesInnerPath = "templates-${TemplateDescriptor.FORMAT_VERSION}"
     private var repoUpdated: Boolean = false
@@ -74,7 +74,7 @@ class BuiltinTemplateProvider : RemoteTemplateProvider() {
     override fun setupConfigUi(
         data: String,
         dataSetter: (String) -> Unit
-    ): JComponent? {
+    ): JComponent {
         val propertyGraph = PropertyGraph("BuiltinTemplateProvider config")
         val autoUpdateProperty = propertyGraph.property(data.toBooleanStrictOrNull() != false)
 

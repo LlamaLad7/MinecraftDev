@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -148,8 +148,8 @@ object CreatorCredentials {
         // First check credentials in IntelliJ IDEA
         if (repoData.username.isNotBlank()) {
             val credentials = getCredentials(repoData.url, repoData.username)
-            var username = credentials?.userName
-            var password = credentials?.getPasswordAsString()
+            val username = credentials?.userName
+            val password = credentials?.getPasswordAsString()
             if (username != null && password != null) {
                 return username to password
             }

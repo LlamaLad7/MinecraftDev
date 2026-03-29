@@ -1,5 +1,37 @@
 # Minecraft Development for IntelliJ
 
+## [1.8.12]
+
+### Version Support
+- Added IntelliJ 2026.1
+- Dropped IntelliJ 2025.1
+
+### Added
+
+- Automatic fetching of Paper versions in the project wizard.
+- More advanced customization in custom project templates, including:
+  - Visibility control for property groups.
+  - Inline Gradle plugin enabling and version selection.
+- Several new inspections for mixins:
+  - `@Shadow` parameter names not matching their target.
+  - Parameter name mismatch compared to the target class in unobfuscated versions.
+  - Mixin class types that don't match the target's type.
+
+### Changed
+
+- The Run and Build tool windows now open automatically during project creation or Maven import.
+- Updated Fabric mixin parameter handling for versions 0.17.0 and higher.
+- Downgraded the parameter name mismatch inspection to a weak warning.
+
+### Fixed
+
+- Fixed translation folding when arguments are provided as an explicit array.
+- Fixed an issue where the Paper library would sometimes not be detected.
+- Fixed unintended renaming of mixin targets incorrectly affecting strings and non-Java files.
+- Fixed local and inner classes being incorrectly disallowed in mixins.
+- Improved the accuracy of parameter name inspections by correctly handling local variable table (LVT) ordering.
+- Fixed NeoForge version detection when in vanilla mode.
+
 ## [1.8.11]
 
 ### Added

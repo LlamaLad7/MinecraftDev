@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -52,7 +52,7 @@ abstract class MEDeclarationImplMixin(
     override fun getPresentation() = object : ItemPresentation {
         override fun getPresentableText() = name
 
-        override fun getIcon(unused: Boolean) = this@MEDeclarationImplMixin.getIcon(Iconable.ICON_FLAG_VISIBILITY)
+        override fun getIcon(unused: Boolean) = this@MEDeclarationImplMixin.getIcon(ICON_FLAG_VISIBILITY)
     }
 
     override fun getIcon(flags: Int): Icon = if ((parent as? MEDeclarationItem)?.isType == true) {

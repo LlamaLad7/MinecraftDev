@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -39,11 +39,7 @@ class ColorPicker(private val colorMap: Map<String, Color>, project: Project, pa
     private val panel = JPanel(GridBagLayout())
 
     private var chosenColor: String? = null
-    private val dialog: ColorPickerDialog
-
-    init {
-        dialog = ColorPickerDialog(project, parent, panel)
-    }
+    private val dialog = ColorPickerDialog(project, parent, panel)
 
     fun showDialog(): String? {
         init()

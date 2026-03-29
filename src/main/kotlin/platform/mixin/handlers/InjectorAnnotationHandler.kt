@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -61,7 +61,7 @@ abstract class InjectorAnnotationHandler : MixinAnnotationHandler {
         val method = methodAttr?.computeStringArray() ?: emptyList()
         val desc = annotation.findAttributeValue("desc")?.findAnnotations() ?: emptyList()
         val selectors = method.mapNotNull { parseMixinSelector(it, methodAttr!!) } +
-            desc.mapNotNull { DescSelectorParser.descSelectorFromAnnotation(it) }
+            desc.mapNotNull { DescSelectorParser.Util.descSelectorFromAnnotation(it) }
 
         val targetClassMethods = selectors.associateWith { selector ->
             val actualTarget = selector.getCustomOwner(targetClass)
@@ -201,24 +201,24 @@ abstract class InjectorAnnotationHandler : MixinAnnotationHandler {
             val localVariables = targetMethod.localVariables?.sortedBy { it.index }
             return targetMethod.getGenericParameterTypes(clazz, project).asSequence().withIndex()
                 .map { (index, type) ->
-                    val name = localVariables
+                    val knownName = localVariables
                         ?.getOrNull(index + numLocalsToDrop)
                         ?.name
                         ?.toJavaIdentifier()
-                        ?: "par${index + 1}"
-                    type to name
+                    val name = knownName ?: "par${index + 1}"
+                    sanitizedParameter(type, name, knownName != null)
                 }
-                .map { (type, name) -> sanitizedParameter(type, name) }
                 .toList()
         }
 
         @JvmStatic
-        protected fun sanitizedParameter(type: PsiType, name: String?): Parameter {
+        @JvmOverloads
+        protected fun sanitizedParameter(type: PsiType, name: String?, knownName: Boolean = false): Parameter {
             // Parameters should not use ellipsis because others like CallbackInfo may follow
             return if (type is PsiEllipsisType) {
-                Parameter(name?.toJavaIdentifier(), type.toArrayType())
+                Parameter(name?.toJavaIdentifier(), type.toArrayType(), knownName)
             } else {
-                Parameter(name?.toJavaIdentifier(), type)
+                Parameter(name?.toJavaIdentifier(), type, knownName)
             }
         }
     }

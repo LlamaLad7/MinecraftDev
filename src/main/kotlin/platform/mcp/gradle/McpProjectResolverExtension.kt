@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -84,7 +84,7 @@ class McpProjectResolverExtension : AbstractProjectResolverExtension() {
     }
 
     override fun populateModuleExtraModels(gradleModule: IdeaModule, ideModule: DataNode<ModuleData>) {
-        for (handler in handlers) {
+        for (handler in Const.handlers) {
             handler.build(gradleModule, ideModule, resolverCtx)
         }
 
@@ -92,7 +92,7 @@ class McpProjectResolverExtension : AbstractProjectResolverExtension() {
         super.populateModuleExtraModels(gradleModule, ideModule)
     }
 
-    companion object {
-        private val handlers = listOf(McpModelFG2Handler, McpModelFG3Handler, McpModelNG7Handler, McpModelNMDHandler)
+    private object Const {
+        val handlers = listOf(McpModelFG2Handler, McpModelFG3Handler, McpModelNG7Handler, McpModelNMDHandler)
     }
 }

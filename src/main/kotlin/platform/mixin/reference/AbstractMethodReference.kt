@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -127,10 +127,6 @@ abstract class AbstractMethodReference : PolyReferenceResolver(), MixinReference
                 val actualTarget = selector.getCustomOwner(target)
                 actualTarget.findMethods(selector).map { ClassAndMethodNode(actualTarget, it) }
             }
-    }
-
-    fun resolveIfUnique(context: PsiElement): ClassAndMethodNode? {
-        return resolve(context)?.singleOrNull()
     }
 
     fun resolveAllIfNotAmbiguous(context: PsiElement): List<ClassAndMethodNode>? {

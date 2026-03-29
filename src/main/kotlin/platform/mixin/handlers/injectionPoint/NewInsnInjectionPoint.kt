@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -60,7 +60,7 @@ class NewInsnInjectionPoint : InjectionPoint<PsiMember>() {
         completeExtraStringAtAttribute(editor, reference, "target")
     }
 
-    override fun getArgsKeys(at: PsiAnnotation) = ARGS_KEYS
+    override fun getArgsKeys(at: PsiAnnotation) = Util.ARGS_KEYS
 
     override fun getArgsValues(at: PsiAnnotation, key: String): Array<out Any> {
         if (key != "class") {
@@ -109,7 +109,7 @@ class NewInsnInjectionPoint : InjectionPoint<PsiMember>() {
 
     override fun createLookup(targetClass: ClassNode, result: CollectVisitor.Result<PsiMember>): LookupElementBuilder? {
         val newInsn = result.originalInsn as? TypeInsnNode ?: return null
-        val methodInsn = findInitCall(newInsn) ?: return null
+        val methodInsn = Util.findInitCall(newInsn) ?: return null
         when (val target = result.target) {
             is PsiClass -> {
                 return JavaLookupElementBuilder.forClass(target, target.internalName)
@@ -166,7 +166,7 @@ class NewInsnInjectionPoint : InjectionPoint<PsiMember>() {
             for (insn in insns) {
                 if (insn !is TypeInsnNode) continue
                 if (insn.opcode != Opcodes.NEW) continue
-                val initCall = findInitCall(insn) ?: continue
+                val initCall = Util.findInitCall(insn) ?: continue
 
                 val sourceMethod = nodeMatchesSelector(initCall, mode, selector, project) ?: continue
                 addResult(
@@ -178,8 +178,8 @@ class NewInsnInjectionPoint : InjectionPoint<PsiMember>() {
         }
     }
 
-    companion object {
-        private val ARGS_KEYS = arrayOf("class")
+    object Util {
+        val ARGS_KEYS = arrayOf("class")
 
         fun findInitCall(newInsn: TypeInsnNode): MethodInsnNode? {
             var newInsns = 0

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -59,9 +59,9 @@ class GenerateEventListenerHandler : CodeInsightActionHandler {
         chooser.showDialog()
         val chosenClass = chooser.selected ?: return
 
-        val relevantModule = facet.modules.asSequence()
-            .filter { m -> isSuperEventListenerAllowed(chosenClass, m) }
-            .firstOrNull() ?: return
+        val relevantModule = facet.modules
+            .firstOrNull { m -> isSuperEventListenerAllowed(chosenClass, m) }
+            ?: return
 
         val chosenClassName = chosenClass.nameIdentifier?.text ?: return
 

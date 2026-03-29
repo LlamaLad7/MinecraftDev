@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -188,7 +188,7 @@ class MixinConfig(private val project: Project, private var json: JsonObject) {
 
         override fun add(index: Int, element: String?) {
             val oldSize = size
-            if (index < 0 || index > oldSize) {
+            if (index !in 0..oldSize) {
                 throw IndexOutOfBoundsException(index.toString())
             }
             val arr = getOrCreateJsonArray()
@@ -221,14 +221,14 @@ class MixinConfig(private val project: Project, private var json: JsonObject) {
         }
 
         override fun get(index: Int): String? {
-            if (index < 0 || index >= size) {
+            if (index !in indices) {
                 throw IndexOutOfBoundsException(index.toString())
             }
             return (array?.get(index) as? JsonStringLiteral)?.value
         }
 
         override fun removeAt(index: Int): String? {
-            if (index < 0 || index >= size) {
+            if (index !in indices) {
                 throw IndexOutOfBoundsException(index.toString())
             }
             val toDelete = array?.get(index) ?: return null
@@ -242,7 +242,7 @@ class MixinConfig(private val project: Project, private var json: JsonObject) {
         }
 
         override fun set(index: Int, element: String?): String? {
-            if (index < 0 || index >= size) {
+            if (index !in indices) {
                 throw IndexOutOfBoundsException(index.toString())
             }
             val toReplace = array?.get(index) ?: return null

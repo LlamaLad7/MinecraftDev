@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -24,7 +24,6 @@ import com.demonwav.mcdev.facet.MinecraftFacet
 import com.demonwav.mcdev.platform.mcp.McpModule
 import com.demonwav.mcdev.platform.mcp.McpModuleType
 import com.demonwav.mcdev.platform.mixin.handlers.desugar.DesugarUtil
-import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.debugger.impl.DebuggerUtilsEx
 import com.intellij.ide.highlighter.JavaClassFileType
 import com.intellij.lang.injection.InjectedLanguageManager
@@ -91,7 +90,6 @@ import com.intellij.psi.util.parentOfType
 import com.intellij.refactoring.changeSignature.ChangeSignatureUtil
 import com.intellij.util.CachedValueBase
 import com.intellij.util.IncorrectOperationException
-import com.siyeh.ig.psiutils.ImportUtils
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.locks.ReentrantReadWriteLock
@@ -263,11 +261,6 @@ fun PsiFile.remapLineNumber(lineNumber: Int): Int {
     return mappedLineNumber + 1
 }
 
-/**
- * Returns the line number of the start of this `PsiElement`'s text range, with line numbers starting at 1
- */
-fun PsiElement.lineNumber(): Int? = findDocument()?.let(this::lineNumber)
-
 fun PsiElement.lineNumber(document: Document): Int? {
     val index = this.textRange.startOffset
     if (index > document.textLength) {
@@ -343,19 +336,12 @@ inline fun <T> PsiElement.lockedCached(
     }
 }
 
-fun LookupElementBuilder.withImportInsertion(toImport: List<PsiClass>): LookupElementBuilder =
-    this.withInsertHandler { insertionContext, _ ->
-        toImport.forEach { ImportUtils.addImportIfNeeded(it, insertionContext.file) }
-    }
-
 fun PsiElement.findMcpModule() = this.cached {
     val file = containingFile?.viewProvider?.virtualFile ?: return@cached null
     val index = ProjectFileIndex.getInstance(project)
     val modules = if (index.isInLibrary(file)) {
         val library = index.getOrderEntriesForFile(file)
-            .asSequence()
-            .mapNotNull { it as? LibraryOrderEntry }
-            .firstOrNull()
+            .firstNotNullOfOrNull { it as? LibraryOrderEntry }
             ?.library
             ?: return@cached null
         ModuleManager.getInstance(project).modules.asSequence()
@@ -364,7 +350,7 @@ fun PsiElement.findMcpModule() = this.cached {
         sequenceOf(this.findModule())
     }
 
-    modules.mapNotNull { it?.findMcpModule() }.firstOrNull()
+    modules.firstNotNullOfOrNull { it?.findMcpModule() }
 }
 
 private fun Module.findMcpModule(): McpModule? {

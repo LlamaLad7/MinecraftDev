@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -58,6 +58,7 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.DocumentUtil
 import com.intellij.util.indexing.FileBasedIndex
 import java.util.Locale
+import kotlin.collections.map
 
 object TranslationFiles {
     private val MC_1_12_2 = SemanticVersion.release(1, 12, 2)
@@ -84,12 +85,13 @@ object TranslationFiles {
 
     fun toTranslation(element: PsiElement): Translation? =
         if (element.containingFile?.virtualFile?.let { isTranslationFile(it) } == true) {
-            when {
-                element is JsonProperty && element.value is JsonStringLiteral -> Translation(
+            when (element) {
+                is JsonProperty if element.value is JsonStringLiteral -> Translation(
                     element.name,
                     (element.value as JsonStringLiteral).value,
                 )
-                element is LangEntry -> Translation(element.key, element.value)
+
+                is LangEntry -> Translation(element.key, element.value)
                 else -> null
             }
         } else {
@@ -290,7 +292,7 @@ object TranslationFiles {
     fun buildFileEntries(project: Project, locale: String, entries: Iterable<Translation>, keepComments: Int) =
         sequence {
             for (entry in entries) {
-                val langElement = TranslationInverseIndex.findElements(
+                val langElement = TranslationInverseIndex.Util.findElements(
                     entry.key,
                     GlobalSearchScope.allScope(project),
                     locale,
@@ -337,7 +339,7 @@ object TranslationFiles {
 
         val defaultTranslationFile = FileBasedIndex.getInstance()
             .getContainingFiles(
-                TranslationIndex.NAME,
+                TranslationIndex.Util.NAME,
                 TranslationConstants.DEFAULT_LOCALE,
                 GlobalSearchScope.moduleScope(module),
             )

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -43,9 +43,9 @@ data class ClassFqn(val fqn: String) {
      */
     val packagePath by lazy { packageName.replace('.', '/') }
 
-    fun withClassName(className: String) = copy("$packageName.$className")
+    fun withClassName(className: String) = copy(fqn = "$packageName.$className")
 
-    fun withSubPackage(name: String) = copy("$packageName.$name.$className")
+    fun withSubPackage(name: String) = copy(fqn = "$packageName.$name.$className")
 
     override fun toString(): String = fqn
 }

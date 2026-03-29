@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -106,7 +106,7 @@ class ListenerLineMarkerProvider : LineMarkerProviderDescriptor() {
                 return false
             }
 
-            val otherElement = info.getElement()
+            val otherElement = info.element
             val myElement = element
             return otherElement != null && myElement != null
         }

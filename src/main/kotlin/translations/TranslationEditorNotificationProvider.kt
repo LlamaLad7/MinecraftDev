@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -116,8 +116,8 @@ class TranslationEditorNotificationProvider : EditorNotificationProvider {
     private fun getMissingTranslations(project: Project, file: VirtualFile): Sequence<Translation> {
         val domain = file.mcDomain
 
-        val defaultTranslations = TranslationIndex.getProjectDefaultTranslations(project, domain)
-        val translations = TranslationIndex.getTranslations(project, file)
+        val defaultTranslations = TranslationIndex.Util.getProjectDefaultTranslations(project, domain)
+        val translations = TranslationIndex.Util.getTranslations(project, file)
 
         val keys = translations.map { it.key }.toSet()
 

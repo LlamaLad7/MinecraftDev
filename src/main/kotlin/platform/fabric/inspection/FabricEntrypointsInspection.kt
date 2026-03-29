@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -83,9 +83,8 @@ class FabricEntrypointsInspection : LocalInspectionTool() {
                     continue
                 }
 
-                val element = resolved.singleOrNull()?.element
-                when {
-                    element is PsiClass && !literal.text.contains("::") -> {
+                when (val element = resolved.singleOrNull()?.element) {
+                    is PsiClass if !literal.text.contains("::") -> {
                         val (propertyKey, expectedType) = findEntrypointKeyAndType(literal)
                         if (propertyKey != null && expectedType != null &&
                             !isEntrypointOfCorrectType(element, propertyKey)
@@ -108,7 +107,7 @@ class FabricEntrypointsInspection : LocalInspectionTool() {
                         }
                     }
 
-                    element is PsiMethod -> {
+                    is PsiMethod -> {
                         if (element.hasParameters()) {
                             holder.registerProblem(
                                 literal,
@@ -142,7 +141,7 @@ class FabricEntrypointsInspection : LocalInspectionTool() {
                         }
                     }
 
-                    element is PsiField -> {
+                    is PsiField -> {
                         if (!element.hasModifierProperty(PsiModifier.PUBLIC)) {
                             holder.registerProblem(
                                 literal,

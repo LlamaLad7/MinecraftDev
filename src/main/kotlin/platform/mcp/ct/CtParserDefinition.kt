@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -40,9 +40,9 @@ class CtParserDefinition : ParserDefinition {
 
     override fun createLexer(project: Project): Lexer = CtLexerAdapter()
     override fun createParser(project: Project): PsiParser = CtParser()
-    override fun getFileNodeType(): IFileElementType = FILE
-    override fun getWhitespaceTokens(): TokenSet = WHITE_SPACES
-    override fun getCommentTokens(): TokenSet = COMMENTS
+    override fun getFileNodeType(): IFileElementType = TokenSets.FILE
+    override fun getWhitespaceTokens(): TokenSet = TokenSets.WHITE_SPACES
+    override fun getCommentTokens(): TokenSet = TokenSets.COMMENTS
     override fun getStringLiteralElements(): TokenSet = TokenSet.EMPTY
     override fun createElement(node: ASTNode): PsiElement = CtTypes.Factory.createElement(node)
     override fun createFile(viewProvider: FileViewProvider): PsiFile = CtFile(viewProvider)
@@ -51,10 +51,10 @@ class CtParserDefinition : ParserDefinition {
         return LanguageUtil.canStickTokensTogetherByLexer(left, right, CtLexerAdapter())
     }
 
-    companion object {
-        private val WHITE_SPACES = TokenSet.create(TokenType.WHITE_SPACE)
-        private val COMMENTS = TokenSet.create(CtTypes.COMMENT)
+    object TokenSets {
+        val WHITE_SPACES = TokenSet.create(TokenType.WHITE_SPACE)
+        val COMMENTS = TokenSet.create(CtTypes.COMMENT)
 
-        private val FILE = IFileElementType(Language.findInstance(CtLanguage::class.java))
+        val FILE = IFileElementType(Language.findInstance(CtLanguage::class.java))
     }
 }

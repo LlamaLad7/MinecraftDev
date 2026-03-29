@@ -1,4 +1,4 @@
-Access Transformers(0,2318)
+Access transformers(0,2318)
   AtEntryImpl(ENTRY)(0,64)
     AtKeywordImpl(KEYWORD)(0,6)
       PsiElement(KEYWORD_ELEMENT)('public')(0,6)

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -50,7 +50,7 @@ class MixinAccessorTargetLineMarkerProvider : LineMarkerProviderDescriptor(), Gu
 
             val identifier = element.nameIdentifier ?: continue
 
-            val mixins = FindMixinsAction.findMixins(element, element.project) ?: continue
+            val mixins = FindMixinsAction.Util.findMixins(element, element.project) ?: continue
             if (mixins.none { it.isAccessorMixin }) {
                 continue
             }
@@ -69,7 +69,7 @@ class MixinAccessorTargetLineMarkerProvider : LineMarkerProviderDescriptor(), Gu
 
     override fun navigate(e: MouseEvent, elt: PsiIdentifier) {
         val targetClass = elt.parent as? PsiClass ?: return
-        FindMixinsAction.openFindMixinsUI(
+        FindMixinsAction.Util.openFindMixinsUI(
             targetClass.project,
             targetClass,
             { show(RelativePoint(e)) }

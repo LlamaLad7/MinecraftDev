@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -33,7 +33,7 @@ class VfsLoadedTemplate(
     override val isValid: Boolean,
 ) : LoadedTemplate {
 
-    override fun loadTemplateContents(path: String): String? {
+    override fun loadTemplateContents(path: String): String {
         templateRoot.refresh(false, true)
         val virtualFile = templateRoot.findFileByRelativePath(path)
             ?: throw FileNotFoundException("Could not find file $path in template root ${templateRoot.path}")

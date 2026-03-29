@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -49,7 +49,7 @@ class NbttBlock(
 
     private val psiElement = node.psi
     private val childWrap: Wrap?
-    private val spacingBuilder = NbttFormattingModelBuilder.createSpacingBuilder(settings)
+    private val spacingBuilder = NbttFormattingModelBuilder.Util.createSpacingBuilder(settings)
 
     init {
         childWrap = when (psiElement) {
@@ -100,7 +100,7 @@ class NbttBlock(
     }
 
     override fun getChildAttributes(newChildIndex: Int): ChildAttributes {
-        if (NbttParserDefinition.NBTT_CONTAINERS.contains(node.elementType)) {
+        if (NbttParserDefinition.TokenSets.NBTT_CONTAINERS.contains(node.elementType)) {
             return ChildAttributes(Indent.getNormalIndent(), null)
         }
         if (psiElement is PsiFile) {
@@ -118,10 +118,10 @@ class NbttBlock(
         var indent = Indent.getNoneIndent()
         var wrap: Wrap? = null
 
-        if (NbttParserDefinition.NBTT_CONTAINERS.contains(node.elementType)) {
+        if (NbttParserDefinition.TokenSets.NBTT_CONTAINERS.contains(node.elementType)) {
             if (NbttTypes.COMMA == childNode.elementType) {
                 wrap = Wrap.createWrap(WrapType.NONE, true)
-            } else if (!NbttParserDefinition.NBTT_BRACES.contains(childNode.elementType)) {
+            } else if (!NbttParserDefinition.TokenSets.NBTT_BRACES.contains(childNode.elementType)) {
                 wrap = childWrap!!
                 indent = Indent.getNormalIndent()
             }

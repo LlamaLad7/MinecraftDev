@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -42,7 +42,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.PsiUtil
 
 class UnusedLocalCaptureInspection : MixinInspection() {
-    companion object {
+    object Util {
         fun findCallbackInfoParam(parameters: Array<PsiParameter>): Int {
             return parameters.indexOfFirst { param ->
                 val classType = param.type as? PsiClassType ?: return@indexOfFirst false
@@ -87,7 +87,7 @@ class UnusedLocalCaptureInspection : MixinInspection() {
 
             // find the start of the locals in the parameter list
             val parameters = method.parameterList.parameters
-            val callbackInfoIndex = findCallbackInfoParam(parameters)
+            val callbackInfoIndex = Util.findCallbackInfoParam(parameters)
             if (callbackInfoIndex == -1) {
                 return
             }

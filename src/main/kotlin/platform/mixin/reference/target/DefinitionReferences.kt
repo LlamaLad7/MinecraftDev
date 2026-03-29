@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -36,12 +36,14 @@ import com.demonwav.mcdev.util.reference.PolyReferenceResolver
 import com.demonwav.mcdev.util.toTypedArray
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.openapi.project.Project
+import com.intellij.patterns.PsiJavaElementPattern
 import com.intellij.patterns.PsiJavaPatterns
 import com.intellij.patterns.StandardPatterns
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementResolveResult
+import com.intellij.psi.PsiLiteral
 import com.intellij.psi.PsiMember
 import com.intellij.psi.ResolveResult
 import com.intellij.psi.search.GlobalSearchScope
@@ -127,7 +129,7 @@ abstract class AbstractDefinitionReference : PolyReferenceResolver(), MixinRefer
 }
 
 object FieldDefinitionReference : AbstractDefinitionReference() {
-    val ELEMENT_PATTERN = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
+    val ELEMENT_PATTERN: PsiJavaElementPattern.Capture<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
         .insideAnnotationAttribute(MixinConstants.MixinExtras.DEFINITION, "field")
 
     override fun getFullReferenceIfMatches(memberReference: MemberReference, node: FlowValue): MemberReference? {
@@ -149,7 +151,7 @@ object FieldDefinitionReference : AbstractDefinitionReference() {
 }
 
 object MethodDefinitionReference : AbstractDefinitionReference() {
-    val ELEMENT_PATTERN = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
+    val ELEMENT_PATTERN: PsiJavaElementPattern.Capture<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
         .insideAnnotationAttribute(MixinConstants.MixinExtras.DEFINITION, "method")
 
     override fun getFullReferenceIfMatches(memberReference: MemberReference, node: FlowValue): MemberReference? {

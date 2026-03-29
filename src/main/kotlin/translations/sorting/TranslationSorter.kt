@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -63,7 +63,7 @@ object TranslationSorter {
     private fun sort(project: Project, file: PsiFile, ordering: Ordering, keepComments: Int) {
         val domain = file.virtualFile.mcDomain
         val locale = TranslationFiles.getLocale(file.virtualFile) ?: return
-        val translations = TranslationIndex.getTranslations(file)
+        val translations = TranslationIndex.Util.getTranslations(file)
         val sorted = translations.let {
             when (ordering) {
                 Ordering.ASCENDING -> TranslationFiles.buildFileEntries(
@@ -86,8 +86,8 @@ object TranslationSorter {
                     keepComments,
                 )
                 else -> {
-                    val template = TranslationFiles.buildSortingTemplateFromDefault(file, domain).getOrElse {
-                        return showBalloon(project, null, null, it.message)
+                    val template = TranslationFiles.buildSortingTemplateFromDefault(file, domain).getOrElse { e ->
+                        return showBalloon(project, null, null, e.message)
                     } ?: return showBalloon(project, null, null, "Could not generate template from default translation file")
                     sortByTemplate(
                         project,

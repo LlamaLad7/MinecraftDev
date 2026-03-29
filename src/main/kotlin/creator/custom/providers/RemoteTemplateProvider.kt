@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -177,7 +177,7 @@ open class RemoteTemplateProvider : TemplateProvider {
     }
 
     private fun replaceVariables(originalRepoUrl: String): String =
-        originalRepoUrl.replace("\$version", TemplateDescriptor.FORMAT_VERSION.toString())
+        originalRepoUrl.replace($$"$version", TemplateDescriptor.FORMAT_VERSION.toString())
 
     override fun setupConfigUi(
         data: String,
@@ -267,7 +267,7 @@ open class RemoteTemplateProvider : TemplateProvider {
                             index: Int,
                             isSelected: Boolean,
                             cellHasFocus: Boolean
-                        ): Component? {
+                        ): Component {
                             text = value?.displayname?.let(MCDevBundle::invoke) ?: value?.name?.capitalize().toString()
                             return this
                         }

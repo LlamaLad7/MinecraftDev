@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -27,15 +27,15 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.tree.IElementType
 
 class MEExpressionBraceMatcher : PairedBraceMatcher {
-    companion object {
-        private val PAIRS = arrayOf(
+    private object Const {
+        val PAIRS = arrayOf(
             BracePair(MEExpressionTypes.TOKEN_LEFT_PAREN, MEExpressionTypes.TOKEN_RIGHT_PAREN, false),
             BracePair(MEExpressionTypes.TOKEN_LEFT_BRACKET, MEExpressionTypes.TOKEN_RIGHT_BRACKET, false),
             BracePair(MEExpressionTypes.TOKEN_LEFT_BRACE, MEExpressionTypes.TOKEN_RIGHT_BRACE, false),
         )
     }
 
-    override fun getPairs() = PAIRS
+    override fun getPairs() = Const.PAIRS
     override fun isPairedBracesAllowedBeforeType(lbraceType: IElementType, contextType: IElementType?) = true
     override fun getCodeConstructStart(file: PsiFile?, openingBraceOffset: Int) = openingBraceOffset
 }

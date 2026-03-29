@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -20,7 +20,6 @@
 
 package com.demonwav.mcdev.asset
 
-@Suppress("unused")
 object GeneralAssets : Assets() {
     val LISTENER = loadIcon("/assets/icons/general/EventListener_dark.png")
     val PLUGIN = loadIcon("/assets/icons/general/plugin.png")

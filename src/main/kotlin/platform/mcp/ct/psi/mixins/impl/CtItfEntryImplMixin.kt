@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -23,5 +23,4 @@ package com.demonwav.mcdev.platform.mcp.ct.psi.mixins.impl
 import com.demonwav.mcdev.platform.mcp.ct.psi.mixins.CtItfEntryMixin
 import com.intellij.lang.ASTNode
 
-abstract class CtItfEntryImplMixin(node: ASTNode): CtEntryImplMixin(node), CtItfEntryMixin {
-}
+abstract class CtItfEntryImplMixin(node: ASTNode): CtEntryImplMixin(node), CtItfEntryMixin

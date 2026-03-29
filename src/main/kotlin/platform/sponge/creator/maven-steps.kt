@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -94,7 +94,7 @@ class SpongeMavenProjectFilesStep(parent: NewProjectWizardStep) : AbstractLongRu
 
         assets.addTemplateProperties(
             "PLUGIN_ID" to pluginId,
-            "VERSION_PLACEHOLDER" to "\${version}",
+            "VERSION_PLACEHOLDER" to $$"${version}",
             "SPONGEAPI_VERSION" to spongeApiVersion,
             "LICENSE" to license.id,
             "PLUGIN_NAME" to pluginName,

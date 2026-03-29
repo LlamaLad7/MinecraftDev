@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -53,7 +53,7 @@ abstract class MECastExpressionImplMixin(node: ASTNode) : MEExpressionImpl(node)
                     ?: return false
                 val javaType = pattern.checkType?.type ?: return false
                 val castedExpr = this.castedExpr ?: return false
-                return MEPsiUtil.isWildcardExpression(castedExpr) && castType?.matchesJava(javaType, context) == true
+                MEPsiUtil.isWildcardExpression(castedExpr) && castType?.matchesJava(javaType, context) == true
             }
             else -> false
         }

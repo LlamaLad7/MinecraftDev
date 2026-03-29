@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -40,13 +40,13 @@ class NbttParserDefinition : ParserDefinition {
     override fun spaceExistenceTypeBetweenTokens(left: ASTNode, right: ASTNode) =
         LanguageUtil.canStickTokensTogetherByLexer(left, right, NbttLexerAdapter())
 
-    override fun getStringLiteralElements() = STRING_LITERALS
-    override fun getWhitespaceTokens() = WHITE_SPACES
-    override fun getFileNodeType() = FILE
+    override fun getStringLiteralElements() = TokenSets.STRING_LITERALS
+    override fun getWhitespaceTokens() = TokenSets.WHITE_SPACES
+    override fun getFileNodeType() = TokenSets.FILE
     override fun createElement(node: ASTNode) = NbttTypes.Factory.createElement(node)!!
     override fun getCommentTokens() = TokenSet.EMPTY!!
 
-    companion object {
+    object TokenSets {
         val WHITE_SPACES = TokenSet.create(TokenType.WHITE_SPACE)
         val STRING_LITERALS = TokenSet.create(NbttTypes.STRING_LITERAL)
 

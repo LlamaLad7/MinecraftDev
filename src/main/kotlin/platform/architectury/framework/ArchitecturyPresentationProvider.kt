@@ -34,15 +34,13 @@ class ArchitecturyPresentationProvider : LibraryPresentationProvider<LibraryVers
 
     override fun detect(classesRoots: MutableList<VirtualFile>): LibraryVersionProperties? {
         for (classesRoot in classesRoots) {
-            if (classesRoot.name.endsWith(".jar")) {
-                runCatching {
-                    val jar = JarFile(classesRoot.localFile)
-                    val isArchitecturyLib = jar.entries().asSequence().any {
-                        it.name == "architectury.common.json"
-                    }
-                    if (isArchitecturyLib) {
-                        return LibraryVersionProperties()
-                    }
+            if (!classesRoot.name.endsWith(".jar")) {
+                continue
+            }
+            runCatching {
+                JarFile(classesRoot.localFile).use { jar ->
+                    jar.getEntry("architectury.common.json") ?: return@runCatching
+                    return LibraryVersionProperties()
                 }
             }
         }

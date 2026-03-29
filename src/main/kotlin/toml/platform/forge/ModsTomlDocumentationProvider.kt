@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -119,12 +119,12 @@ class ModsTomlDocumentationProvider : DocumentationProvider {
 
         private val dummyHolder = DummyHolderFactory.createHolder(psiManager, null)
 
-        override fun getParent(): PsiElement? = dummyHolder
+        override fun getParent(): PsiElement = dummyHolder
 
-        override fun getManager(): PsiManager? = psiManager
+        override fun getManager(): PsiManager = psiManager
 
-        override fun getPresentation(): ItemPresentation? = object : ItemPresentation {
-            override fun getPresentableText(): @NlsSafe String? = key
+        override fun getPresentation(): ItemPresentation = object : ItemPresentation {
+            override fun getPresentableText(): @NlsSafe String = key
 
             override fun getIcon(unused: Boolean): Icon? = null
         }

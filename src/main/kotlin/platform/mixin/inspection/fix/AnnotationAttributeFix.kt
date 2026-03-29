@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -40,11 +40,8 @@ open class AnnotationAttributeFix(
     @SafeFieldForPreview
     private val attributes = attributes.map { (key, value) ->
         key to value?.let {
-            if (it !is PsiAnnotationMemberValue) {
-                JavaPsiFacade.getElementFactory(annotation.project).createLiteralExpression(it)
-            } else {
-                it
-            }
+            it as? PsiAnnotationMemberValue
+                ?: JavaPsiFacade.getElementFactory(annotation.project).createLiteralExpression(it)
         }
     }
 

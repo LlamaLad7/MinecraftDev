@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -40,7 +40,7 @@ class NbttFormattingModelBuilder : FormattingModelBuilder {
         )
     }
 
-    companion object {
+    object Util {
         fun createSpacingBuilder(settings: CodeStyleSettings): SpacingBuilder {
             val nbttSettings = settings.getCustomSettings(NbttCodeStyleSettings::class.java)
             val commonSettings = settings.getCommonSettings(NbttLanguage)

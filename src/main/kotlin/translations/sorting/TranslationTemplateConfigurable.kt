@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -133,7 +133,7 @@ class TranslationTemplateConfigurable(private val project: Project) : Configurab
     }
 
     override fun isModified(): Boolean {
-        return templateEditor?.document?.text != getActiveTemplateText() != false || panel.isModified()
+        return templateEditor?.document?.text != getActiveTemplateText() || panel.isModified()
     }
 
     override fun apply() {

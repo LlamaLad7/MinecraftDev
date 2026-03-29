@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -54,7 +54,6 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiEnumConstant
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiModifier
-import com.intellij.psi.PsiModifierList
 import com.intellij.psi.PsiParameterListOwner
 import com.intellij.psi.PsiQualifiedReference
 import com.intellij.psi.PsiReference
@@ -115,16 +114,14 @@ class AtResolver(
 
         fun getArgs(at: PsiAnnotation): Map<String, String> {
             val args = at.findAttributeValue("args")?.computeStringArray().orEmpty()
-            val explicitArgs = args.asSequence()
-                .map {
-                    val parts = it.split('=', limit = 2)
-                    if (parts.size == 1) {
-                        parts[0] to ""
-                    } else {
-                        parts[0] to parts[1]
-                    }
+            val explicitArgs = args.associate {
+                val parts = it.split('=', limit = 2)
+                if (parts.size == 1) {
+                    parts[0] to ""
+                } else {
+                    parts[0] to parts[1]
                 }
-                .toMap()
+            }
             return getInherentArgs(at) + explicitArgs
         }
 

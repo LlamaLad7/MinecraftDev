@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -47,7 +47,6 @@ import com.intellij.patterns.PlatformPatterns.elementType
 import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.patterns.PsiElementPattern
 import com.intellij.psi.JavaPsiFacade
-import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.GlobalSearchScope
@@ -78,9 +77,9 @@ class AtCompletionContributor : CompletionContributor() {
         val text = parentText.substring(0, parentText.length - CompletionUtil.DUMMY_IDENTIFIER.length)
 
         when {
-            AFTER_KEYWORD.accepts(parent) -> handleAtClassName(text, parent, result)
-            AFTER_CLASS_NAME.accepts(parent) -> handleAtName(text, parent, result)
-            AFTER_NEWLINE.accepts(parent) -> handleNewLine(text, result)
+            Const.AFTER_KEYWORD.accepts(parent) -> handleAtClassName(text, parent, result)
+            Const.AFTER_CLASS_NAME.accepts(parent) -> handleAtName(text, parent, result)
+            Const.AFTER_NEWLINE.accepts(parent) -> handleNewLine(text, result)
         }
     }
 
@@ -346,8 +345,8 @@ class AtCompletionContributor : CompletionContributor() {
         return thisName.getSimilarity(text, packageBonus)
     }
 
-    companion object {
-        fun after(type: IElementType): PsiElementPattern.Capture<PsiElement> =
+    object Const {
+        private fun after(type: IElementType): PsiElementPattern.Capture<PsiElement> =
             psiElement().afterSibling(psiElement().withElementType(elementType().oneOf(type)))
 
         val AFTER_KEYWORD = after(AtTypes.KEYWORD)

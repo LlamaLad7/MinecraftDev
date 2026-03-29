@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -43,8 +43,8 @@ import java.util.Locale
 import org.objectweb.asm.tree.ClassNode
 
 class InvokerHandler : MixinMemberAnnotationHandler {
-    companion object {
-        private val PATTERN = Regex("(call|invoke|new|create)([A-Z].*?)(_\\\$md.*)?")
+    object Util {
+        val PATTERN = Regex($$"(call|invoke|new|create)([A-Z].*?)(_\\$md.*)?")
 
         fun getInstance(): InvokerHandler? {
             return MixinAnnotationHandler.forMixinAnnotation(INVOKER) as? InvokerHandler
@@ -85,7 +85,7 @@ class InvokerHandler : MixinMemberAnnotationHandler {
         }
 
         val memberName = member.name ?: return null
-        val result = PATTERN.matchEntire(memberName) ?: return null
+        val result = Util.PATTERN.matchEntire(memberName) ?: return null
         val prefix = result.groupValues[1]
         if (prefix == "new" || prefix == "create") {
             return "<init>"

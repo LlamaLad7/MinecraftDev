@@ -58,8 +58,15 @@ class LocalInfo(
                 args.add(LocalVariables.LocalVariable("this", thisDesc, null, null, null, 0))
             }
             for (argType in Type.getArgumentTypes(methodNode.desc)) {
+                val hasNamedArguments = module.fabricMixinCompatibility?.let { it >= 17000 } == true
+                val localName = methodNode.localVariables?.find { it.index == args.size }?.name
+                val name = if (localName != null && hasNamedArguments) {
+                    localName
+                } else {
+                    "arg${args.size}"
+                }
                 args.add(
-                    LocalVariables.LocalVariable("arg${args.size}", argType.descriptor, null, null, null, args.size, isNamed = false),
+                    LocalVariables.LocalVariable(name, argType.descriptor, null, null, null, args.size, isNamed = hasNamedArguments),
                 )
                 if (argType.size == 2) {
                     args.add(null)

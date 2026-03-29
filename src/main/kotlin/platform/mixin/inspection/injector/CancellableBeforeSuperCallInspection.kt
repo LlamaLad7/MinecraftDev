@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -48,7 +48,7 @@ class CancellableBeforeSuperCallInspection : MixinInspection() {
             if (cancellableAttr.value?.constantValue != true) {
                 return
             }
-            if (doesInjectBeforeSuperConstructorCall(annotation)) {
+            if (Util.doesInjectBeforeSuperConstructorCall(annotation)) {
                 holder.registerProblem(
                     cancellableAttr,
                     "@Inject is cancellable before a superconstructor call",
@@ -58,7 +58,7 @@ class CancellableBeforeSuperCallInspection : MixinInspection() {
         }
     }
 
-    companion object {
+    object Util {
         fun doesInjectBeforeSuperConstructorCall(annotation: PsiAnnotation): Boolean {
             val handler = MixinAnnotationHandler.forMixinAnnotation(MixinConstants.Annotations.INJECT)!!
                 as InjectorAnnotationHandler

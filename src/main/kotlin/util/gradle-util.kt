@@ -30,14 +30,24 @@ import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
 import org.jetbrains.plugins.gradle.util.GradleConstants
 
-fun runGradleTask(project: Project, dir: Path, func: (ExternalSystemTaskExecutionSettings) -> Unit) {
-    runGradleTaskWithCallback(project, dir, func, GradleCallback(null))
+fun runGradleTask(
+    project: Project,
+    dir: Path,
+    toolWindow: Boolean = false,
+    func: (ExternalSystemTaskExecutionSettings) -> Unit,
+) {
+    runGradleTaskWithCallback(project, dir, toolWindow, func, GradleCallback(null))
 }
 
-fun runGradleTaskAndWait(project: Project, dir: Path, func: (ExternalSystemTaskExecutionSettings) -> Unit) {
+fun runGradleTaskAndWait(
+    project: Project,
+    dir: Path,
+    toolWindow: Boolean = false,
+    func: (ExternalSystemTaskExecutionSettings) -> Unit,
+) {
     val latch = CountDownLatch(1)
 
-    runGradleTaskWithCallback(project, dir, func, GradleCallback(latch))
+    runGradleTaskWithCallback(project, dir, toolWindow, func, GradleCallback(latch))
 
     latch.await()
 }
@@ -45,6 +55,7 @@ fun runGradleTaskAndWait(project: Project, dir: Path, func: (ExternalSystemTaskE
 fun runGradleTaskWithCallback(
     project: Project,
     dir: Path,
+    toolWindow: Boolean = false,
     func: (ExternalSystemTaskExecutionSettings) -> Unit,
     callback: TaskCallback,
 ) {
@@ -62,7 +73,7 @@ fun runGradleTaskWithCallback(
         GradleConstants.SYSTEM_ID,
         callback,
         ProgressExecutionMode.IN_BACKGROUND_ASYNC,
-        false,
+        toolWindow,
     )
 }
 

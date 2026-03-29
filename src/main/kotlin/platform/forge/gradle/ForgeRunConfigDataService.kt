@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -152,7 +152,7 @@ class ForgeRunConfigDataService : AbstractProjectDataService<ProjectData, Projec
         val mainModule = findMainModule(moduleMap, module)
 
         ProgressManager.getInstance().run(
-            object : Task.Backgroundable(project, "genIntellijRuns", false) {
+            object : Task.Backgroundable(project, @Suppress("DialogTitleCapitalization") "genIntellijRuns", false) {
                 override fun run(indicator: ProgressIndicator) {
                     indicator.isIndeterminate = true
 
@@ -195,7 +195,6 @@ class ForgeRunManagerListener(private val module: Module, hasData: Boolean) : Ru
     private val disposable = Disposer.newDisposable()
 
     init {
-        Disposer.register(module, disposable)
         module.project.messageBus.connect(disposable).subscribe(RunManagerListener.TOPIC, this)
         // If we don't have a data run, don't wait for it
         if (!hasData) {

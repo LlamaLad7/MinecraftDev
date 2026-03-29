@@ -50,7 +50,7 @@ class RunGradleTasksFinalizer : CreatorFinalizer {
         val projectDir = context.projectDirectory
 
         thisLogger().info("tasks = $tasks projectDir = $projectDir")
-        runGradleTaskAndWait(project, projectDir) { settings ->
+        runGradleTaskAndWait(project, projectDir, toolWindow = true) { settings ->
             settings.taskNames = tasks
         }
 

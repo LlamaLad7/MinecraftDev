@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -64,12 +64,8 @@ import kotlinx.coroutines.sync.withLock
 import org.jetbrains.plugins.gradle.util.GradleUtil
 
 class MinecraftFacetDetector : ProjectActivity {
-    companion object {
-        private val libraryVersionsKey = Key<MutableMap<LibraryKind, String>>("mcdev.libraryVersions")
-
-        fun getLibraryVersions(module: Module): Map<LibraryKind, String> {
-            return module.getUserData(libraryVersionsKey) ?: emptyMap()
-        }
+    private object Const {
+        val libraryVersionsKey = Key<MutableMap<LibraryKind, String>>("mcdev.libraryVersions")
     }
 
     override suspend fun execute(project: Project) {
@@ -182,8 +178,8 @@ class MinecraftFacetDetector : ProjectActivity {
         }
 
         private fun autoDetectTypes(module: Module): Set<PlatformType> {
-            val libraryVersions = module.getUserData(libraryVersionsKey)
-                ?: mutableMapOf<LibraryKind, String>().also { module.putUserData(libraryVersionsKey, it) }
+            val libraryVersions = module.getUserData(Const.libraryVersionsKey)
+                ?: mutableMapOf<LibraryKind, String>().also { module.putUserData(Const.libraryVersionsKey, it) }
             libraryVersions.clear()
 
             val context = LibrariesValidatorContextImpl(module)

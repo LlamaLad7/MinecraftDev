@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -57,7 +57,7 @@ class VanillaGradleDecompileSourceProvider : AttachSourcesProvider {
 
         override fun getName(): String = "Decompile Minecraft"
 
-        override fun getBusyText(): String = "Decompiling Minecraft..."
+        override fun getBusyText(): String = @Suppress("DialogTitleCapitalization") "Decompiling Minecraft..."
 
         override fun perform(orderEntriesContainingFile: List<LibraryOrderEntry>): ActionCallback {
             val project = orderEntriesContainingFile.firstOrNull()?.ownerModule?.project
@@ -87,6 +87,7 @@ class VanillaGradleDecompileSourceProvider : AttachSourcesProvider {
             runGradleTaskWithCallback(
                 project,
                 Paths.get(projectPath),
+                toolWindow = false,
                 { settings -> settings.taskNames = listOf(decompileTaskName) },
                 taskCallback,
             )

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -43,14 +43,14 @@ import com.intellij.psi.util.parentsOfType
 
 class DefaultAnnotationParamInspectionSuppressor : InspectionSuppressor {
     override fun isSuppressedFor(element: PsiElement, toolId: String): Boolean {
-        if (toolId != INSPECTION) {
+        if (toolId != Const.INSPECTION) {
             return false
         }
 
         val name = element.parentOfType<PsiNameValuePair>()?.attributeName ?: return false
         val annotation = element.parentOfType<PsiAnnotation>() ?: return false
 
-        if (name in CONSTANT_SUPPRESSED && annotation.hasQualifiedName(CONSTANT)) {
+        if (name in Const.CONSTANT_SUPPRESSED && annotation.hasQualifiedName(CONSTANT)) {
             return true
         }
 
@@ -64,7 +64,7 @@ class DefaultAnnotationParamInspectionSuppressor : InspectionSuppressor {
                 .filterIsInstance<PsiModifierListOwner>()
                 .drop(1) // don't look at our own owner
                 .mapNotNull { annotationOwner ->
-                    HAS_REMAP.mapFirstNotNull {
+                    Const.HAS_REMAP.mapFirstNotNull {
                         annotationOwner.findAnnotation(it)
                     }
                 }
@@ -79,14 +79,14 @@ class DefaultAnnotationParamInspectionSuppressor : InspectionSuppressor {
         return false
     }
 
-    private val PsiAnnotation.hasRemap get() = qualifiedName?.let { it in HAS_REMAP } == true
+    private val PsiAnnotation.hasRemap get() = qualifiedName?.let { it in Const.HAS_REMAP } == true
 
     override fun getSuppressActions(element: PsiElement?, toolId: String): Array<SuppressQuickFix> =
         SuppressQuickFix.EMPTY_ARRAY
 
-    companion object {
-        private const val INSPECTION = "DefaultAnnotationParam"
-        private val HAS_REMAP = buildSet {
+    private object Const {
+        const val INSPECTION = "DefaultAnnotationParam"
+        val HAS_REMAP = buildSet {
             add(MIXIN)
             add(AT)
             add(ACCESSOR)
@@ -95,7 +95,7 @@ class DefaultAnnotationParamInspectionSuppressor : InspectionSuppressor {
             add(SHADOW)
             addAll(MixinAnnotationHandler.getBuiltinHandlers().map { it.first })
         }
-        private val CONSTANT_SUPPRESSED = setOf(
+        val CONSTANT_SUPPRESSED = setOf(
             "intValue",
             "floatValue",
             "longValue",

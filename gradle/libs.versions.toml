@@ -3,22 +3,20 @@
 kotlin = "2.2.20"
 # https://github.com/JetBrains/intellij-community/blob/<version>/.idea/libraries/kotlinx_coroutines_core.xml
 coroutines = "1.10.2"
-junit = "5.10.2"
-junit-platform = "1.10.2"
-asm = "9.9"
+junit = "6.0.3"
+asm = "9.9.1"
 fuel = "2.3.1"
 licenser = "0.7.5"
-changelog = "2.2.0"
+changelog = "2.5.0"
 # https://github.com/JetBrains/intellij-platform-gradle-plugin
-intellij-plugin = "2.10.5"
+intellij-plugin = "2.13.1"
 # https://central.sonatype.com/artifact/org.jetbrains.intellij/plugin-repository-rest-client
 intellij-plugin-repository-rest-client = "2.0.50"
 # https://www.jetbrains.com/intellij-repository/snapshots or https://www.jetbrains.com/intellij-repository/releases/
+# Search for com.jetbrains.intellij.idea
 intellij-ide = "253.29346.138"
 # https://github.com/JetBrains/gradle-idea-ext-plugin
-idea-ext = "1.3"
-# https://plugins.jetbrains.com/plugin/227-psiviewer/versions
-psiPlugin = "253.7181"
+idea-ext = "1.4.1"
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -26,7 +24,7 @@ intellij-platform = { id = "org.jetbrains.intellij.platform", version.ref = "int
 idea-ext = { id = "org.jetbrains.gradle.plugin.idea-ext", version.ref = "idea-ext" }
 licenser = { id = "net.neoforged.licenser", version.ref = "licenser" }
 changelog = { id = "org.jetbrains.changelog", version.ref = "changelog" }
-sentry = "io.sentry.jvm.gradle:5.12.2"
+sentry = "io.sentry.jvm.gradle:6.3.0"
 
 [libraries]
 intellij-plugin-repository-rest-client = { module = "org.jetbrains.intellij:plugin-repository-rest-client", version.ref = "intellij-plugin-repository-rest-client" }
@@ -41,7 +39,7 @@ changelog-plugin = { module = "org.jetbrains.changelog:org.jetbrains.changelog.g
 
 coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines" }
 
-mappingIo = "net.fabricmc:mapping-io:0.2.1"
+mappingIo = "net.fabricmc:mapping-io:0.8.0"
 mixinExtras-expressions = "io.github.llamalad7:mixinextras-expressions:0.0.6"
 jgraphx = "com.github.vlsi.mxgraph:jgraphx:4.2.2"
 
@@ -51,36 +49,39 @@ jflex-skeleton = "org.jetbrains.idea:jflex:1.7.0-c1fdf11"
 grammarKit = "org.jetbrains.idea:grammar-kit:1.5.1"
 
 # Gradle Tooling
+# https://www.jetbrains.com/intellij-repository/snapshots or https://www.jetbrains.com/intellij-repository/releases/
+# Search for com.jetbrains.intellij.gradle
 gradleToolingExtension = { module = "com.jetbrains.intellij.gradle:gradle-tooling-extension", version = "253.29346.138" }
-annotations = "org.jetbrains:annotations:24.0.0"
-groovy = "org.codehaus.groovy:groovy:3.0.19"
+annotations = "org.jetbrains:annotations:26.1.0"
+groovy = "org.codehaus.groovy:groovy:3.0.25"
 
 asm = { module = "org.ow2.asm:asm", version.ref = "asm" }
 asm-tree = { module = "org.ow2.asm:asm-tree", version.ref = "asm" }
 asm-analysis = { module = "org.ow2.asm:asm-analysis", version.ref = "asm" }
 asm-util = { module = "org.ow2.asm:asm-util", version.ref = "asm" }
 
-gson = "com.google.code.gson:gson:2.10.1"
+gson = "com.google.code.gson:gson:2.13.2"
+jspecify = "org.jspecify:jspecify:1.0.0"
 
 fuel = { module = "com.github.kittinunf.fuel:fuel", version.ref = "fuel" }
 fuel-coroutines = { module = "com.github.kittinunf.fuel:fuel-coroutines", version.ref = "fuel" }
 
-sentry = "io.sentry:sentry:8.22.0"
+sentry = "io.sentry:sentry:8.37.1"
 
 # Testing
 test-mixin = "org.spongepowered:mixin:0.8.5"
-test-spigotapi = "org.spigotmc:spigot-api:1.21-R0.1-SNAPSHOT"
-test-bungeecord = "net.md-5:bungeecord-api:1.21-R0.3"
+test-spigotapi = "org.spigotmc:spigot-api:1.21.11-R0.2-SNAPSHOT"
+test-bungeecord = "net.md-5:bungeecord-api:1.21-R0.4"
 test-spongeapi = "org.spongepowered:spongeapi:7.4.0"
-test-fabricloader = "net.fabricmc:fabric-loader:0.15.11"
+test-fabricloader = "net.fabricmc:fabric-loader:0.18.5"
 test-nbt = "com.demonwav.mcdev:all-types-nbt:1.0"
 
 junit-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
 junit-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
 junit-vintage = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junit" }
-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit" }
 
-mixinExtras-common = "io.github.llamalad7:mixinextras-common:0.5.0-beta.1"
+mixinExtras-common = "io.github.llamalad7:mixinextras-common:0.5.3"
 
 [bundles]
 coroutines = ["coroutines-swing"]

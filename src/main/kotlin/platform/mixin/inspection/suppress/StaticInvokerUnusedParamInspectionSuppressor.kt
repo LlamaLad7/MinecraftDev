@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -58,11 +58,7 @@ class StaticInvokerUnusedParamInspectionSuppressor : InspectionSuppressor {
         }
 
         val clazz = method.findContainingClass() ?: return false
-        if (!clazz.isMixin) {
-            return false
-        }
-
-        return true
+        return clazz.isMixin
     }
 
     override fun getSuppressActions(element: PsiElement?, toolId: String): Array<SuppressQuickFix> =

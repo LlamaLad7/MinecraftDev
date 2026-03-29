@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -18,6 +18,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.io.OutputStream
+import java.nio.charset.Charset
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.util.PatternFilterable
@@ -64,4 +68,12 @@ fun Project.parser(bnf: String, pack: String): TaskDelegate<ParserExec> {
         val grammarKit by project.configurations
         this.grammarKit.setFrom(grammarKit)
     }
+}
+
+fun Project.git(vararg args: String): String {
+    val output = providers.exec {
+        commandLine("git", *args)
+        isIgnoreExitValue = true
+    }
+    return output.standardOutput.asText.get()
 }

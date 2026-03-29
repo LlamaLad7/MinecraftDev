@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -23,7 +23,7 @@ package com.demonwav.mcdev.platform.mixin.inspection.mixinextras
 import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.inspection.MixinInspection
-import com.demonwav.mcdev.platform.mixin.inspection.injector.ModifyVariableMayUseNameInspection.Companion.getVariableNameToIntroduce
+import com.demonwav.mcdev.platform.mixin.inspection.injector.ModifyVariableMayUseNameInspection.Util.getVariableNameToIntroduce
 import com.demonwav.mcdev.platform.mixin.inspection.injector.ModifyVariableMayUseNameInspection.ReplaceWithNameFix
 import com.demonwav.mcdev.platform.mixin.util.LocalInfo
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -46,7 +46,7 @@ class RemoveDuplicatesIntention(
         endElement: PsiElement
     ) {
         val keep = TranslationFiles.seekTranslation(startElement) ?: return
-        val entries = TranslationInverseIndex.findElements(
+        val entries = TranslationInverseIndex.Util.findElements(
             translation.key,
             GlobalSearchScope.fileScope(file),
         )

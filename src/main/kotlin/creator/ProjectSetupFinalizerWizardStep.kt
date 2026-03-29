@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -21,7 +21,6 @@
 package com.demonwav.mcdev.creator
 
 import com.demonwav.mcdev.asset.MCDevBundle
-import com.demonwav.mcdev.creator.ProjectSetupFinalizer.Factory
 import com.demonwav.mcdev.creator.step.NewProjectWizardChainStep.Companion.nextStep
 import com.demonwav.mcdev.util.mapFirstNotNull
 import com.intellij.ide.wizard.AbstractNewProjectWizardStep

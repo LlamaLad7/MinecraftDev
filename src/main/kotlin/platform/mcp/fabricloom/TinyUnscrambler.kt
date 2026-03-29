@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -34,6 +34,7 @@ import com.intellij.unscramble.UnscrambleSupport
 import java.awt.Dimension
 import java.nio.file.Path
 import java.nio.file.Paths
+import javax.swing.ComboBoxModel
 import javax.swing.JPanel
 import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingReader
@@ -49,8 +50,9 @@ class TinyUnscrambler : UnscrambleSupport<TinyUnscrambler.SettingsComponent> {
 
     class SettingsComponent(mappings: Map<String, Path>) : JPanel(GridLayoutManager(1, 2)) {
 
-        val mappingsBoxModel = MapComboBoxModel(mappings)
-        val mappingsBox = ComboBox(mappingsBoxModel)
+        val mappingsBoxModel: MapComboBoxModel<String, Path> = MapComboBoxModel(mappings)
+        @Suppress("UNCHECKED_CAST")
+        val mappingsBox: ComboBox<String> = ComboBox(mappingsBoxModel as ComboBoxModel<String>)
 
         init {
             mappingsBox.renderer = SimpleListCellRenderer.create { label, value, _ ->
@@ -137,21 +139,25 @@ class TinyUnscrambler : UnscrambleSupport<TinyUnscrambler.SettingsComponent> {
                 return true
             }
 
-            override fun visitField(srcName: String, srcDesc: String): Boolean {
-                src = srcName
+            override fun visitField(srcName: String?, srcDesc: String?): Boolean {
+                if (srcName != null) {
+                    src = srcName
+                }
                 return true
             }
 
-            override fun visitMethod(srcName: String, srcDesc: String): Boolean {
-                src = srcName
+            override fun visitMethod(srcName: String?, srcDesc: String?): Boolean {
+                if (srcName != null) {
+                    src = srcName
+                }
                 return true
             }
 
-            override fun visitMethodArg(argPosition: Int, lvIndex: Int, srcName: String): Boolean {
+            override fun visitMethodArg(argPosition: Int, lvIndex: Int, srcName: String?): Boolean {
                 return false
             }
 
-            override fun visitMethodVar(lvtRowIndex: Int, lvIndex: Int, startOpIdx: Int, srcName: String): Boolean {
+            override fun visitMethodVar(lvtRowIndex: Int, lvIndex: Int, startOpIdx: Int, endOpIdx: Int, srcName: String?): Boolean {
                 return false
             }
 

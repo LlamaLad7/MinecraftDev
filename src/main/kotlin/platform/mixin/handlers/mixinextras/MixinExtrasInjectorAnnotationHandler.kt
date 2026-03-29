@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -315,15 +315,18 @@ abstract class MixinExtrasInjectorAnnotationHandler : InjectorAnnotationHandler(
                     sourceClassAndMethod.clazz,
                     annotation.project,
                 )
+                val sortedLocals = sourceClassAndMethod?.method?.localVariables?.sortedBy { it.index }
                 if (genericParams != null) {
                     genericParams.withIndex().mapTo(parameters) { (index, type) ->
                         val i = if (insn.opcode == Opcodes.INVOKESTATIC) index else index + 1
-                        val name = sourceClassAndMethod.method.localVariables?.getOrNull(i)?.name?.toJavaIdentifier()
-                        sanitizedParameter(type, name)
+                        val name = sortedLocals?.getOrNull(i)?.name?.toJavaIdentifier()
+                        sanitizedParameter(type, name, name != null)
                     }
                 } else {
-                    Type.getArgumentTypes(insn.desc).mapTo(parameters) {
-                        sanitizedParameter(it.toPsiType(elementFactory), null)
+                    Type.getArgumentTypes(insn.desc).withIndex().mapTo(parameters) { (index, type) ->
+                        val i = if (insn.opcode == Opcodes.INVOKESTATIC) index else index + 1
+                        val name = sortedLocals?.getOrNull(i)?.name?.toJavaIdentifier()
+                        sanitizedParameter(type.toPsiType(elementFactory), name, name != null)
                     }
                 }
                 parameters
@@ -354,7 +357,7 @@ abstract class MixinExtrasInjectorAnnotationHandler : InjectorAnnotationHandler(
                     Opcodes.INSTANCEOF ->
                         listOf(Parameter("object", Type.getType(Any::class.java).toPsiType(elementFactory)))
 
-                    Opcodes.NEW -> NewInsnInjectionPoint.findInitCall(insn)?.let {
+                    Opcodes.NEW -> NewInsnInjectionPoint.Util.findInitCall(insn)?.let {
                         getPsiParameters(it, targetClass, annotation)
                     }
 
@@ -407,25 +410,25 @@ private fun getConstantType(insn: AbstractInsnNode?): Type? {
         is LdcInsnNode -> {
             val cst = insn.cst
             when (cst) {
-                is Int -> return Type.INT_TYPE
-                is Float -> return Type.FLOAT_TYPE
-                is Long -> return Type.LONG_TYPE
-                is Double -> return Type.DOUBLE_TYPE
-                is String -> return Type.getType(String::class.java)
-                is Type -> return Type.getType(Class::class.java)
+                is Int -> Type.INT_TYPE
+                is Float -> Type.FLOAT_TYPE
+                is Long -> Type.LONG_TYPE
+                is Double -> Type.DOUBLE_TYPE
+                is String -> Type.getType(String::class.java)
+                is Type -> Type.getType(Class::class.java)
                 else -> null
             }
         }
 
         is TypeInsnNode -> {
-            return if (insn.getOpcode() < Opcodes.CHECKCAST) {
+            if (insn.getOpcode() < Opcodes.CHECKCAST) {
                 null // Don't treat NEW and ANEWARRAY as constants
             } else Type.getType(Class::class.java)
         }
 
         else -> {
             val index = CONSTANTS_ALL.indexOf(insn.opcode)
-            return if (index < 0) null else Type.getType(CONSTANTS_TYPES.get(index))
+            if (index < 0) null else Type.getType(CONSTANTS_TYPES[index])
         }
     }
 }

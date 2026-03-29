@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -60,7 +60,7 @@ class GotoAtEntryAction : AnAction() {
             var parent = data.element.parent
 
             if (parent is PsiMember) {
-                val shadowTarget = ShadowHandler.getInstance()?.findFirstShadowTargetForNavigation(parent)?.element
+                val shadowTarget = ShadowHandler.Util.getInstance()?.findFirstShadowTargetForNavigation(parent)?.element
                 if (shadowTarget != null) {
                     parent = shadowTarget
                 }

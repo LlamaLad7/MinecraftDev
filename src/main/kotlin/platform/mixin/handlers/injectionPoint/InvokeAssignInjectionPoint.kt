@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -40,11 +40,11 @@ import org.objectweb.asm.tree.VarInsnNode
 import org.objectweb.asm.util.Printer
 
 class InvokeAssignInjectionPoint : AbstractMethodInjectionPoint() {
-    companion object {
-        private val ARGS_KEYS = arrayOf("fuzz", "skip")
-        private val SKIP_LIST_DELIMITER = "[ ,;]".toRegex()
-        private val OPCODES_BY_NAME = Printer.OPCODES.withIndex().associate { it.value to it.index }
-        private val DEFAULT_SKIP = setOf(
+    private object Const {
+        val ARGS_KEYS = arrayOf("fuzz", "skip")
+        val SKIP_LIST_DELIMITER = "[ ,;]".toRegex()
+        val OPCODES_BY_NAME = Printer.OPCODES.withIndex().associate { it.value to it.index }
+        val DEFAULT_SKIP = setOf(
             // Opcodes which may appear if the targetted method is part of an
             // expression eg. int foo = 2 + this.bar();
             Opcodes.DUP, Opcodes.IADD, Opcodes.LADD, Opcodes.FADD, Opcodes.DADD,
@@ -69,7 +69,7 @@ class InvokeAssignInjectionPoint : AbstractMethodInjectionPoint() {
         completeExtraStringAtAttribute(editor, reference, "target")
     }
 
-    override fun getArgsKeys(at: PsiAnnotation) = ARGS_KEYS
+    override fun getArgsKeys(at: PsiAnnotation) = Const.ARGS_KEYS
 
     override fun getArgsValues(at: PsiAnnotation, key: String): Array<out Any> {
         if (key == "skip") {
@@ -79,7 +79,7 @@ class InvokeAssignInjectionPoint : AbstractMethodInjectionPoint() {
     }
 
     override fun getArgValueListDelimiter(at: PsiAnnotation, key: String) =
-        SKIP_LIST_DELIMITER.takeIf { key == "skip" }
+        Const.SKIP_LIST_DELIMITER.takeIf { key == "skip" }
 
     override fun isShiftDiscouraged(shift: Int, at: PsiAnnotation): Boolean {
         // Allow shifting before INVOKE_ASSIGN
@@ -102,7 +102,7 @@ class InvokeAssignInjectionPoint : AbstractMethodInjectionPoint() {
     ): CollectVisitor<PsiMethod>? {
         val args = AtResolver.getArgs(at)
         val fuzz = args["fuzz"]?.toIntOrNull()?.coerceAtLeast(1) ?: 1
-        val skip = args["skip"]?.let { parseSkip(it) } ?: DEFAULT_SKIP
+        val skip = args["skip"]?.let { parseSkip(it) } ?: Const.DEFAULT_SKIP
 
         if (mode == CollectVisitor.Mode.COMPLETION) {
             return MyCollectVisitor(mode, at.project, MemberReference(""), fuzz, skip)
@@ -111,11 +111,11 @@ class InvokeAssignInjectionPoint : AbstractMethodInjectionPoint() {
     }
 
     private fun parseSkip(string: String): Set<Int> {
-        return string.split(SKIP_LIST_DELIMITER)
+        return string.split(Const.SKIP_LIST_DELIMITER)
             .asSequence()
             .mapNotNull { part ->
                 val trimmedPart = part.trim()
-                OPCODES_BY_NAME[trimmedPart.removePrefix("Opcodes.")]
+                Const.OPCODES_BY_NAME[trimmedPart.removePrefix("Opcodes.")]
                     ?: trimmedPart.toIntOrNull()?.takeIf { it >= 0 && it < Printer.OPCODES.size }
             }
             .toSet()

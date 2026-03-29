@@ -25,6 +25,8 @@ import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VfsUtil
 import java.nio.file.Path
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import org.jetbrains.idea.maven.buildtool.MavenSyncSpec
 import org.jetbrains.idea.maven.project.MavenProjectsManager
 
@@ -35,15 +37,22 @@ class ImportMavenProjectFinalizer : CreatorFinalizer {
         project: Project,
         properties: Map<String, Any>,
         templateProperties: Map<String, Any?>
-    ) {
+    ) = coroutineScope {
         val projectDir = context.projectFileDirectory
         val pomFile = VfsUtil.findFile(Path.of(projectDir).resolve("pom.xml"), true)
-            ?: return
+            ?: return@coroutineScope
 
         thisLogger().info("Invoking import on EDT pomFile = ${pomFile.path}")
         val projectsManager = MavenProjectsManager.getInstance(project)
         projectsManager.addManagedFiles(listOf(pomFile))
-        projectsManager.updateAllMavenProjects(MavenSyncSpec.incremental("ImportMavenProjectFinalizer", false))
+
+        val import = async {
+            projectsManager.updateAllMavenProjects(MavenSyncSpec.incremental("ImportMavenProjectFinalizer", false))
+        }
+
+        openBuildToolWindow(project)
+
+        import.await()
 
         thisLogger().info("Import finished")
     }

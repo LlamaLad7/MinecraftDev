@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -31,41 +31,41 @@ class CtColorSettingsPage : ColorSettingsPage {
     override fun getIcon() = PlatformAssets.MCP_ICON
     override fun getHighlighter() = CtSyntaxHighlighter()
     override fun getDemoText() =
-        """
+        $$"""
         classTweaker	v1	named
         
         # https://www.fabricmc.net/wiki/tutorial:accesswideners
         
         extendable class net/minecraft/world/item/crafting/Ingredient
         transitive-extendable class net/minecraft/world/item/crafting/Ingredient
-        accessible class net/minecraft/world/entity/monster/Phantom${'$'}AttackPhase
-        transitive-accessible class net/minecraft/world/entity/monster/Phantom${'$'}AttackPhase
+        accessible class net/minecraft/world/entity/monster/Phantom$AttackPhase
+        transitive-accessible class net/minecraft/world/entity/monster/Phantom$AttackPhase
         extendable method net/minecraft/server/players/IpBanList getIpFromAddress (Ljava/net/SocketAddress;)Ljava/lang/String;
         extendable method net/minecraft/world/item/crafting/Ingredient <init> (Ljava/util/stream/Stream;)V
-        accessible field net/minecraft/world/item/crafting/Ingredient values [Lnet/minecraft/world/item/crafting/Ingredient${'$'}Value;
+        accessible field net/minecraft/world/item/crafting/Ingredient values [Lnet/minecraft/world/item/crafting/Ingredient$Value;
         inject-interface net/minecraft/world/level/block/Block com/example/MyBlockInterface
         transitive-inject-interface net/minecraft/world/level/block/Block com/example/MyTransitiveBlockInterface<TT;>
         """.trimIndent()
 
     override fun getAdditionalHighlightingTagToDescriptorMap(): Map<String, TextAttributesKey>? = null
-    override fun getAttributeDescriptors() = DESCRIPTORS
+    override fun getAttributeDescriptors() = Const.DESCRIPTORS
     override fun getColorDescriptors(): Array<out ColorDescriptor> = ColorDescriptor.EMPTY_ARRAY
     override fun getDisplayName() = "Class Tweakers"
 
-    companion object {
-        private val DESCRIPTORS = arrayOf(
-            AttributesDescriptor("Header Name", CtSyntaxHighlighter.HEADER_NAME),
-            AttributesDescriptor("Header Namespace", CtSyntaxHighlighter.HEADER_NAMESPACE),
+    private object Const {
+        val DESCRIPTORS = arrayOf(
+            AttributesDescriptor("Header name", CtSyntaxHighlighter.HEADER_NAME),
+            AttributesDescriptor("Header namespace", CtSyntaxHighlighter.HEADER_NAMESPACE),
             AttributesDescriptor("Access", CtSyntaxHighlighter.ACCESS),
-            AttributesDescriptor("Inject Interface", CtSyntaxHighlighter.INJECT_INTERFACE),
-            AttributesDescriptor("Class Element", CtSyntaxHighlighter.CLASS_ELEMENT),
-            AttributesDescriptor("Method Element", CtSyntaxHighlighter.METHOD_ELEMENT),
-            AttributesDescriptor("Field Element", CtSyntaxHighlighter.FIELD_ELEMENT),
-            AttributesDescriptor("Class Name", CtSyntaxHighlighter.CLASS_NAME),
-            AttributesDescriptor("Member Name", CtSyntaxHighlighter.MEMBER_NAME),
-            AttributesDescriptor("Class Value", CtSyntaxHighlighter.CLASS_VALUE),
+            AttributesDescriptor("Inject interface", CtSyntaxHighlighter.INJECT_INTERFACE),
+            AttributesDescriptor("Class element", CtSyntaxHighlighter.CLASS_ELEMENT),
+            AttributesDescriptor("Method element", CtSyntaxHighlighter.METHOD_ELEMENT),
+            AttributesDescriptor("Field element", CtSyntaxHighlighter.FIELD_ELEMENT),
+            AttributesDescriptor("Class name", CtSyntaxHighlighter.CLASS_NAME),
+            AttributesDescriptor("Member name", CtSyntaxHighlighter.MEMBER_NAME),
+            AttributesDescriptor("Class value", CtSyntaxHighlighter.CLASS_VALUE),
             AttributesDescriptor("Primitive", CtSyntaxHighlighter.PRIMITIVE),
-            AttributesDescriptor("Type Variable", CtSyntaxHighlighter.TYPE_VARIABLE),
+            AttributesDescriptor("Type variable", CtSyntaxHighlighter.TYPE_VARIABLE),
             AttributesDescriptor("Comment", CtSyntaxHighlighter.COMMENT),
         )
     }
