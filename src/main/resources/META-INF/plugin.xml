@@ -1122,6 +1122,14 @@
                          level="ERROR"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.EnumMixinSwitchStatementInspection"/>
+        <localInspection displayName="Mixin instantiated within that same mixin using a constructor which doesn't exist"
+                         shortName="MixinConstructorDoesntExist"
+                         groupName="Mixin"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="ERROR"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.MixinInstantiationWithinMixinInspection"/>
         <localInspection displayName="Inner classes in Mixins"
                          shortName="MixinInnerClass"
                          groupName="Mixin"
