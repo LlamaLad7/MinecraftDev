@@ -1114,6 +1114,14 @@
                          level="WARNING"
                          hasStaticDescription="true"
                          implementationClass="com.demonwav.mcdev.platform.mixin.inspection.StaticMemberInspection"/>
+        <localInspection displayName="Switch used on an enum mixin"
+                         shortName="SwitchOnEnumMixin"
+                         groupName="Mixin"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="ERROR"
+                         hasStaticDescription="true"
+                         implementationClass="com.demonwav.mcdev.platform.mixin.inspection.EnumMixinSwitchStatementInspection"/>
         <localInspection displayName="Inner classes in Mixins"
                          shortName="MixinInnerClass"
                          groupName="Mixin"
