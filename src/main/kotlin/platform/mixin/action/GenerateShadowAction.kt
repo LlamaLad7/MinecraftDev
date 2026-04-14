@@ -189,7 +189,11 @@ private fun shadowMethod(project: Project, psiClass: PsiClass, method: PsiMethod
         // Remove code block
         newMethod.body?.delete()
     } else {
-        val newBody = JavaPsiFacade.getElementFactory(project).createCodeBlockFromText("{throw new UnsupportedOperationException(\"Implemented via mixin\");}", newMethod)
+        val newBody = if (method.isConstructor) {
+            JavaPsiFacade.getElementFactory(project).createCodeBlock()
+        } else {
+            JavaPsiFacade.getElementFactory(project).createCodeBlockFromText("{throw new UnsupportedOperationException(\"Implemented via mixin\");}", newMethod)
+        }
         newMethod.body?.replace(newBody)
     }
 
