@@ -197,15 +197,23 @@ private fun shadowMethod(project: Project, psiClass: PsiClass, method: PsiMethod
 }
 
 private fun canMakeAbstract(psiClass: PsiClass, method: PsiMethod): Boolean {
+    // If the method to shadow is already abstract, then keep it abstract
     if (method.hasModifierProperty(PsiModifier.ABSTRACT)) {
         return true
     }
+
+    // Static or native methods can't be abstract
     if (method.hasModifierProperty(PsiModifier.STATIC) || method.hasModifierProperty(PsiModifier.NATIVE)) {
         return false
     }
-    if (psiClass.isEnum && psiClass.hasModifierProperty(PsiModifier.FINAL)) {
+
+    // Don't generate abstract methods for enums if the method to shadow isn't already abstract. If the enum mixin isn't
+    // already abstract, it will require the enum to be abstract which is bad. If it is already abstract, then it will
+    // require all enum values to override this shadow method which we also don't want.
+    if (psiClass.isEnum) {
         return false
     }
+
     return true
 }
 
