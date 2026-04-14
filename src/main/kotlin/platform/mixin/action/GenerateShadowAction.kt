@@ -132,13 +132,14 @@ fun createShadowMembers(
     psiClass: PsiClass,
     members: Sequence<PsiMember>,
 ): List<PsiGenerationInfo<PsiMember>> {
-    var methodAdded = false
+    var shouldMakeAbstract = false
 
     val result = members.map { m ->
         val shadowMember: PsiMember = when (m) {
             is PsiMethod -> {
-                methodAdded = true
-                shadowMethod(psiClass, m)
+                val shadowMethod = shadowMethod(project, psiClass, m)
+                shouldMakeAbstract = shouldMakeAbstract || shadowMethod.hasModifierProperty(PsiModifier.ABSTRACT)
+                shadowMethod
             }
             is PsiField -> shadowField(project, m)
             else -> throw UnsupportedOperationException("Unsupported member type: ${m::class.java.name}")
@@ -150,7 +151,7 @@ fun createShadowMembers(
     }.toList()
 
     // Make the class abstract (if not already)
-    if (methodAdded && !psiClass.hasModifierProperty(PsiModifier.ABSTRACT)) {
+    if (shouldMakeAbstract && !psiClass.hasModifierProperty(PsiModifier.ABSTRACT)) {
         val classModifiers = psiClass.modifierList!!
         if (classModifiers.hasModifierProperty(PsiModifier.FINAL)) {
             classModifiers.setModifierProperty(PsiModifier.FINAL, false)
@@ -161,8 +162,10 @@ fun createShadowMembers(
     return result
 }
 
-private fun shadowMethod(psiClass: PsiClass, method: PsiMethod): PsiMethod {
+private fun shadowMethod(project: Project, psiClass: PsiClass, method: PsiMethod): PsiMethod {
     val newMethod = GenerateMembersUtil.substituteGenericMethod(method, PsiSubstitutor.EMPTY, psiClass)
+    newMethod.modifierList.setModifierProperty(PsiModifier.STATIC, method.hasModifierProperty(PsiModifier.STATIC))
+    newMethod.modifierList.setModifierProperty(PsiModifier.NATIVE, method.hasModifierProperty(PsiModifier.NATIVE))
 
     // Remove Javadocs
     OverrideImplementUtil.deleteDocComment(newMethod)
@@ -174,18 +177,36 @@ private fun shadowMethod(psiClass: PsiClass, method: PsiMethod): PsiMethod {
     // Copy annotations
     copyAnnotations(psiClass.containingFile, method.modifierList, newModifiers)
 
-    // If the method was original private, make it protected now
-    if (newModifiers.hasModifierProperty(PsiModifier.PRIVATE)) {
-        newModifiers.setModifierProperty(PsiModifier.PROTECTED, true)
+    if (canMakeAbstract(psiClass, method)) {
+        // If the method was original private, make it protected now
+        if (newModifiers.hasModifierProperty(PsiModifier.PRIVATE)) {
+            newModifiers.setModifierProperty(PsiModifier.PROTECTED, true)
+        }
+
+        // Make method abstract
+        newModifiers.setModifierProperty(PsiModifier.ABSTRACT, true)
+
+        // Remove code block
+        newMethod.body?.delete()
+    } else {
+        val newBody = JavaPsiFacade.getElementFactory(project).createCodeBlockFromText("{throw new UnsupportedOperationException(\"Implemented via mixin\");}", newMethod)
+        newMethod.body?.replace(newBody)
     }
 
-    // Make method abstract
-    newModifiers.setModifierProperty(PsiModifier.ABSTRACT, true)
-
-    // Remove code block
-    newMethod.body?.delete()
-
     return newMethod
+}
+
+private fun canMakeAbstract(psiClass: PsiClass, method: PsiMethod): Boolean {
+    if (method.hasModifierProperty(PsiModifier.ABSTRACT)) {
+        return true
+    }
+    if (method.hasModifierProperty(PsiModifier.STATIC) || method.hasModifierProperty(PsiModifier.NATIVE)) {
+        return false
+    }
+    if (psiClass.isEnum && psiClass.hasModifierProperty(PsiModifier.FINAL)) {
+        return false
+    }
+    return true
 }
 
 private fun shadowField(project: Project, field: PsiField): PsiField {
