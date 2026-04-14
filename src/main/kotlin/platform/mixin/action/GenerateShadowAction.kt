@@ -211,6 +211,11 @@ private fun canMakeAbstract(psiClass: PsiClass, method: PsiMethod): Boolean {
         return false
     }
 
+    // Constructors can't be abstract
+    if (method.isConstructor) {
+        return false
+    }
+
     // Don't generate abstract methods for enums if the method to shadow isn't already abstract. If the enum mixin isn't
     // already abstract, it will require the enum to be abstract which is bad. If it is already abstract, then it will
     // require all enum values to override this shadow method which we also don't want.
