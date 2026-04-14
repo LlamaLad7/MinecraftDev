@@ -151,7 +151,7 @@ fun createShadowMembers(
     }.toList()
 
     // Make the class abstract (if not already)
-    if (shouldMakeAbstract && !psiClass.hasModifierProperty(PsiModifier.ABSTRACT)) {
+    if (shouldMakeAbstract && !psiClass.hasModifierProperty(PsiModifier.ABSTRACT) && !psiClass.isEnum) {
         val classModifiers = psiClass.modifierList!!
         if (classModifiers.hasModifierProperty(PsiModifier.FINAL)) {
             classModifiers.setModifierProperty(PsiModifier.FINAL, false)
