@@ -103,10 +103,10 @@ object TargetReference : PolyReferenceResolver(), MixinReference {
     override fun isUnresolved(context: PsiElement): Boolean {
         val at = context.parentOfType<PsiAnnotation>() ?: return true
         val targets = getTargets(at, true)?.ifEmpty { return true } ?: return false
-        return targets.all {
-            val failure = AtResolver(at, it.clazz, it.method).isUnresolved()
+        return targets.all { target ->
+            val failure = AtResolver(at, target.clazz, target.method).isUnresolved()
             // leave it if there is a filter to blame, the target reference was at least resolved
-            failure != null && failure.filterStats.isEmpty()
+            failure != null && failure.filterStats.values.none { it > 0 }
         }
     }
 
