@@ -52,3 +52,5 @@ fun <T> Sequence<T>.memoized(): Sequence<T> {
 }
 
 fun Sequence<*>.countIsAtLeast(n: Int) = n <= 0 || drop(n - 1).any()
+
+fun Sequence<*>.countIsLessThan(n: Int) = n > 0 && drop(n - 1).none()

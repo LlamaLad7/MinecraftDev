@@ -35,6 +35,7 @@ import com.demonwav.mcdev.util.MemberReference
 import com.demonwav.mcdev.util.Quantifier
 import com.demonwav.mcdev.util.constantStringValue
 import com.demonwav.mcdev.util.countIsAtLeast
+import com.demonwav.mcdev.util.countIsLessThan
 import com.demonwav.mcdev.util.findContainingClass
 import com.demonwav.mcdev.util.findContainingMethod
 import com.demonwav.mcdev.util.reference.PolyReferenceResolver
@@ -83,10 +84,12 @@ abstract class AbstractMethodReference : PolyReferenceResolver(), MixinReference
 
         val stringValue = context.constantStringValue ?: return false
         val targetMethodInfo = parseSelector(stringValue, context) ?: return false
+        val minMatches = targetMethodInfo.quantifier.min(Quantifier.Context.MEMBER).coerceAtLeast(1)
         val targets = getTargets(context) ?: return false
-        return !targets.asSequence().flatMap {
-            targetMethodInfo.getCustomOwner(it).findMethods(targetMethodInfo)
-        }.any()
+
+        return targets.any {
+            targetMethodInfo.getCustomOwner(it).findMethods(targetMethodInfo).countIsLessThan(minMatches)
+        }
     }
 
     fun getReferenceIfAmbiguous(context: PsiElement): MemberInfo? {

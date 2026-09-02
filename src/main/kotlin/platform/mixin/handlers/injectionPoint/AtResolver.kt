@@ -36,9 +36,11 @@ import com.demonwav.mcdev.platform.mixin.util.findSourceClass
 import com.demonwav.mcdev.platform.mixin.util.findSourceElement
 import com.demonwav.mcdev.platform.mixin.util.isClinit
 import com.demonwav.mcdev.platform.mixin.util.memberReference
+import com.demonwav.mcdev.util.Quantifier
 import com.demonwav.mcdev.util.computeStringArray
 import com.demonwav.mcdev.util.constantStringValue
 import com.demonwav.mcdev.util.constantValue
+import com.demonwav.mcdev.util.countIsAtLeast
 import com.demonwav.mcdev.util.descriptor
 import com.demonwav.mcdev.util.equivalentTo
 import com.demonwav.mcdev.util.findMethods
@@ -197,7 +199,17 @@ class AtResolver(
                 InsnResolutionInfo.Failure()
             }
         }
-        return collectVisitor.visit(targetMethod) as? InsnResolutionInfo.Failure
+        return when (val result = collectVisitor.visit(targetMethod)) {
+            is InsnResolutionInfo.Failure -> result
+            is InsnResolutionInfo.Success -> {
+                val minMatches = collectVisitor.quantifier.min(Quantifier.Context.INSTRUCTION).coerceAtLeast(1)
+                if (result.results.countIsAtLeast(minMatches)) {
+                    null
+                } else {
+                    InsnResolutionInfo.Failure()
+                }
+            }
+        }
     }
 
     fun resolveInstructions(
