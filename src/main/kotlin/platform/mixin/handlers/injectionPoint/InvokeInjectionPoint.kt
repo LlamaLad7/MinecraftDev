@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -21,7 +21,7 @@
 package com.demonwav.mcdev.platform.mixin.handlers.injectionPoint
 
 import com.demonwav.mcdev.platform.mixin.reference.MixinSelector
-import com.demonwav.mcdev.util.MemberReference
+import com.demonwav.mcdev.platform.mixin.util.MemberInfo
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.CommonClassNames
@@ -64,7 +64,7 @@ class InvokeInjectionPoint : AbstractMethodInjectionPoint() {
         mode: CollectVisitor.Mode,
     ): CollectVisitor<PsiMethod>? {
         if (mode == CollectVisitor.Mode.COMPLETION) {
-            return MyCollectVisitor(mode, at.project, MemberReference(""))
+            return MyCollectVisitor(mode, at.project, MemberInfo(""))
         }
         return target?.let { MyCollectVisitor(mode, at.project, it) }
     }

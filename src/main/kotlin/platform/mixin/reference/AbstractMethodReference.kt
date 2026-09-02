@@ -21,9 +21,9 @@
 package com.demonwav.mcdev.platform.mixin.reference
 
 import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
-import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InjectionPoint
 import com.demonwav.mcdev.platform.mixin.reference.target.TargetReference
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
+import com.demonwav.mcdev.platform.mixin.util.MemberInfo
 import com.demonwav.mcdev.platform.mixin.util.bytecode
 import com.demonwav.mcdev.platform.mixin.util.findMethods
 import com.demonwav.mcdev.platform.mixin.util.findOrConstructSourceMethod
@@ -87,8 +87,8 @@ abstract class AbstractMethodReference : PolyReferenceResolver(), MixinReference
         }.any()
     }
 
-    fun getReferenceIfAmbiguous(context: PsiElement): MemberReference? {
-        val targetReference = parseSelector(context) as? MemberReference ?: return null
+    fun getReferenceIfAmbiguous(context: PsiElement): MemberInfo? {
+        val targetReference = parseSelector(context) as? MemberInfo ?: return null
         if (targetReference.descriptor != null) {
             return null
         }
@@ -97,8 +97,8 @@ abstract class AbstractMethodReference : PolyReferenceResolver(), MixinReference
         return if (isAmbiguous(targets, targetReference)) targetReference else null
     }
 
-    private fun isAmbiguous(targets: Collection<ClassNode>, targetReference: MemberReference): Boolean {
-        if (targetReference.matchAllNames) {
+    private fun isAmbiguous(targets: Collection<ClassNode>, targetReference: MemberInfo): Boolean {
+        if (targetReference.name == null) {
             return targets.any {
                 val methods = it.methods
                 methods != null && methods.size > 1
@@ -141,7 +141,7 @@ abstract class AbstractMethodReference : PolyReferenceResolver(), MixinReference
 
         return targetedMethods.asSequence().flatMap { method ->
             val targetReference = parseSelector(method, context) ?: return@flatMap emptySequence()
-            if (targetReference is MemberReference && targetReference.descriptor == null && isAmbiguous(
+            if (targetReference is MemberInfo && targetReference.descriptor == null && isAmbiguous(
                     targets,
                     targetReference,
                 )

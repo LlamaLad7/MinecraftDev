@@ -23,11 +23,11 @@ package com.demonwav.mcdev.platform.mixin.handlers.injectionPoint
 import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.reference.MixinSelector
 import com.demonwav.mcdev.platform.mixin.reference.MixinSelectorParser
+import com.demonwav.mcdev.platform.mixin.util.MemberInfo
 import com.demonwav.mcdev.platform.mixin.util.MethodTargetMember
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.AT
 import com.demonwav.mcdev.platform.mixin.util.findClassNodeByPsiClass
 import com.demonwav.mcdev.platform.mixin.util.findMethod
-import com.demonwav.mcdev.util.MemberReference
 import com.demonwav.mcdev.util.constantStringValue
 import com.demonwav.mcdev.util.fullQualifiedName
 import com.demonwav.mcdev.util.internalName
@@ -84,7 +84,7 @@ class NewInsnInjectionPoint : InjectionPoint<PsiMember>() {
             return target
         }
         val clazz = AtResolver.getArgs(at)["class"] ?: return null
-        return classToMemberReference(clazz)
+        return classToMemberInfo(clazz)
     }
 
     override fun createNavigationVisitor(
@@ -102,7 +102,7 @@ class NewInsnInjectionPoint : InjectionPoint<PsiMember>() {
         mode: CollectVisitor.Mode,
     ): CollectVisitor<PsiMember>? {
         if (mode == CollectVisitor.Mode.COMPLETION) {
-            return MyCollectVisitor(mode, at.project, MemberReference(""))
+            return MyCollectVisitor(mode, at.project, MemberInfo(""))
         }
         return getTarget(at, target)?.let { MyCollectVisitor(mode, at.project, it) }
     }
@@ -235,7 +235,6 @@ private class NewInsnTypeSelector(
 
     override val fieldDescriptor = null
     override val methodDescriptor = null
-    override val displayName = owner
 }
 
 private class NewInsnDescriptorSelector(
@@ -256,14 +255,13 @@ private class NewInsnDescriptorSelector(
 
     override val owner = null
     override val fieldDescriptor = null
-    override val displayName = methodDescriptor
 }
 
-private fun classToMemberReference(value: String): MemberReference? {
+private fun classToMemberInfo(value: String): MemberInfo? {
     val fqn = value.replace('/', '.')
     if (fqn.isNotEmpty() && !fqn.startsWith('.') && !fqn.endsWith('.') && !fqn.contains("..")) {
         if (StringUtil.isJavaIdentifier(fqn.replace('.', '_'))) {
-            return MemberReference("<init>", owner = fqn)
+            return MemberInfo("<init>", owner = fqn)
         }
     }
 
