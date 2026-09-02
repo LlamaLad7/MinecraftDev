@@ -83,7 +83,7 @@ abstract class AbstractDefinitionReference : PolyReferenceResolver(), MixinRefer
     override fun collectVariants(context: PsiElement) =
         resolveInBytecode(
             context,
-            MemberInfo("*", null, null, matchAllNames = true, matchAllDescs = true)
+            MemberInfo()
         ).mapToArray<MemberReference, Any> {
             LookupElementBuilder.create(referenceToString(it))
                 .withPresentableText(it.presentableText)

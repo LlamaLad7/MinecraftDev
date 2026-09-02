@@ -26,6 +26,7 @@ import com.demonwav.mcdev.platform.mixin.reference.target.FieldDefinitionReferen
 import com.demonwav.mcdev.platform.mixin.reference.target.MethodDefinitionReference
 import com.demonwav.mcdev.platform.mixin.util.MemberInfo
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
+import com.demonwav.mcdev.util.MemberReference
 import com.intellij.lang.ASTNode
 import com.intellij.lang.folding.CustomFoldingBuilder
 import com.intellij.lang.folding.FoldingDescriptor
@@ -50,7 +51,7 @@ class MEDefinitionFoldingBuilder : CustomFoldingBuilder() {
         if (psi is PsiLiteralExpression) {
             val value = psi.value as? String ?: return "..."
             val memberInfo = MemberInfo.parse(value) ?: return "..."
-            return memberInfo.presentableText
+            return MemberReference(memberInfo.name ?: "*", memberInfo.descriptor, memberInfo.owner).presentableText
         }
         return "..."
     }

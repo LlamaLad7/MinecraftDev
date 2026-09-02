@@ -102,7 +102,7 @@ class NewInsnInjectionPoint : InjectionPoint<PsiMember>() {
         mode: CollectVisitor.Mode,
     ): CollectVisitor<PsiMember>? {
         if (mode == CollectVisitor.Mode.COMPLETION) {
-            return MyCollectVisitor(mode, at.project, MemberInfo(""))
+            return MyCollectVisitor(mode, at.project, MemberInfo())
         }
         return getTarget(at, target)?.let { MyCollectVisitor(mode, at.project, it) }
     }

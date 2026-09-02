@@ -24,6 +24,7 @@ import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.inspection.MixinAnnotationAttributeInspection
 import com.demonwav.mcdev.platform.mixin.reference.MethodReference
+import com.demonwav.mcdev.util.Quantifier
 import com.demonwav.mcdev.util.constantStringValue
 import com.intellij.codeInspection.LocalQuickFix
 import com.intellij.codeInspection.ProblemDescriptor
@@ -58,7 +59,7 @@ class AmbiguousReferenceInspection : MixinAnnotationAttributeInspection("method"
 
     private fun checkMember(value: PsiAnnotationMemberValue, holder: ProblemsHolder) {
         val ambiguousReference = MethodReference.getReferenceIfAmbiguous(value) ?: return
-        if (ambiguousReference.matchAllNames || ambiguousReference.matchAllDescs) {
+        if (ambiguousReference.name == null || ambiguousReference.quantifier == Quantifier.Any) {
             // the intent of ambiguity is clear
             return
         }

@@ -148,7 +148,7 @@ class ConstantStringMethodInjectionPoint : AbstractMethodInjectionPoint() {
         mode: CollectVisitor.Mode,
     ): CollectVisitor<PsiMethod>? {
         if (mode == CollectVisitor.Mode.COMPLETION) {
-            return MyCollectVisitor(mode, at.project, MemberInfo(""), null)
+            return MyCollectVisitor(mode, at.project, MemberInfo(), null)
         }
         return target?.let { MyCollectVisitor(mode, at.project, it, AtResolver.getArgs(at)["ldc"]) }
     }

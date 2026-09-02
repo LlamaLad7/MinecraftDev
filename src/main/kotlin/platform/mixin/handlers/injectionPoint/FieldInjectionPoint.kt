@@ -97,7 +97,7 @@ class FieldInjectionPoint : QualifiedInjectionPoint<PsiField>() {
         mode: CollectVisitor.Mode,
     ): CollectVisitor<PsiField>? {
         if (mode == CollectVisitor.Mode.COMPLETION) {
-            return MyCollectVisitor(mode, at.project, MemberInfo(""), -1, null, 8)
+            return MyCollectVisitor(mode, at.project, MemberInfo(), -1, null, 8)
         }
         val opcode = (at.findDeclaredAttributeValue("opcode")?.constantValue as? Int)
             ?.takeIf { it in Const.VALID_OPCODES } ?: -1
