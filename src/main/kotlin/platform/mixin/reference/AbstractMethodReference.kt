@@ -33,6 +33,7 @@ import com.demonwav.mcdev.platform.mixin.util.memberReference
 import com.demonwav.mcdev.platform.mixin.util.mixinTargets
 import com.demonwav.mcdev.util.MemberReference
 import com.demonwav.mcdev.util.constantStringValue
+import com.demonwav.mcdev.util.countIsAtLeast
 import com.demonwav.mcdev.util.findContainingClass
 import com.demonwav.mcdev.util.findContainingMethod
 import com.demonwav.mcdev.util.reference.PolyReferenceResolver
@@ -89,7 +90,8 @@ abstract class AbstractMethodReference : PolyReferenceResolver(), MixinReference
 
     fun getReferenceIfAmbiguous(context: PsiElement): MemberInfo? {
         val targetReference = parseSelector(context) as? MemberInfo ?: return null
-        if (targetReference.descriptor != null) {
+        if (targetReference.name != null && targetReference.descriptor != null) {
+            // Not ambiguous
             return null
         }
 
@@ -98,13 +100,7 @@ abstract class AbstractMethodReference : PolyReferenceResolver(), MixinReference
     }
 
     private fun isAmbiguous(targets: Collection<ClassNode>, targetReference: MemberInfo): Boolean {
-        if (targetReference.name == null) {
-            return targets.any {
-                val methods = it.methods
-                methods != null && methods.size > 1
-            }
-        }
-        return targets.any { it.findMethods(MemberReference(targetReference.name)).count() > 1 }
+        return targets.any { it.findMethods(targetReference).countIsAtLeast(2) }
     }
 
     fun resolve(context: PsiElement): Sequence<ClassAndMethodNode>? {

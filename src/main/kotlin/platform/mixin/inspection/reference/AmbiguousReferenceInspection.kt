@@ -24,6 +24,7 @@ import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.inspection.MixinAnnotationAttributeInspection
 import com.demonwav.mcdev.platform.mixin.reference.MethodReference
+import com.demonwav.mcdev.platform.mixin.util.MemberInfo
 import com.demonwav.mcdev.util.Quantifier
 import com.demonwav.mcdev.util.constantStringValue
 import com.intellij.codeInspection.LocalQuickFix
@@ -59,13 +60,13 @@ class AmbiguousReferenceInspection : MixinAnnotationAttributeInspection("method"
 
     private fun checkMember(value: PsiAnnotationMemberValue, holder: ProblemsHolder) {
         val ambiguousReference = MethodReference.getReferenceIfAmbiguous(value) ?: return
-        if (ambiguousReference.name == null || ambiguousReference.quantifier == Quantifier.Any) {
+        if (ambiguousReference.quantifier != Quantifier.Default) {
             // the intent of ambiguity is clear
             return
         }
         holder.registerProblem(
             value,
-            "Ambiguous reference to method '${ambiguousReference.name}' in target class",
+            "Ambiguous reference to method in target class",
             QuickFix,
         )
     }
@@ -75,18 +76,14 @@ class AmbiguousReferenceInspection : MixinAnnotationAttributeInspection("method"
 
         override fun applyFix(project: Project, descriptor: ProblemDescriptor) {
             val element = descriptor.psiElement ?: return
-            val constantValue = element.constantStringValue
+            val constantValue = element.constantStringValue ?: return
+            val info = MemberInfo.parse(constantValue) ?: return
+            val newText = info.copy(quantifier = Quantifier.Any).toMixinString()
 
             val elementFactory = JavaPsiFacade.getElementFactory(project)
 
-            if (constantValue != null) {
-                val newLiteral = "\"${StringUtil.escapeStringCharacters("$constantValue*")}\""
-                element.replace(elementFactory.createExpressionFromText(newLiteral, null))
-            } else {
-                val replacement = elementFactory.createExpressionFromText("str + \"*\"", null) as PsiBinaryExpression
-                replacement.lOperand.replace(element)
-                element.replace(replacement)
-            }
+            val newLiteral = "\"${StringUtil.escapeStringCharacters(newText)}\""
+            element.replace(elementFactory.createExpressionFromText(newLiteral, null))
         }
     }
 }
