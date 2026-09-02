@@ -22,6 +22,7 @@ package com.demonwav.mcdev.platform.mixin.handlers.injectionPoint
 
 import com.demonwav.mcdev.platform.mixin.reference.MixinSelector
 import com.demonwav.mcdev.platform.mixin.util.MemberInfo
+import com.demonwav.mcdev.util.Quantifier
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.CommonClassNames
@@ -153,6 +154,9 @@ class InvokeInjectionPoint : AbstractMethodInjectionPoint() {
         private val project: Project,
         private val selector: MixinSelector,
     ) : CollectVisitor<PsiMethod>(mode) {
+        override val quantifier: Quantifier
+            get() = selector.quantifier
+
         override fun accept(methodNode: MethodNode) = sequence {
             val insns = methodNode.instructions ?: return@sequence
             for (insn in insns) {

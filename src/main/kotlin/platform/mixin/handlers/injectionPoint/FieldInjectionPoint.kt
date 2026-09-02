@@ -24,6 +24,7 @@ import com.demonwav.mcdev.platform.mixin.reference.MixinSelector
 import com.demonwav.mcdev.platform.mixin.util.MemberInfo
 import com.demonwav.mcdev.platform.mixin.util.fakeResolve
 import com.demonwav.mcdev.platform.mixin.util.findOrConstructSourceField
+import com.demonwav.mcdev.util.Quantifier
 import com.demonwav.mcdev.util.constantValue
 import com.intellij.codeInsight.completion.JavaLookupElementBuilder
 import com.intellij.codeInsight.lookup.LookupElementBuilder
@@ -197,6 +198,9 @@ class FieldInjectionPoint : QualifiedInjectionPoint<PsiField>() {
         private val arrayAccess: ArrayAccessType?,
         private val fuzz: Int,
     ) : CollectVisitor<PsiField>(mode) {
+        override val quantifier: Quantifier
+            get() = selector.quantifier
+
         override fun accept(methodNode: MethodNode) = sequence {
             val insns = methodNode.instructions ?: return@sequence
             for (insn in insns) {

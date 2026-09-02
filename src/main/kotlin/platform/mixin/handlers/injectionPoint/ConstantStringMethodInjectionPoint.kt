@@ -26,6 +26,7 @@ import com.demonwav.mcdev.platform.mixin.util.MemberInfo
 import com.demonwav.mcdev.platform.mixin.util.MethodTargetMember
 import com.demonwav.mcdev.platform.mixin.util.fakeResolve
 import com.demonwav.mcdev.platform.mixin.util.findOrConstructSourceMethod
+import com.demonwav.mcdev.util.Quantifier
 import com.demonwav.mcdev.util.constantStringValue
 import com.demonwav.mcdev.util.createLiteralExpression
 import com.demonwav.mcdev.util.toTypedArray
@@ -204,6 +205,9 @@ class ConstantStringMethodInjectionPoint : AbstractMethodInjectionPoint() {
         private val selector: MixinSelector,
         private val ldc: String?,
     ) : CollectVisitor<PsiMethod>(mode) {
+        override val quantifier: Quantifier
+            get() = selector.quantifier
+
         override fun accept(methodNode: MethodNode) = sequence {
             val insns = methodNode.instructions ?: return@sequence
             var seenStringConstant: String? = null

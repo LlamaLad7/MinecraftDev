@@ -26,8 +26,10 @@ import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.DESC
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.SLICE
 import com.demonwav.mcdev.platform.mixin.util.mixinTargets
 import com.demonwav.mcdev.util.MemberMatcher
+import com.demonwav.mcdev.util.Quantifier
 import com.demonwav.mcdev.util.cached
 import com.demonwav.mcdev.util.constantStringValue
+import com.demonwav.mcdev.util.constantValue
 import com.demonwav.mcdev.util.descriptor
 import com.demonwav.mcdev.util.findAnnotation
 import com.demonwav.mcdev.util.findContainingClass
@@ -90,7 +92,11 @@ interface MixinSelectorParser {
 /**
  * An interface which represents Mixin target selectors.
  */
-interface MixinSelector : MemberMatcher
+interface MixinSelector : MemberMatcher {
+    val quantifier: Quantifier
+
+    fun withQuantifier(quantifier: Quantifier): MixinSelector
+}
 
 class MixinMemberParser : MixinSelectorParser {
     override fun parse(value: String, context: PsiElement) = MemberInfo.parse(value)
@@ -168,6 +174,7 @@ private class MixinRegexSelector(
     val descPattern: Regex,
     override val owner: String?,
     descriptor: String?,
+    override val quantifier: Quantifier = Quantifier.Any
 ) : MixinSelector {
     override fun matchField(owner: String, name: String, desc: String): Boolean {
         return ownerPattern.containsMatchIn(owner) &&
@@ -188,6 +195,9 @@ private class MixinRegexSelector(
     override val methodDescriptor = descriptor?.takeIf { it.contains("(") }
     override val fieldDescriptor = descriptor?.takeUnless { it.contains("(") }
 
+    override fun withQuantifier(quantifier: Quantifier) = MixinRegexSelector(
+        ownerPattern, namePattern, descPattern, owner, methodDescriptor ?: fieldDescriptor, quantifier
+    )
 }
 
 // Dynamic selectors
@@ -455,7 +465,15 @@ class DescSelectorParser : DynamicSelectorParser("Desc", "mixin:Desc") {
                 *argTypes.mapToArray { Type.getType(it.descriptor) },
             )
 
-            return DescSelector(owners, name, desc)
+            val min = descAnnotation.findAttributeValue("min")?.constantValue as? Int
+            val max = descAnnotation.findAttributeValue("max")?.constantValue as? Int
+            val quantifier = if (min == null && max == null) {
+                Quantifier.Default
+            } else {
+                Quantifier.Exact(min ?: 0, max ?: Int.MAX_VALUE)
+            }
+
+            return DescSelector(owners, name, desc, quantifier)
         }
     }
 }
@@ -464,6 +482,7 @@ data class DescSelector(
     val owners: Set<String>,
     val name: String,
     override val methodDescriptor: String,
+    override val quantifier: Quantifier,
 ) : MixinSelector {
     override fun matchField(owner: String, name: String, desc: String): Boolean {
         return this.owners.contains(owner) && this.name == name && this.fieldDescriptor.substringBefore("(") == desc
@@ -479,4 +498,6 @@ data class DescSelector(
 
     override val owner = owners.singleOrNull()
     override val fieldDescriptor = methodDescriptor.substringBefore('(')
+
+    override fun withQuantifier(quantifier: Quantifier) = copy(quantifier = quantifier)
 }

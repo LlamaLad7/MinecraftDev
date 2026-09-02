@@ -20,9 +20,20 @@
 
 package com.demonwav.mcdev.util
 
+import com.demonwav.mcdev.platform.mixin.util.FieldTargetMember
+import com.demonwav.mcdev.platform.mixin.util.MethodTargetMember
+import com.demonwav.mcdev.platform.mixin.util.MixinTargetMember
+import com.demonwav.mcdev.platform.mixin.util.bytecode
+import com.demonwav.mcdev.platform.mixin.util.findField
+import com.demonwav.mcdev.platform.mixin.util.findMethod
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.RecursionManager
+import com.intellij.psi.CommonClassNames
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiField
+import com.intellij.psi.PsiMember
 import com.intellij.psi.PsiMethod
+import com.intellij.psi.search.GlobalSearchScope
 import org.objectweb.asm.Type
 
 /**
@@ -107,11 +118,64 @@ data class MemberReference(
             append(descriptor)
         }
     }
+
+    fun resolveMember(project: Project, scope: GlobalSearchScope = GlobalSearchScope.allScope(project)): PsiMember? {
+        return resolve(project, scope) { _, member -> member }
+    }
+
+    fun resolveAsm(
+        project: Project,
+        scope: GlobalSearchScope = GlobalSearchScope.allScope(project),
+    ): MixinTargetMember? {
+        val owner = this.owner ?: return null
+
+        fun doFind(owner: String): MixinTargetMember? {
+            if (owner == CommonClassNames.JAVA_LANG_OBJECT) {
+                return null
+            }
+            return RecursionManager.doPreventingRecursion(owner, false) {
+                val classNode = findQualifiedClass(project, owner, scope)?.bytecode ?: return@doPreventingRecursion null
+
+                classNode.findMethod(this)?.let {
+                    return@doPreventingRecursion MethodTargetMember(classNode, it)
+                }
+
+                classNode.findField(this)?.let {
+                    return@doPreventingRecursion FieldTargetMember(classNode, it)
+                }
+
+                classNode.superName?.let { doFind(it.replace('/', '.')) }?.let { return@doPreventingRecursion it }
+
+                classNode.interfaces?.let { interfaces ->
+                    for (itf in interfaces) {
+                        doFind(itf.replace('/', '.'))?.let { return@doPreventingRecursion it }
+                    }
+                }
+
+                null
+            }
+        }
+
+        return doFind(owner)
+    }
+
+    private inline fun <R> resolve(project: Project, scope: GlobalSearchScope, ret: (PsiClass, PsiMember) -> R): R? {
+        val owner = this.owner ?: return null
+
+        val psiClass = findQualifiedClass(project, owner, scope) ?: return null
+
+        val field = psiClass.findField(this, checkBases = true)
+        return if (field != null) {
+            ret(psiClass, field)
+        } else {
+            psiClass.findMethods(this, checkBases = true).firstOrNull()?.let { ret(psiClass, it) }
+        }
+    }
 }
 
 // Class
 
-fun PsiClass.findMethods(member: MemberMatcher, checkBases: Boolean = false): Sequence<PsiMethod> {
+fun PsiClass.findMethods(member: MemberReference, checkBases: Boolean = false): Sequence<PsiMethod> {
     val methods = if (checkBases) {
         allMethods.asSequence()
     } else {
@@ -120,7 +184,7 @@ fun PsiClass.findMethods(member: MemberMatcher, checkBases: Boolean = false): Se
     return methods.filter { member.matchMethod(it, this) }
 }
 
-fun PsiClass.findField(selector: MemberMatcher, checkBases: Boolean = false): PsiField? {
+fun PsiClass.findField(selector: MemberReference, checkBases: Boolean = false): PsiField? {
     val fields = if (checkBases) {
         allFields.toList()
     } else {

@@ -32,7 +32,7 @@ data class MemberInfo(
     val name: String? = null,
     val descriptor: String? = null,
     override val owner: String? = null,
-    val quantifier: Quantifier = Quantifier.Default,
+    override val quantifier: Quantifier = Quantifier.Default,
 ) : MixinSelector {
 
     init {
@@ -95,6 +95,8 @@ data class MemberInfo(
             }
         }
     }
+
+    override fun withQuantifier(quantifier: Quantifier) = copy(quantifier = quantifier)
 
     companion object {
         fun parse(input: String): MemberInfo? {

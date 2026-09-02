@@ -32,6 +32,7 @@ import com.demonwav.mcdev.platform.mixin.util.findUpstreamMixin
 import com.demonwav.mcdev.platform.mixin.util.memberReference
 import com.demonwav.mcdev.platform.mixin.util.mixinTargets
 import com.demonwav.mcdev.util.MemberReference
+import com.demonwav.mcdev.util.Quantifier
 import com.demonwav.mcdev.util.constantStringValue
 import com.demonwav.mcdev.util.countIsAtLeast
 import com.demonwav.mcdev.util.findContainingClass
@@ -100,7 +101,7 @@ abstract class AbstractMethodReference : PolyReferenceResolver(), MixinReference
     }
 
     private fun isAmbiguous(targets: Collection<ClassNode>, targetReference: MemberInfo): Boolean {
-        return targets.any { it.findMethods(targetReference).countIsAtLeast(2) }
+        return targets.any { it.findMethods(targetReference.withQuantifier(Quantifier.Any)).countIsAtLeast(2) }
     }
 
     fun resolve(context: PsiElement): Sequence<ClassAndMethodNode>? {
@@ -125,27 +126,6 @@ abstract class AbstractMethodReference : PolyReferenceResolver(), MixinReference
                 val actualTarget = selector.getCustomOwner(target)
                 actualTarget.findMethods(selector).map { ClassAndMethodNode(actualTarget, it) }
             }
-    }
-
-    fun resolveAllIfNotAmbiguous(context: PsiElement): List<ClassAndMethodNode>? {
-        val targets = getTargets(context) ?: return null
-
-        val targetedMethods = when (context) {
-            is PsiArrayInitializerMemberValue -> context.initializers.mapNotNull { it.constantStringValue }
-            else -> context.constantStringValue?.let { listOf(it) } ?: emptyList()
-        }
-
-        return targetedMethods.asSequence().flatMap { method ->
-            val targetReference = parseSelector(method, context) ?: return@flatMap emptySequence()
-            if (targetReference is MemberInfo && targetReference.descriptor == null && isAmbiguous(
-                    targets,
-                    targetReference,
-                )
-            ) {
-                return@flatMap emptySequence()
-            }
-            return@flatMap resolve(targets, targetReference)
-        }.toList()
     }
 
     fun resolveForNavigation(context: PsiElement): Array<PsiElement>? {

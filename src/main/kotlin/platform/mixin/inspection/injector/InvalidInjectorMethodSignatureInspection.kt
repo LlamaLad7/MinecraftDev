@@ -98,7 +98,7 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
                 val handler = MixinAnnotationHandler.forMixinAnnotation(annotation, annotation.project)
                     as? InjectorAnnotationHandler ?: continue
                 val methodAttribute = annotation.findDeclaredAttributeValue("method") ?: continue
-                val targetMethods = MethodReference.resolveAllIfNotAmbiguous(methodAttribute) ?: continue
+                val targetMethods = MethodReference.resolve(methodAttribute) ?: continue
 
                 val hasDisallowedInsns = targetMethods.any { classAndMethod ->
                     handler.resolveInstructions(
