@@ -68,9 +68,9 @@ abstract class InjectorAnnotationHandler : MixinAnnotationHandler {
             (actualTarget to actualTarget.methods)
         }
 
-        return targetClassMethods.mapNotNull { (selector, pair) ->
+        return targetClassMethods.flatMap { (selector, pair) ->
             val (clazz, methods) = pair
-            methods.firstNotNullOfOrNull { method ->
+            methods.mapNotNull { method ->
                 if (selector.matchMethod(method, clazz)) {
                     MethodTargetMember(clazz, method)
                 } else {
