@@ -184,13 +184,13 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
                         }
 
                         var isValid = false
-                        for ((expectedParameters, expectedReturnType) in possibleSignatures) {
+                        for (expectedSignature in possibleSignatures) {
                             val paramsMatch =
-                                Util.checkParameters(parameters, expectedParameters, handler.allowCoerce) == CheckResult.OK
+                                Util.checkParameters(parameters, expectedSignature, handler.allowCoerce)
                             if (paramsMatch) {
                                 val methodReturnType = method.returnType
                                 if (methodReturnType != null &&
-                                    checkReturnType(expectedReturnType, methodReturnType, method, handler.allowCoerce)
+                                    checkReturnType(expectedSignature.returnType, methodReturnType, method, handler.allowCoerce)
                                 ) {
                                     isValid = true
                                     break
@@ -199,18 +199,19 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
                         }
 
                         if (!isValid) {
-                            val (expectedParameters, expectedReturnType, intLikeTypePositions) = possibleSignatures[0]
+                            val expectedSignature = possibleSignatures[0]
+                            val (expectedParams, expectedReturnType, expectedTrailingParams, trailingByDefault, intLikeTypePositions) = expectedSignature
                             val normalizedReturnType = when (expectedReturnType) {
                                 is PsiEllipsisType -> expectedReturnType.toArrayType()
                                 else -> expectedReturnType
                             }
 
-                            val paramsCheck = Util.checkParameters(parameters, expectedParameters, handler.allowCoerce)
-                            val isWarning = paramsCheck == CheckResult.WARNING
+                            val paramsMatch = Util.checkParameters(parameters, expectedSignature, handler.allowCoerce)
+                            val isWarning = false
                             val methodReturnType = method.returnType
                             val returnTypeOk = methodReturnType != null &&
                                 checkReturnType(normalizedReturnType, methodReturnType, method, handler.allowCoerce)
-                            val isError = paramsCheck == CheckResult.ERROR || !returnTypeOk
+                            val isError = true
                             if (isWarning || isError) {
                                 reportedSignature = true
 
@@ -218,21 +219,20 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
                                     "Method signature does not match expected signature for $annotationName"
                                 val quickFix = SignatureQuickFix(
                                     method,
-                                    expectedParameters.takeUnless { paramsCheck == CheckResult.OK },
+                                    when {
+                                        paramsMatch -> null
+                                        trailingByDefault -> expectedParams + expectedTrailingParams
+                                        else -> expectedParams
+                                    },
                                     normalizedReturnType.takeUnless { returnTypeOk },
                                     intLikeTypePositions
                                 )
-                                val highlightType =
-                                    if (isError)
-                                        ProblemHighlightType.GENERIC_ERROR_OR_WARNING
-                                    else
-                                        ProblemHighlightType.WARNING
                                 val declarationStart = (method.returnTypeElement ?: identifier).startOffsetInParent
                                 val declarationEnd = method.parameterList.textRangeInParent.endOffset
                                 holder.registerProblem(
                                     method,
                                     description,
-                                    highlightType,
+                                    ProblemHighlightType.GENERIC_ERROR_OR_WARNING,
                                     TextRange.create(declarationStart, declarationEnd),
                                     quickFix
                                 )
@@ -267,59 +267,20 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
     object Util {
         fun checkParameters(
             parameterList: PsiParameterList,
-            expected: List<ParameterGroup>,
+            expected: MethodSignature,
             allowCoerce: Boolean,
-        ): CheckResult {
+        ): Boolean {
             val parameters = parameterList.parameters
-            val parametersWithoutSugar = parameters.dropLastWhile { it.isMixinExtrasSugar }.toTypedArray()
-            var pos = 0
+            val parametersWithoutSugar = parameters.dropLastWhile { it.isMixinExtrasSugar }
 
-            for (group in expected) {
-                // Check if parameter group matches
-                if (group.match(parametersWithoutSugar, pos, allowCoerce)) {
-                    pos += group.size
-                } else if (group.required != ParameterGroup.RequiredLevel.OPTIONAL) {
-                    return if (group.required == ParameterGroup.RequiredLevel.ERROR_IF_ABSENT) {
-                        CheckResult.ERROR
-                    } else {
-                        CheckResult.WARNING
-                    }
-                }
-            }
-
-            // Sugars are valid on any injector and should be ignored, as long as they're at the end.
-            while (pos < parameters.size) {
-                if (parameters[pos].isMixinExtrasSugar) {
-                    pos++
-                } else {
-                    break
-                }
-            }
-
-            // check we have consumed all the parameters
-            if (pos < parameters.size) {
-                return if (
-                    expected.lastOrNull()?.isVarargs == true &&
-                    expected.last().required == ParameterGroup.RequiredLevel.WARN_IF_ABSENT
-                ) {
-                    CheckResult.WARNING
-                } else {
-                    CheckResult.ERROR
-                }
-            }
-
-            return CheckResult.OK
+            return expected.matchParams(parametersWithoutSugar, allowCoerce)
         }
-    }
-
-    enum class CheckResult {
-        OK, WARNING, ERROR
     }
 
     private class SignatureQuickFix(
         method: PsiMethod,
         @SafeFieldForPreview
-        private val expectedParams: List<ParameterGroup>?,
+        private val expectedParams: List<Parameter>?,
         @SafeFieldForPreview
         private val expectedReturnType: PsiType?,
         private val intLikeTypePositions: List<MethodSignature.TypePosition>
@@ -374,21 +335,16 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
             // We want to preserve sugars, and while we're at it, we might as well move them all to the end
             val sugars = parameters.parameters.filter { it.isMixinExtrasSugar }
 
-            val newParams = expectedParams.flatMapTo(mutableListOf()) {
-                if (it.default) {
-                    val nameHelper = PsiNameHelper.getInstance(project)
-                    val languageLevel = PsiUtil.getLanguageLevel(parameters)
-                    it.parameters.mapIndexed { i: Int, p: Parameter ->
-                        val paramName = p.name?.takeIf { name -> nameHelper.isIdentifier(name, languageLevel) }
-                            ?: JavaCodeStyleManager.getInstance(project)
-                                .suggestVariableName(VariableKind.PARAMETER, null, null, p.type).names
-                                .firstOrNull()
-                            ?: "var$i"
-                        JavaPsiFacade.getElementFactory(project).createParameter(paramName, p.type)
-                    }
-                } else {
-                    emptyList()
-                }
+            val nameHelper = PsiNameHelper.getInstance(project)
+            val languageLevel = PsiUtil.getLanguageLevel(parameters)
+
+            val newParams = expectedParams.mapIndexedTo(mutableListOf()) { i, p ->
+                val paramName = p.name?.takeIf { name -> nameHelper.isIdentifier(name, languageLevel) }
+                    ?: JavaCodeStyleManager.getInstance(project)
+                        .suggestVariableName(VariableKind.PARAMETER, null, null, p.type).names
+                        .firstOrNull()
+                    ?: "var$i"
+                JavaPsiFacade.getElementFactory(project).createParameter(paramName, p.type)
             }
             // Restore the captured locals and sugars before applying the fix
             newParams.addAll(locals)

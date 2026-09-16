@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -21,7 +21,6 @@
 package com.demonwav.mcdev.platform.mixin.handlers.mixinextras
 
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
-import com.demonwav.mcdev.platform.mixin.inspection.injector.ParameterGroup
 import com.demonwav.mcdev.platform.mixin.util.mixinExtrasOperationType
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
 import com.demonwav.mcdev.util.Parameter
@@ -52,11 +51,11 @@ class WrapOperationHandler : MixinExtrasInjectorAnnotationHandler() {
         targetClass: ClassNode,
         targetMethod: MethodNode,
         target: TargetInsn
-    ): Pair<ParameterGroup, PsiType>? {
+    ): Pair<List<Parameter>, PsiType>? {
         val params = getParameterTypes(target, targetClass, annotation) ?: return null
         val returnType = getReturnType(target, annotation) ?: return null
         val operationType = mixinExtrasOperationType(annotation, returnType) ?: return null
-        return ParameterGroup(
+        return (
             params + Parameter("original", operationType)
         ) to returnType
     }

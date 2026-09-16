@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -21,7 +21,6 @@
 package com.demonwav.mcdev.platform.mixin.handlers
 
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
-import com.demonwav.mcdev.platform.mixin.inspection.injector.ParameterGroup
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Classes.ARGS
 import com.demonwav.mcdev.util.Parameter
 import com.intellij.psi.JavaPsiFacade
@@ -47,16 +46,14 @@ class ModifyArgsHandler : InjectorAnnotationHandler() {
     ): List<MethodSignature> {
         val argsType = JavaPsiFacade.getElementFactory(annotation.project)
             .createTypeByFQClassName(ARGS, annotation.resolveScope)
+        val shortParams = listOf(Parameter("args", argsType))
         return listOf(
             MethodSignature(
-                listOf(
-                    ParameterGroup(listOf(Parameter("args", argsType))),
-                    ParameterGroup(
-                        collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
-                        required = ParameterGroup.RequiredLevel.OPTIONAL,
-                        isVarargs = true,
-                    ),
-                ),
+                shortParams,
+                PsiTypes.voidType(),
+            ),
+            MethodSignature(
+                shortParams + collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
                 PsiTypes.voidType(),
             ),
         )

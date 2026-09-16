@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -21,7 +21,6 @@
 package com.demonwav.mcdev.platform.mixin.handlers
 
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
-import com.demonwav.mcdev.platform.mixin.inspection.injector.ParameterGroup
 import com.demonwav.mcdev.platform.mixin.util.LocalVariables
 import com.demonwav.mcdev.platform.mixin.util.callbackInfoReturnableType
 import com.demonwav.mcdev.platform.mixin.util.callbackInfoType
@@ -52,34 +51,23 @@ class InjectAnnotationHandler : InjectorAnnotationHandler() {
     ): List<MethodSignature> {
         val returnType = targetMethod.getGenericReturnType(targetClass, annotation.project)
 
-        val result = ArrayList<ParameterGroup>()
+        val result = mutableListOf<MethodSignature>()
 
-        // Parameters from injected method (optional)
-        result.add(
-            ParameterGroup(
-                collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
-                required = ParameterGroup.RequiredLevel.OPTIONAL,
-                default = true,
-            ),
-        )
+        val ciParam = if (returnType == PsiTypes.voidType()) {
+            Parameter("ci", callbackInfoType(annotation.project))
+        } else {
+            Parameter(
+                "cir",
+                callbackInfoReturnableType(annotation.project, annotation, returnType)!!,
+            )
+        }
 
-        // Callback info (required)
-        result.add(
-            ParameterGroup(
-                listOf(
-                    if (returnType == PsiTypes.voidType()) {
-                        Parameter("ci", callbackInfoType(annotation.project))
-                    } else {
-                        Parameter(
-                            "cir",
-                            callbackInfoReturnableType(annotation.project, annotation, returnType)!!,
-                        )
-                    },
-                ),
-            ),
-        )
+        // Parameters from injected method
+        val targetParams = collectTargetMethodParameters(annotation.project, targetClass, targetMethod)
 
         // Captured locals (only if local capture is enabled)
+        var capturedLocals = emptyList<Parameter>()
+
         val localCapture = (annotation.findDeclaredAttributeValue("locals") as? PsiQualifiedReference)
             ?.referenceName ?: "NO_CAPTURE"
         if (localCapture != "NO_CAPTURE") {
@@ -107,29 +95,34 @@ class InjectAnnotationHandler : InjectorAnnotationHandler() {
 
                 if (commonLocalsPrefix != null) {
                     val elementFactory = JavaPsiFacade.getElementFactory(annotation.project)
-                    val localParams = commonLocalsPrefix.map { local ->
+                    capturedLocals = commonLocalsPrefix.map { local ->
                         val type =
                             Type.getType(local.desc).toPsiType(elementFactory, annotation.parentOfType<PsiMethod>())
                         sanitizedParameter(type, local.name)
                     }
-                    val requiredLevel = if (localCapture == "CAPTURE_FAILSOFT") {
-                        ParameterGroup.RequiredLevel.WARN_IF_ABSENT
-                    } else {
-                        ParameterGroup.RequiredLevel.ERROR_IF_ABSENT
-                    }
-                    result.add(
-                        ParameterGroup(
-                            localParams,
-                            default = true,
-                            required = requiredLevel,
-                            isVarargs = true,
-                        ),
-                    )
                 }
             }
         }
 
-        return listOf(MethodSignature(result, PsiTypes.voidType()))
+        // Long form
+        result.add(
+            MethodSignature(
+                targetParams + ciParam,
+                PsiTypes.voidType(),
+                capturedLocals,
+                trailingByDefault = true,
+            )
+        )
+
+        // Short form
+        result.add(
+            MethodSignature(
+                listOf(ciParam),
+                PsiTypes.voidType(),
+            )
+        )
+
+        return result
     }
 
     override fun canAlwaysBeStatic(method: PsiMethod): Boolean {

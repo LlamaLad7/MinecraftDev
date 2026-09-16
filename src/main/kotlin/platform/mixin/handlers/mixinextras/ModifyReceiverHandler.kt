@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -20,7 +20,7 @@
 
 package com.demonwav.mcdev.platform.mixin.handlers.mixinextras
 
-import com.demonwav.mcdev.platform.mixin.inspection.injector.ParameterGroup
+import com.demonwav.mcdev.util.Parameter
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiType
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
@@ -48,9 +48,9 @@ class ModifyReceiverHandler : MixinExtrasInjectorAnnotationHandler() {
         targetClass: ClassNode,
         targetMethod: MethodNode,
         target: TargetInsn
-    ): Pair<ParameterGroup, PsiType>? {
+    ): Pair<List<Parameter>, PsiType>? {
         val params = getPsiParameters(target.insn, targetClass, annotation) ?: return null
-        return ParameterGroup(params) to params[0].type
+        return params to params[0].type
     }
 
     override val mixinExtrasExpressionContextType = ExpressionContext.Type.MODIFY_RECEIVER

@@ -30,6 +30,7 @@ import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.platform.mixin.util.MixinTargetMember
 import com.demonwav.mcdev.platform.mixin.util.hasNamedLocalVariables
 import com.demonwav.mcdev.platform.mixin.util.isMixinExtrasSugar
+import com.demonwav.mcdev.util.Parameter
 import com.demonwav.mcdev.util.findModule
 import com.intellij.codeInsight.intention.LowPriorityAction
 import com.intellij.codeInspection.LocalQuickFix
@@ -63,7 +64,7 @@ class MixinParameterNameInspection : MixinInspection() {
         override fun visitMethod(method: PsiMethod) {
             val module = method.findModule() ?: return
             val parameters = method.parameterList.parameters
-            val parametersWithoutSugar = parameters.dropLastWhile { it.isMixinExtrasSugar }.toTypedArray()
+            val parametersWithoutSugar = parameters.dropLastWhile { it.isMixinExtrasSugar }
 
             val validNames = arrayOfNulls<MutableSet<String>>(parameters.size)
 
@@ -110,7 +111,7 @@ class MixinParameterNameInspection : MixinInspection() {
         validNames: Array<MutableSet<String>?>,
         module: Module, method: PsiMethod,
         parameters: Array<PsiParameter>,
-        parametersWithoutSugar: Array<PsiParameter>,
+        parametersWithoutSugar: List<PsiParameter>,
         annotation: PsiAnnotation,
         handler: InjectorAnnotationHandler,
         target: MixinTargetMember
@@ -131,12 +132,12 @@ class MixinParameterNameInspection : MixinInspection() {
                     ?: return false
             var anyValidSignatures = false
 
-            for ((expectedParams, _) in expectedSignatures) {
-                if (InvalidInjectorMethodSignatureInspection.Util.checkParameters(
+            for (expectedSignature in expectedSignatures) {
+                if (!InvalidInjectorMethodSignatureInspection.Util.checkParameters(
                         method.parameterList,
-                        expectedParams,
+                        expectedSignature,
                         handler.allowCoerce
-                    ) != InvalidInjectorMethodSignatureInspection.CheckResult.OK
+                    )
                 ) {
                     continue
                 }
@@ -145,8 +146,7 @@ class MixinParameterNameInspection : MixinInspection() {
 
                 checkExpectedSignatureForKnownNames(
                     validNamesForThisTarget,
-                    handler,
-                    expectedParams,
+                    expectedSignature.requiredParams + expectedSignature.trailingParams,
                     parametersWithoutSugar
                 )
             }
@@ -187,30 +187,20 @@ class MixinParameterNameInspection : MixinInspection() {
 
     private fun checkExpectedSignatureForKnownNames(
         validNamesForThisTarget: Array<MutableSet<String>?>,
-        handler: InjectorAnnotationHandler,
-        expectedParams: List<ParameterGroup>,
-        parametersWithoutSugar: Array<PsiParameter>
+        expectedParams: List<Parameter>,
+        parametersWithoutSugar: List<PsiParameter>
     ) {
         if (parametersWithoutSugar.isEmpty()) {
             return
         }
 
-        var pos = 0
-        for (group in expectedParams) {
-            if (!group.match(parametersWithoutSugar, pos, handler.allowCoerce)) {
-                continue
-            }
-            for (expectedParam in group.parameters) {
-                if (expectedParam.knownName && expectedParam.name != null) {
-                    if (validNamesForThisTarget[pos] == null) {
-                        validNamesForThisTarget[pos] = mutableSetOf(expectedParam.name)
-                    } else {
-                        validNamesForThisTarget[pos]!!.add(expectedParam.name)
-                    }
-                }
-                pos++
-                if (pos >= parametersWithoutSugar.size) {
-                    return
+        for (pos in parametersWithoutSugar.indices) {
+            val expectedParam = expectedParams[pos]
+            if (expectedParam.knownName && expectedParam.name != null) {
+                if (validNamesForThisTarget[pos] == null) {
+                    validNamesForThisTarget[pos] = mutableSetOf(expectedParam.name)
+                } else {
+                    validNamesForThisTarget[pos]!!.add(expectedParam.name)
                 }
             }
         }

@@ -3,7 +3,7 @@
  *
  * https://mcdev.io/
  *
- * Copyright (C) 2025 minecraft-dev
+ * Copyright (C) 2026 minecraft-dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -21,7 +21,6 @@
 package com.demonwav.mcdev.platform.mixin.handlers
 
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
-import com.demonwav.mcdev.platform.mixin.inspection.injector.ParameterGroup
 import com.demonwav.mcdev.platform.mixin.util.fakeResolve
 import com.demonwav.mcdev.platform.mixin.util.getParameter
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
@@ -111,27 +110,22 @@ class ModifyArgHandler : InjectorAnnotationHandler() {
             val psiType = psiParameter?.type ?: Type.getType(type).toPsiType(elementFactory, null)
             val singleSignature = MethodSignature(
                 listOf(
-                    ParameterGroup(
-                        listOf(
-                            sanitizedParameter(psiType, psiParameter?.name),
-                        ),
-                    ),
+                    sanitizedParameter(psiType, psiParameter?.name),
                 ),
                 psiType,
             )
             if (validFullSignature != null) {
-                val fullParamGroup = ParameterGroup(
+                val fullParams =
                     Type.getArgumentTypes(validFullSignature).withIndex().map { (index, argType) ->
                         val psiParam = paramList?.let { bytecodeMethod.getParameter(bytecodeClass, index, it) }
                         sanitizedParameter(
                             psiParam?.type ?: argType.toPsiType(elementFactory),
                             psiParam?.name,
                         )
-                    },
-                )
+                    }
                 listOf(
                     singleSignature,
-                    MethodSignature(listOf(fullParamGroup), psiType),
+                    MethodSignature(fullParams, psiType),
                 )
             } else {
                 listOf(singleSignature)

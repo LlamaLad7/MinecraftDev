@@ -23,7 +23,6 @@ package com.demonwav.mcdev.platform.mixin.handlers
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.ConstantInjectionPoint
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InjectionPoint
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
-import com.demonwav.mcdev.platform.mixin.inspection.injector.ParameterGroup
 import com.demonwav.mcdev.util.findAnnotations
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
@@ -94,15 +93,9 @@ class ModifyConstantHandler : InjectorAnnotationHandler() {
             val constantParamName = method.parameterList.getParameter(0)?.name ?: "constant"
             return listOf(
                 MethodSignature(
-                    listOf(
-                        ParameterGroup(listOf(sanitizedParameter(returnType, constantParamName))),
-                        ParameterGroup(
-                            collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
-                            isVarargs = true,
-                            required = ParameterGroup.RequiredLevel.OPTIONAL,
-                        ),
-                    ),
+                    listOf(sanitizedParameter(returnType, constantParamName)),
                     returnType,
+                    collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
                 )
             )
         }
@@ -151,15 +144,9 @@ class ModifyConstantHandler : InjectorAnnotationHandler() {
         type: PsiType,
     ): MethodSignature {
         return MethodSignature(
-            listOf(
-                ParameterGroup(listOf(sanitizedParameter(type, "constant"))),
-                ParameterGroup(
-                    collectTargetMethodParameters(project, targetClass, targetMethod),
-                    isVarargs = true,
-                    required = ParameterGroup.RequiredLevel.OPTIONAL,
-                ),
-            ),
+            listOf(sanitizedParameter(type, "constant")),
             type,
+            collectTargetMethodParameters(project, targetClass, targetMethod),
         )
     }
 
@@ -173,19 +160,11 @@ class ModifyConstantHandler : InjectorAnnotationHandler() {
     ): MethodSignature {
         return MethodSignature(
             listOf(
-                ParameterGroup(
-                    listOf(
-                        sanitizedParameter(PsiType.getJavaLangObject(psiManager, context.resolveScope), "instance"),
-                        sanitizedParameter(getClassType(psiManager, context), "type"),
-                    )
-                ),
-                ParameterGroup(
-                    collectTargetMethodParameters(project, targetClass, targetMethod),
-                    isVarargs = true,
-                    required = ParameterGroup.RequiredLevel.OPTIONAL,
-                ),
+                sanitizedParameter(PsiType.getJavaLangObject(psiManager, context.resolveScope), "instance"),
+                sanitizedParameter(getClassType(psiManager, context), "type"),
             ),
             returnType,
+            collectTargetMethodParameters(project, targetClass, targetMethod),
         )
     }
 

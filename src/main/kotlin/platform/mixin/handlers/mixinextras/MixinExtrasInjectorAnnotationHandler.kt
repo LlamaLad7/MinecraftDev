@@ -23,7 +23,6 @@ package com.demonwav.mcdev.platform.mixin.handlers.mixinextras
 import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.NewInsnInjectionPoint
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
-import com.demonwav.mcdev.platform.mixin.inspection.injector.ParameterGroup
 import com.demonwav.mcdev.platform.mixin.util.FieldTargetMember
 import com.demonwav.mcdev.platform.mixin.util.MethodTargetMember
 import com.demonwav.mcdev.platform.mixin.util.getGenericParameterTypes
@@ -104,7 +103,7 @@ abstract class MixinExtrasInjectorAnnotationHandler : InjectorAnnotationHandler(
         targetClass: ClassNode,
         targetMethod: MethodNode,
         target: TargetInsn,
-    ): Pair<ParameterGroup, PsiType>?
+    ): Pair<List<Parameter>, PsiType>?
 
     open fun intLikeTypePositions(
         target: TargetInsn
@@ -140,7 +139,7 @@ abstract class MixinExtrasInjectorAnnotationHandler : InjectorAnnotationHandler(
         annotation: PsiAnnotation,
         targetClass: ClassNode,
         targetMethod: MethodNode,
-        params: ParameterGroup,
+        params: List<Parameter>,
         returnType: PsiType,
         intLikeTypePositions: List<MethodSignature.TypePosition>
     ): List<MethodSignature> {
@@ -151,7 +150,7 @@ abstract class MixinExtrasInjectorAnnotationHandler : InjectorAnnotationHandler(
         }
         return buildList {
             for (actualType in intLikePsiTypes) {
-                val newParams = params.parameters.toMutableList()
+                val newParams = params.toMutableList()
                 var newReturnType = returnType
                 for (pos in intLikeTypePositions) {
                     when (pos) {
@@ -165,7 +164,7 @@ abstract class MixinExtrasInjectorAnnotationHandler : InjectorAnnotationHandler(
                         annotation,
                         targetClass,
                         targetMethod,
-                        ParameterGroup(newParams),
+                        newParams,
                         newReturnType,
                         intLikeTypePositions
                     )
@@ -178,20 +177,14 @@ abstract class MixinExtrasInjectorAnnotationHandler : InjectorAnnotationHandler(
         annotation: PsiAnnotation,
         targetClass: ClassNode,
         targetMethod: MethodNode,
-        params: ParameterGroup,
+        params: List<Parameter>,
         returnType: PsiType,
         intLikeTypePositions: List<MethodSignature.TypePosition>
     ) = MethodSignature(
-        listOf(
-            params,
-            ParameterGroup(
-                collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
-                required = ParameterGroup.RequiredLevel.OPTIONAL,
-                isVarargs = true,
-            ),
-        ),
+        params,
         returnType,
-        intLikeTypePositions
+        collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
+        intLikeTypes = intLikeTypePositions
     )
 
     protected fun getInsnReturnType(insn: AbstractInsnNode): Type? {

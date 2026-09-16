@@ -24,7 +24,6 @@ import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.AbstractLoadInj
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.CollectVisitor
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InjectionPoint
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
-import com.demonwav.mcdev.platform.mixin.inspection.injector.ParameterGroup
 import com.demonwav.mcdev.platform.mixin.util.LocalInfo
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
 import com.demonwav.mcdev.util.constantStringValue
@@ -51,11 +50,7 @@ class ModifyVariableHandler : InjectorAnnotationHandler() {
         val mode = if (isLoadStore) CollectVisitor.Mode.COMPLETION else CollectVisitor.Mode.RESOLUTION
         val targets = resolveInstructions(annotation, targetClass, targetMethod, mode)
 
-        val targetParamsGroup = ParameterGroup(
-            collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
-            required = ParameterGroup.RequiredLevel.OPTIONAL,
-            isVarargs = true,
-        )
+        val targetParams = collectTargetMethodParameters(annotation.project, targetClass, targetMethod)
 
         val method = annotation.findContainingMethod() ?: return null
         val localType = method.parameterList.getParameter(0)?.type
@@ -73,11 +68,9 @@ class ModifyVariableHandler : InjectorAnnotationHandler() {
                 if (seenParams.add(local.desc + local.name)) {
                     val localType = Type.getType(local.desc).toPsiType(elementFactory)
                     result += MethodSignature(
-                        listOf(
-                            ParameterGroup(listOf(sanitizedParameter(localType, local.name, local.isNamed))),
-                            targetParamsGroup,
-                        ),
+                        listOf(sanitizedParameter(localType, local.name, local.isNamed)),
                         localType,
+                        targetParams,
                     )
                 }
             }
