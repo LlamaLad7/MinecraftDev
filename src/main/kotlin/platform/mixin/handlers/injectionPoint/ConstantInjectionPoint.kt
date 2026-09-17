@@ -131,7 +131,6 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
 
     fun getConstantInfo(at: PsiAnnotation): ConstantInfo? {
         val args = AtResolver.getArgs(at)
-        val nullValue = args["nullValue"]?.let(java.lang.Boolean::parseBoolean) ?: false
         val intValue = args["intValue"]?.toIntOrNull()
         val floatValue = args["floatValue"]?.toFloatOrNull()
         val longValue = args["longValue"]?.toLongOrNull()
@@ -139,22 +138,17 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
         val stringValue = args["stringValue"]
         val classValue = args["classValue"]?.ifNotBlank { Type.getObjectType(it.replace('.', '/')) }
         val count =
-            nullValue.toInt() +
-                (intValue != null).toInt() +
+            (intValue != null).toInt() +
                 (floatValue != null).toInt() +
                 (longValue != null).toInt() +
                 (doubleValue != null).toInt() +
                 (stringValue != null).toInt() +
                 (classValue != null).toInt()
-        if (count != 1) {
+        if ("nullValue" in args || count != 1) {
             return null
         }
 
-        val constant = if (nullValue) {
-            null
-        } else {
-            intValue ?: floatValue ?: longValue ?: doubleValue ?: stringValue ?: classValue!!
-        }
+        val constant = intValue ?: floatValue ?: longValue ?: doubleValue ?: stringValue ?: classValue!!
 
         return ConstantInfo(constant, parseExpandConditions(args))
     }
@@ -195,7 +189,7 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
         return null
     }
 
-    class ConstantInfo(val constant: Any?, val expandConditions: Set<ExpandCondition>)
+    class ConstantInfo(val constant: Any, val expandConditions: Set<ExpandCondition>)
 
     enum class ExpandCondition(vararg val opcodes: Int) {
         LESS_THAN_ZERO(Opcodes.IFLT, Opcodes.IFGE),

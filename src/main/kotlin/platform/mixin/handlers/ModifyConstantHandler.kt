@@ -102,12 +102,9 @@ class ModifyConstantHandler : InjectorAnnotationHandler() {
 
         val psiManager = PsiManager.getInstance(annotation.project)
         return constantInfos.asSequence()
-            .distinctBy { it.constant?.javaClass }
+            .distinctBy { it.constant.javaClass }
             .flatMap {
                 when (it.constant) {
-                    null -> sequenceOf(
-                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiType.getJavaLangObject(psiManager, annotation.resolveScope))
-                    )
                     is Int -> sequenceOf(
                         makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.intType()),
                     )
