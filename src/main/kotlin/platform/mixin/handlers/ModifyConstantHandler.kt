@@ -110,10 +110,6 @@ class ModifyConstantHandler : InjectorAnnotationHandler() {
                     )
                     is Int -> sequenceOf(
                         makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.intType()),
-                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.booleanType()),
-                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.byteType()),
-                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.charType()),
-                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.shortType()),
                     )
                     is Long -> sequenceOf(
                         makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.longType())
