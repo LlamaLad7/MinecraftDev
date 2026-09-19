@@ -20,10 +20,13 @@
 
 package com.demonwav.mcdev.platform.mixin.handlers.mixinextras
 
+import com.demonwav.mcdev.platform.mixin.inspection.injector.GeneralSignatures
+import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.knownSignatures
+import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.getGenericReturnType
 import com.demonwav.mcdev.util.Parameter
 import com.intellij.psi.PsiAnnotation
-import com.intellij.psi.PsiType
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
@@ -38,9 +41,23 @@ class ModifyReturnValueHandler : MixinExtrasInjectorAnnotationHandler() {
         targetClass: ClassNode,
         targetMethod: MethodNode,
         target: TargetInsn
-    ): Pair<List<Parameter>, PsiType> {
+    ): GeneralSignatures {
         val returnType = targetMethod.getGenericReturnType(targetClass, annotation.project)
-        return listOf(Parameter("original", returnType)) to returnType
+        return GeneralSignatures(
+            listOf(Parameter("original", returnType)),
+            returnType,
+            trailingParams = collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
+        )
+    }
+
+    override fun suggestedMethodSignature(
+        annotation: PsiAnnotation,
+        targets: List<ClassAndMethodNode>
+    ): SuggestedSignature? {
+        return SuggestedSignature.general(
+            annotation,
+            expectedMethodSignatures(annotation, targets).knownSignatures<GeneralSignatures>() ?: return null
+        )
     }
 
     override val mixinExtrasExpressionContextType = ExpressionContext.Type.MODIFY_RETURN_VALUE

@@ -21,6 +21,8 @@
 package com.demonwav.mcdev.platform.mixin.handlers
 
 import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.TargetInsn
+import com.demonwav.mcdev.platform.mixin.inspection.injector.BasicSignatures
+import com.demonwav.mcdev.platform.mixin.inspection.injector.ExpectedSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
 import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
@@ -47,21 +49,23 @@ class ModifyArgsHandler : InsnInjectorAnnotationHandler() {
         targetClass: ClassNode,
         targetMethod: MethodNode,
         targetInsn: TargetInsn,
-    ): List<MethodSignature> {
+    ): ExpectedSignatures<*> {
         val argsType = JavaPsiFacade.getElementFactory(annotation.project)
             .createTypeByFQClassName(ARGS, annotation.resolveScope)
         val shortParams = listOf(Parameter("args", argsType))
-        return listOf(
-            MethodSignature(
-                shortParams,
-                PsiTypes.voidType(),
-                allowCoerceRequired = false,
-            ),
-            MethodSignature(
-                shortParams + collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
-                PsiTypes.voidType(),
-                allowCoerceRequired = false,
-            ),
+        return ExpectedSignatures.Valid(
+            BasicSignatures(
+                MethodSignature(
+                    shortParams,
+                    PsiTypes.voidType(),
+                    allowCoerceRequired = false,
+                ),
+                MethodSignature(
+                    shortParams + collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
+                    PsiTypes.voidType(),
+                    allowCoerceRequired = false,
+                ),
+            )
         )
     }
 

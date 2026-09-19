@@ -24,7 +24,7 @@ import com.demonwav.mcdev.asset.MixinAssets
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.AtResolver
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InsnResolutionInfo
 import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.TargetInsn
-import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.ExpectedSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
 import com.demonwav.mcdev.platform.mixin.reference.DescSelectorParser
 import com.demonwav.mcdev.platform.mixin.reference.isMiscDynamicSelector
@@ -107,7 +107,7 @@ abstract class InjectorAnnotationHandler : MixinAnnotationHandler {
     abstract fun expectedMethodSignatures(
         annotation: PsiAnnotation,
         targets: List<ClassAndMethodNode>,
-    ): List<List<MethodSignature>>
+    ): List<ExpectedSignatures<*>>
 
     open fun suggestedMethodSignature(
         annotation: PsiAnnotation,
@@ -171,7 +171,7 @@ object DefaultInjectorAnnotationHandler : InsnInjectorAnnotationHandler() {
         targetClass: ClassNode,
         targetMethod: MethodNode,
         targetInsn: TargetInsn,
-    ) = null
+    ): ExpectedSignatures<Nothing> = ExpectedSignatures.Unknown
 
     override val isSoft = true
 

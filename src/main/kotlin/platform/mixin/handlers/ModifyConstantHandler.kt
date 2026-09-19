@@ -23,9 +23,15 @@ package com.demonwav.mcdev.platform.mixin.handlers
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.ConstantInjectionPoint
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InjectionPoint
 import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.TargetInsn
+import com.demonwav.mcdev.platform.mixin.inspection.injector.BasicSignatures
+import com.demonwav.mcdev.platform.mixin.inspection.injector.ExpectedSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignatures
+import com.demonwav.mcdev.platform.mixin.inspection.injector.ModifierSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.knownSignatures
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
+import com.demonwav.mcdev.util.Parameter
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElement
@@ -75,10 +81,10 @@ class ModifyConstantHandler : InsnInjectorAnnotationHandler() {
         targetClass: ClassNode,
         targetMethod: MethodNode,
         targetInsn: TargetInsn,
-    ): List<MethodSignature>? {
+    ): ExpectedSignatures<*> {
         val targetParams = collectTargetMethodParameters(annotation.project, targetClass, targetMethod)
-        val cst = constantInjectionPoint.getTargetedConstant(targetInsn.insn) ?: return emptyList()
-        return basicMethodSignatures(annotation, cst)?.map { it.copy(trailingParams = targetParams) }
+        val cst = constantInjectionPoint.getTargetedConstant(targetInsn.insn) ?: return ExpectedSignatures.Invalid
+        return ExpectedSignatures.Valid(expectedSignatures(annotation, cst, targetParams))
     }
 
     override fun suggestedMethodSignature(
@@ -97,35 +103,40 @@ class ModifyConstantHandler : InsnInjectorAnnotationHandler() {
                     PsiManager.getInstance(annotation.project),
                     annotation,
                     PsiTypes.booleanType(),
+                    emptyList(),
                 )
             )
         } else {
-            SuggestedSignature.modifierNoCoerce(annotation, targets, this)
+            SuggestedSignature.modifierNoCoerce(
+                annotation,
+                expectedMethodSignatures(annotation, targets).knownSignatures<ModifierSignatures>() ?: return null,
+            )
         }
     }
 
-    private fun basicMethodSignatures(annotation: PsiAnnotation, cst: Any): List<MethodSignature>? {
+    private fun expectedSignatures(annotation: PsiAnnotation, cst: Any, trailingParams: List<Parameter>): MethodSignatures {
         val psiManager = PsiManager.getInstance(annotation.project)
 
         return if (cst is Type) {
-            listOf(
+            BasicSignatures(
                 makeTypeCheckMethodSignature(
                     psiManager,
                     annotation,
                     PsiTypes.booleanType(),
+                    trailingParams,
                 ),
                 makeTypeCheckMethodSignature(
                     psiManager,
                     annotation,
                     getClassType(psiManager, annotation),
+                    trailingParams,
                 ),
             )
         } else {
-            listOf(
-                makeMethodSignature(
-                    getConstantType(annotation, cst)
-                        ?: throw IllegalStateException("Unknown constant type: ${cst.javaClass.name}")
-                ),
+            makeSignatures(
+                getConstantType(annotation, cst)
+                    ?: throw IllegalStateException("Unknown constant type: ${cst.javaClass.name}"),
+                trailingParams,
             )
         }
     }
@@ -143,11 +154,11 @@ class ModifyConstantHandler : InsnInjectorAnnotationHandler() {
         else -> null
     }
 
-    private fun makeMethodSignature(type: PsiType): MethodSignature {
-        return MethodSignature(
+    private fun makeSignatures(type: PsiType, trailingParams: List<Parameter>): ModifierSignatures {
+        return ModifierSignatures(
             listOf(sanitizedParameter(type, "constant")),
-            type,
-            allowCoerceRequired = true,
+            allowCoerce = true,
+            trailingParams = trailingParams,
         )
     }
 
@@ -155,6 +166,7 @@ class ModifyConstantHandler : InsnInjectorAnnotationHandler() {
         psiManager: PsiManager,
         context: PsiElement,
         returnType: PsiType,
+        trailingParams: List<Parameter>,
     ): MethodSignature {
         return MethodSignature(
             listOf(
@@ -163,6 +175,7 @@ class ModifyConstantHandler : InsnInjectorAnnotationHandler() {
             ),
             returnType,
             allowCoerceRequired = false,
+            trailingParams = trailingParams,
         )
     }
 

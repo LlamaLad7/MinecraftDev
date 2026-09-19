@@ -20,10 +20,12 @@
 
 package com.demonwav.mcdev.platform.mixin.handlers.mixinextras
 
+import com.demonwav.mcdev.platform.mixin.inspection.injector.GeneralSignatures
+import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.knownSignatures
+import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.nextRealInsn
-import com.demonwav.mcdev.util.Parameter
 import com.intellij.psi.PsiAnnotation
-import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypes
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import org.objectweb.asm.Opcodes
@@ -71,9 +73,23 @@ class WrapWithConditionHandler : MixinExtrasInjectorAnnotationHandler() {
         targetClass: ClassNode,
         targetMethod: MethodNode,
         target: TargetInsn
-    ): Pair<List<Parameter>, PsiType>? {
+    ): GeneralSignatures? {
         val params = getPsiParameters(target.insn, targetClass, annotation) ?: return null
-        return params to PsiTypes.booleanType()
+        return GeneralSignatures(
+            params,
+            PsiTypes.booleanType(),
+            trailingParams = collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
+        )
+    }
+
+    override fun suggestedMethodSignature(
+        annotation: PsiAnnotation,
+        targets: List<ClassAndMethodNode>
+    ): SuggestedSignature? {
+        return SuggestedSignature.general(
+            annotation,
+            expectedMethodSignatures(annotation, targets).knownSignatures<GeneralSignatures>() ?: return null
+        )
     }
 
     override val mixinExtrasExpressionContextType = ExpressionContext.Type.WRAP_WITH_CONDITION

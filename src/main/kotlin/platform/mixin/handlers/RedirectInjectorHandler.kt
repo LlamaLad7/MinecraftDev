@@ -22,10 +22,15 @@ package com.demonwav.mcdev.platform.mixin.handlers
 
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.NewInsnInjectionPoint
 import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.TargetInsn
-import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.ExpectedSignatures
+import com.demonwav.mcdev.platform.mixin.inspection.injector.GeneralSignatures
+import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.knownSignatures
 import com.demonwav.mcdev.platform.mixin.util.AsmDfaUtil
+import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.FieldTargetMember
 import com.demonwav.mcdev.platform.mixin.util.MethodTargetMember
+import com.demonwav.mcdev.platform.mixin.util.TypeKind
 import com.demonwav.mcdev.platform.mixin.util.getGenericSignature
 import com.demonwav.mcdev.platform.mixin.util.getGenericType
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
@@ -89,22 +94,26 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
         targetClass: ClassNode,
         targetMethod: MethodNode,
         targetInsn: TargetInsn,
-    ): List<MethodSignature>? {
+    ): ExpectedSignatures<GeneralSignatures> {
         val extraParams = collectTargetMethodParameters(annotation.project, targetClass, targetMethod)
-        val redirectType = getRedirectType(targetInsn.insn) ?: return null
+        val redirectType = getRedirectType(targetInsn.insn) ?: return ExpectedSignatures.Invalid
         return redirectType.expectedMethodSignature(
             annotation,
             targetClass,
             targetMethod,
             targetInsn.insn,
-        )?.map { (params, returnType) ->
-            MethodSignature(
-                params,
-                returnType,
-                trailingParams = extraParams,
-                allowCoerceRequired = redirectType.allowCoerce,
-            )
-        }
+            extraParams,
+        )?.let(ExpectedSignatures<*>::Valid) ?: ExpectedSignatures.Invalid
+    }
+
+    override fun suggestedMethodSignature(
+        annotation: PsiAnnotation,
+        targets: List<ClassAndMethodNode>
+    ): SuggestedSignature? {
+        return SuggestedSignature.general(
+            annotation,
+            expectedMethodSignatures(annotation, targets).knownSignatures<GeneralSignatures>() ?: return null
+        )
     }
 
     override val mixinExtrasExpressionContextType = ExpressionContext.Type.REDIRECT
@@ -119,7 +128,8 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
             targetClass: ClassNode,
             targetMethod: MethodNode,
             insn: AbstractInsnNode,
-        ): List<Pair<List<Parameter>, PsiType>>?
+            trailingParams: List<Parameter>,
+        ): GeneralSignatures?
     }
 
     private abstract class FieldAccess : RedirectType {
@@ -146,7 +156,8 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
             targetClass: ClassNode,
             targetMethod: MethodNode,
             insn: AbstractInsnNode,
-        ): List<Pair<List<Parameter>, PsiType>> {
+            trailingParams: List<Parameter>,
+        ): GeneralSignatures {
             insn as FieldInsnNode
 
             val (elementFactory, fieldType) = determineFieldType(insn, annotation)
@@ -156,7 +167,11 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
                 parameters += Parameter("instance", Type.getObjectType(insn.owner).toPsiType(elementFactory))
             }
 
-            return listOf(parameters to fieldType)
+            return GeneralSignatures(
+                parameters,
+                fieldType,
+                trailingParams,
+            )
         }
     }
 
@@ -166,7 +181,8 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
             targetClass: ClassNode,
             targetMethod: MethodNode,
             insn: AbstractInsnNode,
-        ): List<Pair<List<Parameter>, PsiType>> {
+            trailingParams: List<Parameter>,
+        ): GeneralSignatures {
             insn as FieldInsnNode
 
             val (elementFactory, fieldType) = determineFieldType(insn, annotation)
@@ -177,7 +193,11 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
             }
             parameters += Parameter("value", fieldType)
 
-            return listOf(parameters to PsiTypes.voidType())
+            return GeneralSignatures(
+                parameters,
+                PsiTypes.voidType(),
+                trailingParams,
+            )
         }
     }
 
@@ -191,7 +211,8 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
             targetClass: ClassNode,
             targetMethod: MethodNode,
             insn: AbstractInsnNode,
-        ): List<Pair<List<Parameter>, PsiType>> {
+            trailingParams: List<Parameter>,
+        ): GeneralSignatures {
             insn as MethodInsnNode
 
             val elementFactory = JavaPsiFacade.getElementFactory(annotation.project)
@@ -229,7 +250,11 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
             }
 
             val returnType = signature?.first ?: Type.getReturnType(insn.desc).toPsiType(elementFactory)
-            return listOf(parameters to returnType)
+            return GeneralSignatures(
+                parameters,
+                returnType,
+                trailingParams,
+            )
         }
     }
 
@@ -239,7 +264,8 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
             targetClass: ClassNode,
             targetMethod: MethodNode,
             insn: AbstractInsnNode,
-        ): List<Pair<List<Parameter>, PsiType>>? {
+            trailingParams: List<Parameter>,
+        ): GeneralSignatures? {
             val arrayType = AsmDfaUtil.getStackType(annotation.project, targetClass, targetMethod, insn, 0)
                 ?: return null
             if (arrayType.sort != Type.ARRAY) {
@@ -248,8 +274,10 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
 
             val elementFactory = JavaPsiFacade.getElementFactory(annotation.project)
 
-            return listOf(
-                listOf(Parameter("array", arrayType.toPsiType(elementFactory))) to PsiTypes.intType(),
+            return GeneralSignatures(
+                listOf(Parameter("array", arrayType.toPsiType(elementFactory))),
+                PsiTypes.intType(),
+                trailingParams,
             )
         }
     }
@@ -260,7 +288,8 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
             targetClass: ClassNode,
             targetMethod: MethodNode,
             insn: AbstractInsnNode,
-        ): List<Pair<List<Parameter>, PsiType>>? {
+            trailingParams: List<Parameter>,
+        ): GeneralSignatures? {
             val arrayType = AsmDfaUtil.getStackType(annotation.project, targetClass, targetMethod, insn, 1)
                 ?: return null
             if (arrayType.sort != Type.ARRAY) {
@@ -270,11 +299,13 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
             val elementFactory = JavaPsiFacade.getElementFactory(annotation.project)
 
             val psiArrayType = arrayType.toPsiType(elementFactory) as PsiArrayType
-            return listOf(
+            return GeneralSignatures(
                 listOf(
                     Parameter("array", psiArrayType),
                     Parameter("index", PsiTypes.intType()),
-                ) to psiArrayType.componentType,
+                ),
+                psiArrayType.componentType,
+                trailingParams,
             )
         }
     }
@@ -285,7 +316,8 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
             targetClass: ClassNode,
             targetMethod: MethodNode,
             insn: AbstractInsnNode,
-        ): List<Pair<List<Parameter>, PsiType>>? {
+            trailingParams: List<Parameter>,
+        ): GeneralSignatures? {
             val arrayType = AsmDfaUtil.getStackType(annotation.project, targetClass, targetMethod, insn, 2)
                 ?: return null
             if (arrayType.sort != Type.ARRAY) {
@@ -295,12 +327,14 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
             val elementFactory = JavaPsiFacade.getElementFactory(annotation.project)
 
             val psiArrayType = arrayType.toPsiType(elementFactory) as PsiArrayType
-            return listOf(
+            return GeneralSignatures(
                 listOf(
                     Parameter("array", psiArrayType),
                     Parameter("index", PsiTypes.intType()),
                     Parameter("value", psiArrayType.componentType),
-                ) to PsiTypes.voidType(),
+                ),
+                PsiTypes.voidType(),
+                trailingParams,
             )
         }
     }
@@ -315,7 +349,8 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
             targetClass: ClassNode,
             targetMethod: MethodNode,
             insn: AbstractInsnNode,
-        ): List<Pair<List<Parameter>, PsiType>> {
+            trailingParams: List<Parameter>,
+        ): GeneralSignatures? {
             insn as TypeInsnNode
 
             val elementFactory = JavaPsiFacade.getElementFactory(annotation.project)
@@ -325,10 +360,14 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
                 annotation,
                 targetClass,
                 targetMethod,
-                NewInsnInjectionPoint.Util.findInitCall(insn) ?: return emptyList()
-            ).map { (params, _) ->
+                NewInsnInjectionPoint.Util.findInitCall(insn) ?: return null,
+                trailingParams,
+            ).let { sig ->
                 // drop the instance parameter, return the constructed type
-                params.drop(1) to constructedType
+                sig.copy(
+                    params = sig.params.drop(1),
+                    returnTypeOptions = linkedMapOf(TypeKind.OBJECT to constructedType),
+                )
             }
         }
     }
@@ -341,7 +380,8 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
             targetClass: ClassNode,
             targetMethod: MethodNode,
             insn: AbstractInsnNode,
-        ): List<Pair<List<Parameter>, PsiType>> {
+            trailingParams: List<Parameter>,
+        ): GeneralSignatures {
             val psiManager = PsiManager.getInstance(annotation.project)
             val elementFactory = JavaPsiFacade.getElementFactory(annotation.project)
             val objectType = PsiType.getJavaLangObject(psiManager, annotation.resolveScope)
@@ -350,9 +390,14 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
                 Parameter("instance", objectType),
                 Parameter("type", classType),
             )
-            return listOf(
-                parameters to PsiTypes.booleanType(),
-                parameters to classType,
+            return GeneralSignatures(
+                parameters,
+                linkedMapOf(
+                    TypeKind.INT_LIKE to PsiTypes.booleanType(),
+                    TypeKind.OBJECT to classType,
+                ),
+                allowCoerce = false,
+                trailingParams,
             )
         }
     }

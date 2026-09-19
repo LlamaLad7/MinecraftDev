@@ -18,8 +18,23 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.demonwav.mcdev.platform.mixin.inspection.injector
+package com.demonwav.mcdev.util
 
-interface ExpectedSignatures {
-    val options: List<MethodSignature>
+fun <T> sharedPrefixLength(lists: List<List<T>>): Int {
+    if (lists.isEmpty()) {
+        return 0
+    }
+    lists.singleOrNull()?.let { return it.size }
+
+    val firstList = lists.first()
+
+    for (i in firstList.indices) {
+        val targetElement = firstList[i]
+
+        if (lists.any { i >= it.size || it[i] != targetElement }) {
+            return i
+        }
+    }
+
+    return firstList.size
 }

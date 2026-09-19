@@ -21,8 +21,10 @@
 package com.demonwav.mcdev.platform.mixin.handlers
 
 import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.TargetInsn
-import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.ExpectedSignatures
+import com.demonwav.mcdev.platform.mixin.inspection.injector.ModifierSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.knownSignatures
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.getBytecodeParameter
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
@@ -50,10 +52,10 @@ class ModifyArgHandler : InsnInjectorAnnotationHandler() {
         targetClass: ClassNode,
         targetMethod: MethodNode,
         targetInsn: TargetInsn,
-    ): List<MethodSignature>? {
+    ): ExpectedSignatures<ModifierSignatures> {
         val insn = targetInsn.insn
         if (insn !is MethodInsnNode) {
-            return null
+            return ExpectedSignatures.Invalid
         }
         val project = annotation.project
         val index = annotation.findDeclaredAttributeValue("index")?.constantValue as? Int
@@ -67,7 +69,7 @@ class ModifyArgHandler : InsnInjectorAnnotationHandler() {
         }
 
         if (validTypes.isEmpty()) {
-            return emptyList()
+            return ExpectedSignatures.Invalid
         }
 
         // get the source method for parameter names
@@ -77,40 +79,37 @@ class ModifyArgHandler : InsnInjectorAnnotationHandler() {
             insn.owner.replace('/', '.')
         ).resolveMember(project) as PsiMethod?
         val elementFactory = JavaPsiFacade.getElementFactory(annotation.project)
-        return validTypes.flatMap { type ->
-            val psiParams = argTypes.indices.map { index -> sourceMethod?.getBytecodeParameter(index) }
+        val psiParams = argTypes.indices.map { index -> sourceMethod?.getBytecodeParameter(index) }
+        val paramOptions = validTypes.map { type ->
             val targetParam = psiParams[index ?: argTypes.indexOf(type)]
             val psiType = targetParam?.type ?: type.toPsiType(elementFactory)
-            val singleSignature = MethodSignature(
-                listOf(
-                    sanitizedParameter(psiType, targetParam?.name),
-                ),
-                sanitizedReturnType(psiType),
-                allowCoerceRequired = false,
-            )
-            if (argTypes.size > 1) {
-                val fullParams =
-                    psiParams.zip(argTypes) { param, argType ->
-                        sanitizedParameter(
-                            param?.type ?: argType.toPsiType(elementFactory),
-                            param?.name,
-                        )
-                    }
-                listOf(
-                    singleSignature,
-                    MethodSignature(fullParams, sanitizedReturnType(psiType), allowCoerceRequired = false),
-                )
-            } else {
-                listOf(singleSignature)
-            }
+            sanitizedParameter(psiType, targetParam?.name)
         }
+        val fullParams = if (argTypes.size > 1) {
+            psiParams.zip(argTypes) { param, argType ->
+                sanitizedParameter(
+                    param?.type ?: argType.toPsiType(elementFactory),
+                    param?.name,
+                )
+            }
+        } else null
+        return ExpectedSignatures.Valid(
+            ModifierSignatures(
+                paramOptions,
+                allowCoerce = false,
+                fullParams,
+            )
+        )
     }
 
     override fun suggestedMethodSignature(
         annotation: PsiAnnotation,
         targets: List<ClassAndMethodNode>
     ): SuggestedSignature? {
-        return SuggestedSignature.modifierNoCoerce(annotation, targets, this)
+        return SuggestedSignature.modifierNoCoerce(
+            annotation,
+            expectedMethodSignatures(annotation, targets).knownSignatures<ModifierSignatures>() ?: return null,
+        )
     }
 
     override val mixinExtrasExpressionContextType = ExpressionContext.Type.MODIFY_ARG

@@ -24,6 +24,7 @@ import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.COERCE
 import com.demonwav.mcdev.platform.mixin.util.isAssignable
 import com.demonwav.mcdev.platform.mixin.util.isMixinExtrasSugar
 import com.demonwav.mcdev.util.Parameter
+import com.demonwav.mcdev.util.allSame
 import com.demonwav.mcdev.util.countIsLessThan
 import com.demonwav.mcdev.util.normalize
 import com.intellij.psi.PsiMethod
@@ -38,14 +39,13 @@ data class MethodSignature(
     val allowCoerceRequired: Boolean,
     val trailingParams: List<Parameter> = emptyList(),
     val allowCoerceTrailing: Boolean = true,
-    val trailingByDefault: Boolean = false,
     val intLikeTypes: Set<TypePosition> = emptySet()
 ) {
     fun matches(method: PsiMethod): Boolean {
         val returnType = method.returnType ?: return false
         val parameters = method.parameterList.parameters.dropLastWhile { it.isMixinExtrasSugar }
 
-        return intLikeTypes.asSequence().map { it.getElement(method)?.type }.distinct().countIsLessThan(2)
+        return intLikeTypes.asSequence().map { it.getElement(method)?.type }.allSame()
             && matchReturnType(returnType, method.hasAnnotation(COERCE))
             && parameters.size in requiredParams.size..requiredParams.size + trailingParams.size
             && matchParams(requiredParams, parameters, allowCoerceRequired, 0)

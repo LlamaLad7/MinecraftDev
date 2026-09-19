@@ -20,7 +20,11 @@
 
 package com.demonwav.mcdev.platform.mixin.handlers.mixinextras
 
+import com.demonwav.mcdev.platform.mixin.inspection.injector.GeneralSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.knownSignatures
+import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
 import com.demonwav.mcdev.util.Parameter
 import com.intellij.psi.JavaPsiFacade
@@ -60,12 +64,27 @@ class ModifyExpressionValueHandler : MixinExtrasInjectorAnnotationHandler() {
         targetClass: ClassNode,
         targetMethod: MethodNode,
         target: TargetInsn
-    ): Pair<List<Parameter>, PsiType>? {
+    ): GeneralSignatures? {
         val psiType = getReturnType(target, annotation) ?: return null
-        return listOf(Parameter("original", psiType)) to psiType
+        return GeneralSignatures(
+            listOf(Parameter("original", psiType)),
+            psiType,
+            trailingParams = collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
+            intLikePositions = intLikeTypePositions(target),
+        )
     }
 
-    override fun intLikeTypePositions(target: TargetInsn): Set<MethodSignature.TypePosition> {
+    override fun suggestedMethodSignature(
+        annotation: PsiAnnotation,
+        targets: List<ClassAndMethodNode>
+    ): SuggestedSignature? {
+        return SuggestedSignature.general(
+            annotation,
+            expectedMethodSignatures(annotation, targets).knownSignatures<GeneralSignatures>() ?: return null
+        )
+    }
+
+    private fun intLikeTypePositions(target: TargetInsn): Set<MethodSignature.TypePosition> {
         val expressionType = target.getDecoration<Type>(ExpressionDecorations.SIMPLE_EXPRESSION_TYPE)
         if (expressionType == ExpressionASMUtils.INTLIKE_TYPE) {
             return setOf(MethodSignature.TypePosition.Return, MethodSignature.TypePosition.Param(0))

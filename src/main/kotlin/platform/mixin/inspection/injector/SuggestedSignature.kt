@@ -20,9 +20,11 @@
 
 package com.demonwav.mcdev.platform.mixin.inspection.injector
 
-import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
-import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
+import com.demonwav.mcdev.platform.mixin.util.TypeKind
+import com.demonwav.mcdev.util.Parameter
+import com.demonwav.mcdev.util.allSame
 import com.demonwav.mcdev.util.normalize
+import com.demonwav.mcdev.util.sharedPrefixLength
 import com.intellij.psi.GenericsUtil
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiManager
@@ -97,25 +99,21 @@ data class SuggestedSignature(
     }
 
     companion object {
-        fun exact(signature: MethodSignature): SuggestedSignature {
+        fun exact(signature: MethodSignature, takeTrailing: Int = 0): SuggestedSignature {
             return SuggestedSignature(
-                signature.requiredParams.map { Param(it.name, it.type) },
+                (signature.requiredParams + signature.trailingParams.take(takeTrailing)).map {
+                    Param(
+                        it.name,
+                        it.type,
+                    )
+                },
                 signature.returnType,
                 signature.intLikeTypes,
             )
         }
 
-        fun modifierNoCoerce(
-            annotation: PsiAnnotation,
-            targets: List<ClassAndMethodNode>,
-            handler: InjectorAnnotationHandler,
-        ): SuggestedSignature? {
-            val parameterOptions = handler.expectedMethodSignatures(annotation, targets).map { signatures ->
-                signatures.mapNotNull {
-                    require(it.intLikeTypes.isEmpty())
-                    it.requiredParams.singleOrNull()
-                }.ifEmpty { return null }
-            }
+        fun modifierNoCoerce(annotation: PsiAnnotation, signatures: List<ModifierSignatures>, ): SuggestedSignature? {
+            val parameterOptions = signatures.map { it.paramOptions.ifEmpty { return null } }
             val psiManager = PsiManager.getInstance(annotation.project)
 
             val optionsByType = parameterOptions.asSequence().flatten().groupBy { it.type.normalize() }
@@ -128,15 +126,37 @@ data class SuggestedSignature(
             return SuggestedSignature(listOf(Param(name, type)), type)
         }
 
-        fun operationWrapper(
-            annotation: PsiAnnotation,
-            targets: List<ClassAndMethodNode>,
-            handler: InjectorAnnotationHandler,
-        ): SuggestedSignature? {
+        fun operationWrapper(annotation: PsiAnnotation, signatures: List<OperationWrapperSignatures>): SuggestedSignature? {
+            return intersectCoerce(annotation, signatures.asSequence().map { exact(it.signature) })
+        }
+
+        fun inject(annotation: PsiAnnotation, signatures: List<InjectSignatures>): SuggestedSignature? {
+            if (!signatures.asSequence().map { it.params.kinds() }.allSame()) {
+                // Shape mismatch, use short form
+                return intersectCoerce(
+                    annotation,
+                    signatures.asSequence().map { exact(it.shortSignature ?: it.longSignature) },
+                )
+            }
+
+            val localsToUse = sharedPrefixLength(signatures.map { it.locals.kinds() })
+
+            return intersectCoerce(
+                annotation,
+                signatures.asSequence()
+                    .map { exact(it.longSignature, takeTrailing = localsToUse) },
+            )
+        }
+
+        fun general(annotation: PsiAnnotation, signatures: List<GeneralSignatures>): SuggestedSignature? {
+            // TODO
+
+            return signatures.firstOrNull()?.options?.firstOrNull()?.let(::exact)
+        }
+
+        private fun intersectCoerce(annotation: PsiAnnotation, signatures: Sequence<SuggestedSignature>): SuggestedSignature? {
             val manager = PsiManager.getInstance(annotation.project)
-            return handler.expectedMethodSignatures(annotation, targets).map {
-                exact(it.single())
-            }.reduceOrNull<SuggestedSignature?, _> { acc, it -> acc?.intersectCoerce(it, manager) }
+            return signatures.reduceOrNull<SuggestedSignature?, _> { acc, it -> acc?.intersectCoerce(it, manager) }
         }
     }
 }
@@ -144,6 +164,8 @@ data class SuggestedSignature(
 private fun roughShapeOf(signature: SuggestedSignature): Shape<TypeKind> {
     return Shape(signature.params.map { TypeKind.of(it.type) }, TypeKind.of(signature.returnType))
 }
+
+private fun List<Parameter>.kinds() = map { TypeKind.of(it.type) }
 
 private fun getSupertype(
     manager: PsiManager,
@@ -183,31 +205,6 @@ private fun getSupertype(
 private data class TypeMergeResult(val type: PsiType, val isIntLike: Boolean, val coerce: Boolean)
 
 private data class Shape<out T>(val params: List<T>, val returnType: T)
-
-private enum class TypeKind {
-    OBJECT,
-    INT_LIKE,
-    FLOAT,
-    DOUBLE,
-    LONG,
-    VOID;
-
-    companion object {
-        private val typeMap = mapOf(
-            PsiTypes.byteType() to INT_LIKE,
-            PsiTypes.charType() to INT_LIKE,
-            PsiTypes.intType() to INT_LIKE,
-            PsiTypes.shortType() to INT_LIKE,
-            PsiTypes.booleanType() to INT_LIKE,
-            PsiTypes.doubleType() to DOUBLE,
-            PsiTypes.floatType() to FLOAT,
-            PsiTypes.longType() to LONG,
-            PsiTypes.voidType() to VOID,
-        )
-
-        fun of(type: PsiType) = typeMap[type] ?: OBJECT
-    }
-}
 
 //private class Shape<out T>(private val init: Shape<T>?, private val last: T) {
 //    private val hashCode = init.hashCode() * 31 + last.hashCode()

@@ -21,9 +21,10 @@
 package com.demonwav.mcdev.platform.mixin.handlers.mixinextras
 
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.OperationWrapperSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.knownSignatures
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
-import com.demonwav.mcdev.platform.mixin.util.mixinExtrasOperationType
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
 import com.demonwav.mcdev.util.Parameter
 import com.intellij.psi.JavaPsiFacade
@@ -53,16 +54,29 @@ class WrapOperationHandler : MixinExtrasInjectorAnnotationHandler() {
         targetClass: ClassNode,
         targetMethod: MethodNode,
         target: TargetInsn
-    ): Pair<List<Parameter>, PsiType>? {
+    ): OperationWrapperSignatures? {
         val params = getParameterTypes(target, targetClass, annotation) ?: return null
         val returnType = getReturnType(target, annotation) ?: return null
-        val operationType = mixinExtrasOperationType(annotation, returnType) ?: return null
-        return (
-            params + Parameter("original", operationType)
-        ) to returnType
+        return OperationWrapperSignatures(
+            annotation,
+            params,
+            returnType,
+            intLikeTypePositions(target),
+            trailingParams = collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
+        )
     }
 
-    override fun intLikeTypePositions(target: TargetInsn) = buildSet {
+    override fun suggestedMethodSignature(
+        annotation: PsiAnnotation,
+        targets: List<ClassAndMethodNode>
+    ): SuggestedSignature? {
+        return SuggestedSignature.operationWrapper(
+            annotation,
+            expectedMethodSignatures(annotation, targets).knownSignatures<OperationWrapperSignatures>() ?: return null
+        )
+    }
+
+    private fun intLikeTypePositions(target: TargetInsn) = buildSet {
         if (
             target.getDecoration<Type>(ExpressionDecorations.SIMPLE_OPERATION_RETURN_TYPE)
             == ExpressionASMUtils.INTLIKE_TYPE
@@ -74,13 +88,6 @@ class WrapOperationHandler : MixinExtrasInjectorAnnotationHandler() {
                 add(MethodSignature.TypePosition.Param(i))
             }
         }
-    }
-
-    override fun suggestedMethodSignature(
-        annotation: PsiAnnotation,
-        targets: List<ClassAndMethodNode>
-    ): SuggestedSignature? {
-        return SuggestedSignature.operationWrapper(annotation, targets, this)
     }
 
     private fun getParameterTypes(

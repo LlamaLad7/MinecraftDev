@@ -28,7 +28,6 @@ import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.COERCE
 import com.demonwav.mcdev.platform.mixin.util.findDelegateConstructorCall
 import com.demonwav.mcdev.platform.mixin.util.hasAccess
-import com.demonwav.mcdev.platform.mixin.util.isAssignable
 import com.demonwav.mcdev.platform.mixin.util.isConstructor
 import com.demonwav.mcdev.platform.mixin.util.isMixinExtrasSugar
 import com.demonwav.mcdev.platform.mixin.util.mixinTargets
@@ -67,12 +66,9 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiNameHelper
 import com.intellij.psi.PsiParameterList
-import com.intellij.psi.PsiPrimitiveType
-import com.intellij.psi.PsiType
 import com.intellij.psi.codeStyle.VariableKind
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.PsiUtil
-import com.intellij.psi.util.TypeConversionUtil
 import com.intellij.psi.util.startOffset
 import com.siyeh.ig.psiutils.VariableNameGenerator
 import org.objectweb.asm.Opcodes
@@ -175,9 +171,7 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
             }
 
             val isAlreadyValid = handler.expectedMethodSignatures(annotation, targetMethods)
-                .all { options ->
-                    options.any { it.matches(method) }
-                }
+                .all { it.matches(method) }
 
             if (isAlreadyValid) {
                 return

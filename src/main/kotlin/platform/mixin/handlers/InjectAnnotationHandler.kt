@@ -21,10 +21,12 @@
 package com.demonwav.mcdev.platform.mixin.handlers
 
 import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.TargetInsn
-import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.ExpectedSignatures
+import com.demonwav.mcdev.platform.mixin.inspection.injector.InjectSignatures
+import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.knownSignatures
+import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.LocalVariables
-import com.demonwav.mcdev.platform.mixin.util.callbackInfoReturnableType
-import com.demonwav.mcdev.platform.mixin.util.callbackInfoType
 import com.demonwav.mcdev.platform.mixin.util.getGenericReturnType
 import com.demonwav.mcdev.platform.mixin.util.hasAccess
 import com.demonwav.mcdev.platform.mixin.util.isFabricMixin
@@ -35,7 +37,6 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiQualifiedReference
-import com.intellij.psi.PsiTypes
 import com.intellij.psi.util.parentOfType
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import org.objectweb.asm.Opcodes
@@ -49,19 +50,8 @@ class InjectAnnotationHandler : InsnInjectorAnnotationHandler() {
         targetClass: ClassNode,
         targetMethod: MethodNode,
         targetInsn: TargetInsn,
-    ): List<MethodSignature> {
+    ): ExpectedSignatures<InjectSignatures> {
         val returnType = targetMethod.getGenericReturnType(targetClass, annotation.project)
-
-        val result = mutableListOf<MethodSignature>()
-
-        val ciParam = if (returnType == PsiTypes.voidType()) {
-            Parameter("ci", callbackInfoType(annotation.project))
-        } else {
-            Parameter(
-                "cir",
-                callbackInfoReturnableType(annotation.project, annotation, returnType)!!,
-            )
-        }
 
         // Parameters from injected method
         val targetParams = collectTargetMethodParameters(annotation.project, targetClass, targetMethod)
@@ -91,27 +81,24 @@ class InjectAnnotationHandler : InsnInjectorAnnotationHandler() {
             }
         }
 
-        // Long form
-        result.add(
-            MethodSignature(
-                targetParams + ciParam,
-                PsiTypes.voidType(),
-                trailingParams = capturedLocals,
-                allowCoerceRequired = true,
-                trailingByDefault = true,
-            )
+        return ExpectedSignatures.Valid(
+            InjectSignatures(
+                annotation,
+                targetParams,
+                returnType,
+                capturedLocals,
+            ) ?: return ExpectedSignatures.Invalid
         )
+    }
 
-        // Short form
-        result.add(
-            MethodSignature(
-                listOf(ciParam),
-                PsiTypes.voidType(),
-                allowCoerceRequired = true,
-            )
+    override fun suggestedMethodSignature(
+        annotation: PsiAnnotation,
+        targets: List<ClassAndMethodNode>
+    ): SuggestedSignature? {
+        return SuggestedSignature.inject(
+            annotation,
+            expectedMethodSignatures(annotation, targets).knownSignatures<InjectSignatures>() ?: return null,
         )
-
-        return result
     }
 
     override fun canAlwaysBeStatic(method: PsiMethod): Boolean {

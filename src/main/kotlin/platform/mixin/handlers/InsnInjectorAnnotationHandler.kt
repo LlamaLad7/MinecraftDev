@@ -24,7 +24,7 @@ import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.AtResolver
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.CollectVisitor
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InsnResolutionInfo
 import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.TargetInsn
-import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.ExpectedSignatures
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.mixinTargets
 import com.demonwav.mcdev.util.cached
@@ -107,8 +107,8 @@ abstract class InsnInjectorAnnotationHandler : InjectorAnnotationHandler() {
     final override fun expectedMethodSignatures(
         annotation: PsiAnnotation,
         targets: List<ClassAndMethodNode>,
-    ): List<List<MethodSignature>> {
-        return resolveInstructions(annotation, targets).mapNotNull { (target, result) ->
+    ): List<ExpectedSignatures<*>> {
+        return resolveInstructions(annotation, targets).map { (target, result) ->
             val (targetClass, targetMethod) = target
             val targetInsn = TargetInsn(result.insn, result.decorations)
             expectedMethodSignature(annotation, targetClass, targetMethod, targetInsn)
@@ -125,7 +125,7 @@ abstract class InsnInjectorAnnotationHandler : InjectorAnnotationHandler() {
         targetClass: ClassNode,
         targetMethod: MethodNode,
         targetInsn: TargetInsn,
-    ): List<MethodSignature>?
+    ): ExpectedSignatures<*>
 
     open fun isInsnAllowed(insn: AbstractInsnNode, decorations: Map<String, Any?>): Boolean {
         return true

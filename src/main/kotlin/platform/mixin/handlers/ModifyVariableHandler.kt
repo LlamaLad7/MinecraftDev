@@ -22,11 +22,14 @@ package com.demonwav.mcdev.platform.mixin.handlers
 
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.CollectVisitor
 import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.TargetInsn
-import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.ExpectedSignatures
+import com.demonwav.mcdev.platform.mixin.inspection.injector.ModifierSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.knownSignatures
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.LocalInfo
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
+import com.demonwav.mcdev.util.Parameter
 import com.demonwav.mcdev.util.findContainingMethod
 import com.demonwav.mcdev.util.findModule
 import com.intellij.psi.JavaPsiFacade
@@ -42,17 +45,17 @@ class ModifyVariableHandler : InsnInjectorAnnotationHandler() {
         targetClass: ClassNode,
         targetMethod: MethodNode,
         targetInsn: TargetInsn,
-    ): List<MethodSignature>? {
-        val module = annotation.findModule() ?: return null
+    ): ExpectedSignatures<ModifierSignatures> {
+        val module = annotation.findModule() ?: return ExpectedSignatures.Unknown
         val targetParams = collectTargetMethodParameters(annotation.project, targetClass, targetMethod)
 
-        val method = annotation.findContainingMethod() ?: return null
+        val method = annotation.findContainingMethod() ?: return ExpectedSignatures.Unknown
         val localType = method.parameterList.getParameter(0)?.type
         val info = LocalInfo.fromAnnotation(localType, annotation)
 
         val elementFactory = JavaPsiFacade.getElementFactory(annotation.project)
         val seenParams = mutableSetOf<String>()
-        val result = mutableListOf<MethodSignature>()
+        val result = mutableListOf<Parameter>()
         val matchedLocals = info.matchLocals(
             module, targetClass, targetMethod, targetInsn.insn,
             CollectVisitor.Mode.SUGGESTION, matchType = false
@@ -60,23 +63,27 @@ class ModifyVariableHandler : InsnInjectorAnnotationHandler() {
         for (local in matchedLocals) {
             if (seenParams.add(local.desc + local.name)) {
                 val localType = Type.getType(local.desc).toPsiType(elementFactory)
-                result += MethodSignature(
-                    listOf(sanitizedParameter(localType, local.name, local.isNamed)),
-                    localType,
-                    trailingParams = targetParams,
-                    allowCoerceRequired = false,
-                )
+                result += sanitizedParameter(localType, local.name, local.isNamed)
             }
         }
 
-        return result
+        return ExpectedSignatures.Valid(
+            ModifierSignatures(
+                result,
+                allowCoerce = false,
+                trailingParams = targetParams,
+            )
+        )
     }
 
     override fun suggestedMethodSignature(
         annotation: PsiAnnotation,
         targets: List<ClassAndMethodNode>
     ): SuggestedSignature? {
-        return SuggestedSignature.modifierNoCoerce(annotation, targets, this)
+        return SuggestedSignature.modifierNoCoerce(
+            annotation,
+            expectedMethodSignatures(annotation, targets).knownSignatures<ModifierSignatures>() ?: return null,
+        )
     }
 
     override val isShiftAlwaysDiscouraged = false

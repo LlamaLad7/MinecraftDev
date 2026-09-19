@@ -22,13 +22,13 @@ package com.demonwav.mcdev.platform.mixin.handlers.mixinextras
 
 import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InsnResolutionInfo
-import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.ExpectedSignatures
+import com.demonwav.mcdev.platform.mixin.inspection.injector.OperationWrapperSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.knownSignatures
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.findSourceElement
 import com.demonwav.mcdev.platform.mixin.util.getGenericReturnType
-import com.demonwav.mcdev.platform.mixin.util.mixinExtrasOperationType
-import com.demonwav.mcdev.util.Parameter
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.GlobalSearchScope
@@ -39,20 +39,16 @@ class WrapMethodHandler : InjectorAnnotationHandler() {
     override fun expectedMethodSignatures(
         annotation: PsiAnnotation,
         targets: List<ClassAndMethodNode>,
-    ): List<List<MethodSignature>> {
+    ): List<ExpectedSignatures<*>> {
         return targets.map { (targetClass, targetMethod) ->
             val returnType = targetMethod.getGenericReturnType(targetClass, annotation.project)
 
-            listOf(
-                MethodSignature(
-                    collectTargetMethodParameters(annotation.project, targetClass, targetMethod) +
-                        Parameter(
-                            "original",
-                            mixinExtrasOperationType(annotation, returnType) ?: return@map emptyList()
-                        ),
+            ExpectedSignatures.Valid(
+                OperationWrapperSignatures(
+                    annotation,
+                    collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
                     returnType,
-                    allowCoerceRequired = true,
-                )
+                ) ?: return@map ExpectedSignatures.Invalid
             )
         }
     }
@@ -61,7 +57,10 @@ class WrapMethodHandler : InjectorAnnotationHandler() {
         annotation: PsiAnnotation,
         targets: List<ClassAndMethodNode>
     ): SuggestedSignature? {
-        return SuggestedSignature.operationWrapper(annotation, targets, this)
+        return SuggestedSignature.operationWrapper(
+            annotation,
+            expectedMethodSignatures(annotation, targets).knownSignatures<OperationWrapperSignatures>() ?: return null
+        )
     }
 
     override fun isUnresolved(
