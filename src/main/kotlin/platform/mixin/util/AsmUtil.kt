@@ -472,9 +472,11 @@ fun ClassNode.findField(ref: MemberMatcher): FieldNode? {
     return findFields(ref).firstOrNull()
 }
 
-fun ClassNode.findMethods(ref: MixinSelector): Sequence<MethodNode> {
+fun ClassNode.findMethods(ref: MixinSelector, allowStatic: Boolean): Sequence<MethodNode> {
     val maxMatches = ref.quantifier.max(Quantifier.Context.MEMBER)
-    return methods?.asSequence()?.filter { ref.matchMethod(it, this) }?.take(maxMatches).orEmpty()
+    return methods?.asSequence()?.filter {
+        ref.matchMethod(it, this) && (maxMatches <= 1 || allowStatic || !it.hasAccess(Opcodes.ACC_STATIC))
+    }?.take(maxMatches).orEmpty()
 }
 
 fun ClassNode.findMethod(ref: MemberReference): MethodNode? {
