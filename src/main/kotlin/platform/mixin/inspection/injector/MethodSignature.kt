@@ -21,6 +21,7 @@
 package com.demonwav.mcdev.platform.mixin.inspection.injector
 
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.COERCE
+import com.demonwav.mcdev.platform.mixin.util.checkCoerce
 import com.demonwav.mcdev.platform.mixin.util.isAssignable
 import com.demonwav.mcdev.platform.mixin.util.isMixinExtrasSugar
 import com.demonwav.mcdev.util.Parameter
@@ -82,29 +83,14 @@ data class MethodSignature(
             .all { (expected, indexAndActual) ->
                 val (index, actual) = indexAndActual
                 matchType(
-                    actual.type,
                     expected.type,
+                    actual.type,
                     allowCoerce && actual.hasAnnotation(COERCE),
                     TypePosition.Param(index),
                 )
             }
     }
 
-    private fun matchType(actual: PsiType, expected: PsiType, coerce: Boolean, typePos: TypePosition): Boolean = when {
-        typePos in intLikeTypes -> actual in INT_TYPES
-        actual.normalize() == expected.normalize() -> true
-        !coerce -> false
-        expected in INT_TYPES -> actual == PsiTypes.intType()
-        else -> isAssignable(actual.normalize(), expected.normalize())
-    }
-
-    companion object {
-        private val INT_TYPES = setOf(
-            PsiTypes.intType(),
-            PsiTypes.shortType(),
-            PsiTypes.charType(),
-            PsiTypes.byteType(),
-            PsiTypes.booleanType()
-        )
-    }
+    private fun matchType(expected: PsiType, actual: PsiType, coerce: Boolean, typePos: TypePosition) =
+        checkCoerce(expected, actual, coerce, typePos in intLikeTypes)
 }

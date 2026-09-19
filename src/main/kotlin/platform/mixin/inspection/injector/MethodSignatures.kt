@@ -141,15 +141,15 @@ data class GeneralSignatures(
         intLikePositions,
     )
 
-    override val options = returnTypeOptions.values.map { returnType ->
-        MethodSignature(
-            params,
-            returnType,
-            allowCoerceRequired = allowCoerce,
-            trailingParams = trailingParams,
-            intLikeTypes = intLikePositions,
-        )
-    }
+    override val options = returnTypeOptions.keys.map(::specificSignature)
+
+    fun specificSignature(returnKind: TypeKind) = MethodSignature(
+        params,
+        returnTypeOptions.getValue(returnKind),
+        allowCoerceRequired = allowCoerce,
+        trailingParams = trailingParams,
+        intLikeTypes = intLikePositions,
+    )
 }
 
 class InjectSignatures(

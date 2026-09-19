@@ -21,6 +21,7 @@
 package com.demonwav.mcdev.platform.mixin.inspection.injector
 
 import com.demonwav.mcdev.platform.mixin.util.TypeKind
+import com.demonwav.mcdev.platform.mixin.util.checkCoerce
 import com.demonwav.mcdev.util.Parameter
 import com.demonwav.mcdev.util.allSame
 import com.demonwav.mcdev.util.normalize
@@ -149,9 +150,50 @@ data class SuggestedSignature(
         }
 
         fun general(annotation: PsiAnnotation, signatures: List<GeneralSignatures>): SuggestedSignature? {
-            // TODO
+            val signaturesByReturnKind = signatures.asSequence().flatMap { sig ->
+                sig.returnTypeOptions.keys.map { it to sig }
+            }.groupBy({ it.first }, { it.second })
+            val returnKind =
+                signaturesByReturnKind.entries.firstOrNull { it.value.size == signatures.size }?.key ?: return null
 
-            return signatures.firstOrNull()?.options?.firstOrNull()?.let(::exact)
+            val numParams = signatures.maxOf { it.params.size }
+            val intersected = intersectCoerce(
+                annotation,
+                signatures.asSequence()
+                    .map {
+                        val signature = it.specificSignature(returnKind)
+                        exact(signature, takeTrailing = numParams - signature.requiredParams.size)
+                    }
+            ) ?: return null
+
+            for (signature in signatures) {
+                if (signature.allowCoerce) {
+                    continue
+                }
+                // Match strictly
+                val returnTypeMatches = checkCoerce(
+                    signature.returnTypeOptions.getValue(returnKind),
+                    intersected.returnType,
+                    intersected.coerceReturnType,
+                    MethodSignature.TypePosition.Return in signature.intLikePositions,
+                )
+                if (!returnTypeMatches) {
+                    return null
+                }
+                val paramsMatch = signature.params.withIndex().all { (index, param) ->
+                    checkCoerce(
+                        param.type,
+                        intersected.params[index].type,
+                        coerce = false,
+                        MethodSignature.TypePosition.Param(index) in signature.intLikePositions,
+                    )
+                }
+                if (!paramsMatch) {
+                    return null
+                }
+            }
+
+            return intersected
         }
 
         private fun intersectCoerce(annotation: PsiAnnotation, signatures: Sequence<SuggestedSignature>): SuggestedSignature? {

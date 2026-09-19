@@ -85,7 +85,6 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
             val identifier = method.nameIdentifier ?: return
             val modifiers = method.modifierList
             val parameters = method.parameterList
-            val methodReturnType = method.returnType ?: return
 
             val (annotation, handler) = modifiers.annotations.firstNotNullOfOrNull { annotation ->
                 (MixinAnnotationHandler.forMixinAnnotation(annotation, annotation.project)
