@@ -23,6 +23,8 @@ package com.demonwav.mcdev.platform.mixin.handlers.mixinextras
 import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InsnResolutionInfo
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
+import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.findSourceElement
 import com.demonwav.mcdev.platform.mixin.util.getGenericReturnType
 import com.demonwav.mcdev.platform.mixin.util.mixinExtrasOperationType
@@ -30,30 +32,36 @@ import com.demonwav.mcdev.util.Parameter
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.GlobalSearchScope
-import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
 
 class WrapMethodHandler : InjectorAnnotationHandler() {
-    override val allowCoerce get() = true
-
-    override fun expectedMethodSignature(
+    override fun expectedMethodSignatures(
         annotation: PsiAnnotation,
-        targetClass: ClassNode,
-        targetMethod: MethodNode,
-    ): List<MethodSignature> {
-        val returnType = targetMethod.getGenericReturnType(targetClass, annotation.project)
+        targets: List<ClassAndMethodNode>,
+    ): List<List<MethodSignature>> {
+        return targets.map { (targetClass, targetMethod) ->
+            val returnType = targetMethod.getGenericReturnType(targetClass, annotation.project)
 
-        return listOf(
-            MethodSignature(
-                collectTargetMethodParameters(annotation.project, targetClass, targetMethod) +
+            listOf(
+                MethodSignature(
+                    collectTargetMethodParameters(annotation.project, targetClass, targetMethod) +
                         Parameter(
                             "original",
-                            mixinExtrasOperationType(annotation, returnType) ?: return emptyList()
+                            mixinExtrasOperationType(annotation, returnType) ?: return@map emptyList()
                         ),
-                returnType
+                    returnType,
+                    allowCoerceRequired = true,
+                )
             )
-        )
+        }
+    }
+
+    override fun suggestedMethodSignature(
+        annotation: PsiAnnotation,
+        targets: List<ClassAndMethodNode>
+    ): SuggestedSignature? {
+        return SuggestedSignature.operationWrapper(annotation, targets, this)
     }
 
     override fun isUnresolved(
@@ -78,6 +86,4 @@ class WrapMethodHandler : InjectorAnnotationHandler() {
             canDecompile = true
         )?.let(::listOf).orEmpty()
     }
-
-    override val mixinExtrasExpressionContextType = ExpressionContext.Type.CUSTOM
 }

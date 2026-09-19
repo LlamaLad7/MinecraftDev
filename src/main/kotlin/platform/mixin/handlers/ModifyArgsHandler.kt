@@ -20,7 +20,10 @@
 
 package com.demonwav.mcdev.platform.mixin.handlers
 
+import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.TargetInsn
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
+import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Classes.ARGS
 import com.demonwav.mcdev.util.Parameter
 import com.intellij.psi.JavaPsiFacade
@@ -32,7 +35,7 @@ import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
 
-class ModifyArgsHandler : InjectorAnnotationHandler() {
+class ModifyArgsHandler : InsnInjectorAnnotationHandler() {
     override fun isInsnAllowed(insn: AbstractInsnNode, decorations: Map<String, Any?>): Boolean {
         return insn is MethodInsnNode
     }
@@ -43,6 +46,7 @@ class ModifyArgsHandler : InjectorAnnotationHandler() {
         annotation: PsiAnnotation,
         targetClass: ClassNode,
         targetMethod: MethodNode,
+        targetInsn: TargetInsn,
     ): List<MethodSignature> {
         val argsType = JavaPsiFacade.getElementFactory(annotation.project)
             .createTypeByFQClassName(ARGS, annotation.resolveScope)
@@ -51,11 +55,25 @@ class ModifyArgsHandler : InjectorAnnotationHandler() {
             MethodSignature(
                 shortParams,
                 PsiTypes.voidType(),
+                allowCoerceRequired = false,
             ),
             MethodSignature(
                 shortParams + collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
                 PsiTypes.voidType(),
+                allowCoerceRequired = false,
             ),
+        )
+    }
+
+    override fun suggestedMethodSignature(
+        annotation: PsiAnnotation,
+        targets: List<ClassAndMethodNode>
+    ): SuggestedSignature {
+        val argsType = JavaPsiFacade.getElementFactory(annotation.project)
+            .createTypeByFQClassName(ARGS, annotation.resolveScope)
+        return SuggestedSignature(
+            listOf(SuggestedSignature.Param("args", argsType)),
+            PsiTypes.voidType(),
         )
     }
 

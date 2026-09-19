@@ -153,9 +153,9 @@ inline fun <T : Collection<*>> T.ifEmpty(func: () -> Unit): T {
     return this
 }
 
-inline fun <T : Collection<*>?> T.ifNullOrEmpty(func: () -> Unit): T {
+inline fun <T, R : Collection<*>> T?.ifNullOrEmpty(func: () -> R): R where T : R {
     if (isNullOrEmpty()) {
-        func()
+        return func()
     }
     return this
 }

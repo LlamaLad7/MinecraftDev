@@ -50,6 +50,7 @@ import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiSwitchLabelStatementBase
 import com.intellij.psi.util.PsiUtil
 import com.intellij.util.ArrayUtilRt
+import java.util.EnumSet
 import java.util.Locale
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
@@ -129,7 +130,7 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
     override fun getArgValueListDelimiter(at: PsiAnnotation, key: String) =
         Const.COMMA_LIST_DELIMITER.takeIf { key == "expandZeroConditions" }
 
-    fun getConstantInfo(at: PsiAnnotation): ConstantInfo? {
+    fun getConstantInfos(at: PsiAnnotation): List<ConstantInfo> {
         val args = AtResolver.getArgs(at)
         val intValue = args["intValue"]?.toIntOrNull()
         val floatValue = args["floatValue"]?.toFloatOrNull()
@@ -137,20 +138,13 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
         val doubleValue = args["doubleValue"]?.toDoubleOrNull()
         val stringValue = args["stringValue"]
         val classValue = args["classValue"]?.ifNotBlank { Type.getObjectType(it.replace('.', '/')) }
-        val count =
-            (intValue != null).toInt() +
-                (floatValue != null).toInt() +
-                (longValue != null).toInt() +
-                (doubleValue != null).toInt() +
-                (stringValue != null).toInt() +
-                (classValue != null).toInt()
-        if ("nullValue" in args || count != 1) {
-            return null
-        }
+        val nullValue = args["nullValue"]?.toBooleanStrictOrNull()
+        val expandZeroConditions = parseExpandConditions(args)
 
-        val constant = intValue ?: floatValue ?: longValue ?: doubleValue ?: stringValue ?: classValue!!
-
-        return ConstantInfo(constant, parseExpandConditions(args))
+        return listOfNotNull(
+            intValue, floatValue, longValue, doubleValue, stringValue, classValue
+        ).map { ConstantInfo(it, expandZeroConditions) } +
+            if (nullValue == true) listOf(ConstantInfo(null, expandZeroConditions)) else emptyList()
     }
 
     private fun parseExpandConditions(args: Map<String, String>): Set<ExpandCondition> {
@@ -161,16 +155,12 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
             ?.toSet() ?: emptySet()
     }
 
-    private fun Boolean.toInt(): Int {
-        return if (this) 1 else 0
-    }
-
     override fun createNavigationVisitor(
         at: PsiAnnotation,
         target: MixinSelector?,
         targetClass: PsiClass,
     ): NavigationVisitor {
-        return MyNavigationVisitor(getConstantInfo(at))
+        return MyNavigationVisitor(getConstantInfos(at))
     }
 
     override fun doCreateCollectVisitor(
@@ -179,7 +169,7 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
         targetClass: ClassNode,
         mode: CollectVisitor.Mode,
     ): CollectVisitor<PsiElement> {
-        return MyCollectVisitor(at.project, mode, getConstantInfo(at))
+        return MyCollectVisitor(at.project, mode, getConstantInfos(at))
     }
 
     override fun createLookup(
@@ -189,7 +179,11 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
         return null
     }
 
-    class ConstantInfo(val constant: Any, val expandConditions: Set<ExpandCondition>)
+    fun getTargetedConstant(insn: AbstractInsnNode) =
+        insn.computeConstantValue(EnumSet.allOf(ExpandCondition::class.java))
+            ?.let { if (it === NullSentinel) null else it }
+
+    class ConstantInfo(val constant: Any?, val expandConditions: Set<ExpandCondition>)
 
     enum class ExpandCondition(vararg val opcodes: Int) {
         LESS_THAN_ZERO(Opcodes.IFLT, Opcodes.IFGE),
@@ -199,7 +193,7 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
     }
 
     class MyNavigationVisitor(
-        private val constantInfo: ConstantInfo?,
+        private val constantInfos: List<ConstantInfo>,
         private val expectedType: Type? = null,
     ) : NavigationVisitor() {
         override fun visitForeachStatement(statement: PsiForeachStatement) {
@@ -234,121 +228,96 @@ class ConstantInjectionPoint : InjectionPoint<PsiElement>() {
         }
 
         private fun visitConstant(element: PsiElement, value: Any?) {
-            if (constantInfo != null && value != constantInfo.constant) {
-                return
-            }
-
-            if (expectedType != null && value != null) {
-                // First check if we expect any String literal
-                if (value is String &&
-                    (expectedType.sort != Type.OBJECT || expectedType.className != CommonClassNames.JAVA_LANG_STRING)
-                ) {
-                    return
-                }
-
-                // then check if we expect any class literal
-                if (value is Type && (
-                    expectedType.sort != Type.ARRAY && expectedType.sort != Type.OBJECT ||
-                        expectedType.className != CommonClassNames.JAVA_LANG_CLASS
-                    )
-                ) {
-                    return
-                }
-
-                // otherwise we expect a primitive literal
-                if (expectedType.sort in Type.BOOLEAN..Type.DOUBLE &&
-                    value::class.javaPrimitiveType?.let(Type::getType) != expectedType
-                ) {
-                    return
-                }
-            }
-
-            val parent = PsiUtil.skipParenthesizedExprUp(element.parent)
-
-            // check for expandZeroConditions
-            if (value == null || value == 0) {
-                if (parent is PsiBinaryExpression) {
-                    val operation = parent.operationTokenType
-                    if (operation == JavaTokenType.EQEQ || operation == JavaTokenType.NE) {
-                        return
-                    }
-                    val opcode = when (operation) {
-                        JavaTokenType.LT -> Opcodes.IFLT
-                        JavaTokenType.LE -> Opcodes.IFLE
-                        JavaTokenType.GT -> Opcodes.IFGT
-                        JavaTokenType.GE -> Opcodes.IFGE
-                        else -> null
-                    }
-                    if (opcode != null && (
-                        constantInfo == null ||
-                            !constantInfo.expandConditions.any { opcode in it.opcodes }
-                        )
-                    ) {
-                        return
-                    }
-                }
-            }
-
-            // check for switch statement (compiles to tableswitch or lookupswitch which aren't targeted)
-            if (parent is PsiSwitchLabelStatementBase) {
-                return
-            }
-
-            addResult(element)
-        }
-    }
-
-    class MyCollectVisitor(
-        private val project: Project,
-        mode: Mode,
-        private val constantInfo: ConstantInfo?,
-        private val expectedType: Type? = null,
-    ) : CollectVisitor<PsiElement>(mode) {
-        override fun accept(methodNode: MethodNode) = sequence {
-            for (insn in methodNode.instructions ?: emptyList()) {
-                val constant = (
-                    insn.computeConstantValue(constantInfo?.expandConditions ?: emptySet())
-                        ?: continue
-                    ).let { if (it is NullSentinel) null else it }
-
-                if (constantInfo != null && constant != constantInfo.constant) {
+            for (constantInfo in constantInfos) {
+                if (value != constantInfo.constant) {
                     continue
                 }
 
-                if (expectedType != null && constant != null) {
+                if (expectedType != null && value != null) {
                     // First check if we expect any String literal
-                    if (constant is String && (
-                        expectedType.sort != Type.OBJECT ||
-                            expectedType.className != CommonClassNames.JAVA_LANG_STRING
-                        )
+                    if (value is String &&
+                        (expectedType.sort != Type.OBJECT || expectedType.className != CommonClassNames.JAVA_LANG_STRING)
                     ) {
                         continue
                     }
 
                     // then check if we expect any class literal
-                    if (constant is Type && (
-                        expectedType.sort != Type.ARRAY && expectedType.sort != Type.OBJECT ||
-                            expectedType.className != CommonClassNames.JAVA_LANG_CLASS
-                        )
+                    if (value is Type && (
+                            expectedType.sort != Type.ARRAY && expectedType.sort != Type.OBJECT ||
+                                expectedType.className != CommonClassNames.JAVA_LANG_CLASS
+                            )
                     ) {
                         continue
                     }
 
                     // otherwise we expect a primitive literal
                     if (expectedType.sort in Type.BOOLEAN..Type.DOUBLE &&
-                        constant::class.javaPrimitiveType?.let(Type::getType) != expectedType
+                        value::class.javaPrimitiveType?.let(Type::getType) != expectedType
                     ) {
                         continue
                     }
                 }
 
-                val elementFactory = JavaPsiFacade.getElementFactory(project)
-                val literal = if (constant is Type) {
-                    elementFactory.createExpressionFromText("${constant.className}.class", null)
-                } else {
-                    elementFactory.createLiteralExpression(constant)
+                val parent = PsiUtil.skipParenthesizedExprUp(element.parent)
+
+                // check for expandZeroConditions
+                if (value == null || value == 0) {
+                    if (parent is PsiBinaryExpression) {
+                        val operation = parent.operationTokenType
+                        if (operation == JavaTokenType.EQEQ || operation == JavaTokenType.NE) {
+                            continue
+                        }
+                        val opcode = when (operation) {
+                            JavaTokenType.LT -> Opcodes.IFLT
+                            JavaTokenType.LE -> Opcodes.IFLE
+                            JavaTokenType.GT -> Opcodes.IFGT
+                            JavaTokenType.GE -> Opcodes.IFGE
+                            else -> null
+                        }
+                        if (opcode != null && (
+                                !constantInfo.expandConditions.any { opcode in it.opcodes }
+                                )
+                        ) {
+                            continue
+                        }
+                    }
                 }
-                addResult(insn, literal)
+
+                // check for switch statement (compiles to tableswitch or lookupswitch which aren't targeted)
+                if (parent is PsiSwitchLabelStatementBase) {
+                    continue
+                }
+
+                addResult(element)
+            }
+        }
+    }
+
+    class MyCollectVisitor(
+        private val project: Project,
+        mode: Mode,
+        private val constantInfos: List<ConstantInfo>,
+    ) : CollectVisitor<PsiElement>(mode) {
+        override fun accept(methodNode: MethodNode) = sequence {
+            for (insn in methodNode.instructions ?: emptyList()) {
+                for (constantInfo in constantInfos) {
+                    val constant = (
+                        insn.computeConstantValue(constantInfo.expandConditions)
+                            ?: continue
+                        ).let { if (it is NullSentinel) null else it }
+
+                    if (constant != constantInfo.constant) {
+                        continue
+                    }
+
+                    val elementFactory = JavaPsiFacade.getElementFactory(project)
+                    val literal = if (constant is Type) {
+                        elementFactory.createExpressionFromText("${constant.className}.class", null)
+                    } else {
+                        elementFactory.createLiteralExpression(constant)
+                    }
+                    addResult(insn, literal)
+                }
             }
         }
     }

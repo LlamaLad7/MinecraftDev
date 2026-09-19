@@ -43,7 +43,7 @@ class ModifyReceiverHandler : MixinExtrasInjectorAnnotationHandler() {
 
     override val allowedInsnDescription = "non-static method invocations and field references"
 
-    override fun expectedMethodSignature(
+    override fun expectedMethodSignatureImpl(
         annotation: PsiAnnotation,
         targetClass: ClassNode,
         targetMethod: MethodNode,

@@ -55,7 +55,7 @@ class ModifyExpressionValueHandler : MixinExtrasInjectorAnnotationHandler() {
 
     override val allowedInsnDescription = "instructions that return a value"
 
-    override fun expectedMethodSignature(
+    override fun expectedMethodSignatureImpl(
         annotation: PsiAnnotation,
         targetClass: ClassNode,
         targetMethod: MethodNode,
@@ -65,12 +65,12 @@ class ModifyExpressionValueHandler : MixinExtrasInjectorAnnotationHandler() {
         return listOf(Parameter("original", psiType)) to psiType
     }
 
-    override fun intLikeTypePositions(target: TargetInsn): List<MethodSignature.TypePosition> {
+    override fun intLikeTypePositions(target: TargetInsn): Set<MethodSignature.TypePosition> {
         val expressionType = target.getDecoration<Type>(ExpressionDecorations.SIMPLE_EXPRESSION_TYPE)
         if (expressionType == ExpressionASMUtils.INTLIKE_TYPE) {
-            return listOf(MethodSignature.TypePosition.Return, MethodSignature.TypePosition.Param(0))
+            return setOf(MethodSignature.TypePosition.Return, MethodSignature.TypePosition.Param(0))
         }
-        return emptyList()
+        return emptySet()
     }
 
     private fun getReturnType(

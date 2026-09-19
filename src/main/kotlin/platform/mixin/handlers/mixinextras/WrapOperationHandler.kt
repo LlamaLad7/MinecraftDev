@@ -21,6 +21,8 @@
 package com.demonwav.mcdev.platform.mixin.handlers.mixinextras
 
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
+import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.mixinExtrasOperationType
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
 import com.demonwav.mcdev.util.Parameter
@@ -46,7 +48,7 @@ class WrapOperationHandler : MixinExtrasInjectorAnnotationHandler() {
         return if (annotation.hasAttribute("constant")) "constant" else "at"
     }
 
-    override fun expectedMethodSignature(
+    override fun expectedMethodSignatureImpl(
         annotation: PsiAnnotation,
         targetClass: ClassNode,
         targetMethod: MethodNode,
@@ -60,7 +62,7 @@ class WrapOperationHandler : MixinExtrasInjectorAnnotationHandler() {
         ) to returnType
     }
 
-    override fun intLikeTypePositions(target: TargetInsn) = buildList {
+    override fun intLikeTypePositions(target: TargetInsn) = buildSet {
         if (
             target.getDecoration<Type>(ExpressionDecorations.SIMPLE_OPERATION_RETURN_TYPE)
             == ExpressionASMUtils.INTLIKE_TYPE
@@ -72,6 +74,13 @@ class WrapOperationHandler : MixinExtrasInjectorAnnotationHandler() {
                 add(MethodSignature.TypePosition.Param(i))
             }
         }
+    }
+
+    override fun suggestedMethodSignature(
+        annotation: PsiAnnotation,
+        targets: List<ClassAndMethodNode>
+    ): SuggestedSignature? {
+        return SuggestedSignature.operationWrapper(annotation, targets, this)
     }
 
     private fun getParameterTypes(

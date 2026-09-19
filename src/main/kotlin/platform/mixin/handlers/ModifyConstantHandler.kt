@@ -22,17 +22,16 @@ package com.demonwav.mcdev.platform.mixin.handlers
 
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.ConstantInjectionPoint
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InjectionPoint
+import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.TargetInsn
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
-import com.demonwav.mcdev.util.findAnnotations
-import com.intellij.openapi.project.Project
+import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
+import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiManager
-import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypes
-import com.intellij.psi.util.parentOfType
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
@@ -40,8 +39,11 @@ import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
 
-class ModifyConstantHandler : InjectorAnnotationHandler() {
+class ModifyConstantHandler : InsnInjectorAnnotationHandler() {
+    private val constantInjectionPoint by lazy { InjectionPoint.byAtCode("CONSTANT") as ConstantInjectionPoint }
+
     private val allowedOpcodes = setOf(
+        Opcodes.ACONST_NULL,
         Opcodes.ICONST_M1,
         Opcodes.ICONST_0,
         Opcodes.ICONST_1,
@@ -63,19 +65,8 @@ class ModifyConstantHandler : InjectorAnnotationHandler() {
         Opcodes.IFGE,
         Opcodes.IFGT,
         Opcodes.IFLE,
-        Opcodes.CHECKCAST,
         Opcodes.INSTANCEOF,
     )
-
-    private fun getConstantInfos(modifyConstant: PsiAnnotation): List<ConstantInjectionPoint.ConstantInfo>? {
-        val constants = modifyConstant.findDeclaredAttributeValue("constant")
-            ?.findAnnotations()
-            ?.takeIf { it.isNotEmpty() }
-            ?: return null
-        return constants.map { constant ->
-            (InjectionPoint.byAtCode("CONSTANT") as ConstantInjectionPoint).getConstantInfo(constant) ?: return null
-        }
-    }
 
     override fun getAtKey(annotation: PsiAnnotation) = "constant"
 
@@ -83,72 +74,86 @@ class ModifyConstantHandler : InjectorAnnotationHandler() {
         annotation: PsiAnnotation,
         targetClass: ClassNode,
         targetMethod: MethodNode,
-    ): List<MethodSignature> {
-        val constantInfos = getConstantInfos(annotation)
-        if (constantInfos == null) {
-            val method = annotation.parentOfType<PsiMethod>()
-                ?: return emptyList()
-            val returnType = method.returnType
-                ?: return emptyList()
-            val constantParamName = method.parameterList.getParameter(0)?.name ?: "constant"
-            return listOf(
-                MethodSignature(
-                    listOf(sanitizedParameter(returnType, constantParamName)),
-                    returnType,
-                    collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
-                )
-            )
-        }
-
-        val psiManager = PsiManager.getInstance(annotation.project)
-        return constantInfos.asSequence()
-            .distinctBy { it.constant.javaClass }
-            .flatMap {
-                when (it.constant) {
-                    is Int -> sequenceOf(
-                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.intType()),
-                    )
-                    is Long -> sequenceOf(
-                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.longType())
-                    )
-                    is Float -> sequenceOf(
-                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.floatType())
-                    )
-                    is Double -> sequenceOf(
-                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiTypes.doubleType())
-                    )
-                    is String -> sequenceOf(
-                        makeMethodSignature(annotation.project, targetClass, targetMethod, PsiType.getJavaLangString(psiManager, annotation.resolveScope))
-                    )
-                    is Type -> sequenceOf(
-                        makeTypeCheckMethodSignature(annotation.project, psiManager, annotation, targetClass, targetMethod, getClassType(psiManager, annotation)),
-                        makeTypeCheckMethodSignature(annotation.project, psiManager, annotation, targetClass, targetMethod, PsiTypes.booleanType()),
-                    )
-                    else -> throw IllegalStateException("Unknown constant type: ${it.constant.javaClass.name}")
-                }
-            }
-            .toList()
+        targetInsn: TargetInsn,
+    ): List<MethodSignature>? {
+        val targetParams = collectTargetMethodParameters(annotation.project, targetClass, targetMethod)
+        val cst = constantInjectionPoint.getTargetedConstant(targetInsn.insn) ?: return emptyList()
+        return basicMethodSignatures(annotation, cst)?.map { it.copy(trailingParams = targetParams) }
     }
 
-    private fun makeMethodSignature(
-        project: Project,
-        targetClass: ClassNode,
-        targetMethod: MethodNode,
-        type: PsiType,
-    ): MethodSignature {
+    override fun suggestedMethodSignature(
+        annotation: PsiAnnotation,
+        targets: List<ClassAndMethodNode>
+    ): SuggestedSignature? {
+        val isTypeCheck =
+            resolveInstructions(annotation, targets).asSequence()
+                .map { it.result.insn.opcode == Opcodes.INSTANCEOF }
+                .distinct()
+                .singleOrNull() ?: return null
+
+        return if (isTypeCheck) {
+            SuggestedSignature.exact(
+                makeTypeCheckMethodSignature(
+                    PsiManager.getInstance(annotation.project),
+                    annotation,
+                    PsiTypes.booleanType(),
+                )
+            )
+        } else {
+            SuggestedSignature.modifierNoCoerce(annotation, targets, this)
+        }
+    }
+
+    private fun basicMethodSignatures(annotation: PsiAnnotation, cst: Any): List<MethodSignature>? {
+        val psiManager = PsiManager.getInstance(annotation.project)
+
+        return if (cst is Type) {
+            listOf(
+                makeTypeCheckMethodSignature(
+                    psiManager,
+                    annotation,
+                    PsiTypes.booleanType(),
+                ),
+                makeTypeCheckMethodSignature(
+                    psiManager,
+                    annotation,
+                    getClassType(psiManager, annotation),
+                ),
+            )
+        } else {
+            listOf(
+                makeMethodSignature(
+                    getConstantType(annotation, cst)
+                        ?: throw IllegalStateException("Unknown constant type: ${cst.javaClass.name}")
+                ),
+            )
+        }
+    }
+
+    private fun getConstantType(context: PsiAnnotation, cst: Any) = when (cst) {
+        is Int -> PsiTypes.intType()
+        is Long -> PsiTypes.longType()
+        is Float -> PsiTypes.floatType()
+        is Double -> PsiTypes.doubleType()
+        is String -> PsiType.getJavaLangString(
+            PsiManager.getInstance(context.project),
+            context.resolveScope
+        )
+
+        else -> null
+    }
+
+    private fun makeMethodSignature(type: PsiType): MethodSignature {
         return MethodSignature(
             listOf(sanitizedParameter(type, "constant")),
             type,
-            collectTargetMethodParameters(project, targetClass, targetMethod),
+            allowCoerceRequired = true,
         )
     }
 
     private fun makeTypeCheckMethodSignature(
-        project: Project,
         psiManager: PsiManager,
         context: PsiElement,
-        targetClass: ClassNode,
-        targetMethod: MethodNode,
         returnType: PsiType,
     ): MethodSignature {
         return MethodSignature(
@@ -157,7 +162,7 @@ class ModifyConstantHandler : InjectorAnnotationHandler() {
                 sanitizedParameter(getClassType(psiManager, context), "type"),
             ),
             returnType,
-            collectTargetMethodParameters(project, targetClass, targetMethod),
+            allowCoerceRequired = false,
         )
     }
 

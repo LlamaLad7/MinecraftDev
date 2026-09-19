@@ -20,6 +20,7 @@
 
 package com.demonwav.mcdev.platform.mixin.handlers
 
+import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.TargetInsn
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
 import com.demonwav.mcdev.platform.mixin.util.LocalVariables
 import com.demonwav.mcdev.platform.mixin.util.callbackInfoReturnableType
@@ -30,7 +31,6 @@ import com.demonwav.mcdev.platform.mixin.util.isFabricMixin
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
 import com.demonwav.mcdev.util.Parameter
 import com.demonwav.mcdev.util.findModule
-import com.demonwav.mcdev.util.firstIndexOrNull
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiMethod
@@ -43,11 +43,12 @@ import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
 
-class InjectAnnotationHandler : InjectorAnnotationHandler() {
+class InjectAnnotationHandler : InsnInjectorAnnotationHandler() {
     override fun expectedMethodSignature(
         annotation: PsiAnnotation,
         targetClass: ClassNode,
         targetMethod: MethodNode,
+        targetInsn: TargetInsn,
     ): List<MethodSignature> {
         val returnType = targetMethod.getGenericReturnType(targetClass, annotation.project)
 
@@ -72,34 +73,20 @@ class InjectAnnotationHandler : InjectorAnnotationHandler() {
             ?.referenceName ?: "NO_CAPTURE"
         if (localCapture != "NO_CAPTURE") {
             annotation.findModule()?.let { module ->
-                var commonLocalsPrefix: MutableList<LocalVariables.LocalVariable>? = null
-                val resolvedInsns = resolveInstructions(annotation, targetClass, targetMethod).ifEmpty { return@let }
-                for (insn in resolvedInsns) {
-                    val locals = LocalVariables.getLocals(module, targetClass, targetMethod, insn.insn)
-                        ?.filterNotNull()
-                        ?.drop(
-                            Type.getArgumentTypes(targetMethod.desc).size +
-                                if (targetMethod.hasAccess(Opcodes.ACC_STATIC)) 0 else 1,
-                        )
-                        ?.filter { it.desc != null }
-                        ?: continue
-                    if (commonLocalsPrefix == null) {
-                        commonLocalsPrefix = locals.toMutableList()
-                    } else {
-                        val mismatch = commonLocalsPrefix.zip(locals).firstIndexOrNull { (a, b) -> a.desc != b.desc }
-                        if (mismatch != null) {
-                            commonLocalsPrefix.subList(mismatch, commonLocalsPrefix.size).clear()
-                        }
-                    }
-                }
+                val locals = LocalVariables.getLocals(module, targetClass, targetMethod, targetInsn.insn)
+                    ?.filterNotNull()
+                    ?.drop(
+                        Type.getArgumentTypes(targetMethod.desc).size +
+                            if (targetMethod.hasAccess(Opcodes.ACC_STATIC)) 0 else 1,
+                    )
+                    ?.filter { it.desc != null }
+                    ?: return@let
 
-                if (commonLocalsPrefix != null) {
-                    val elementFactory = JavaPsiFacade.getElementFactory(annotation.project)
-                    capturedLocals = commonLocalsPrefix.map { local ->
-                        val type =
-                            Type.getType(local.desc).toPsiType(elementFactory, annotation.parentOfType<PsiMethod>())
-                        sanitizedParameter(type, local.name)
-                    }
+                val elementFactory = JavaPsiFacade.getElementFactory(annotation.project)
+                capturedLocals = locals.map { local ->
+                    val type =
+                        Type.getType(local.desc).toPsiType(elementFactory, annotation.parentOfType<PsiMethod>())
+                    sanitizedParameter(type, local.name)
                 }
             }
         }
@@ -109,7 +96,8 @@ class InjectAnnotationHandler : InjectorAnnotationHandler() {
             MethodSignature(
                 targetParams + ciParam,
                 PsiTypes.voidType(),
-                capturedLocals,
+                trailingParams = capturedLocals,
+                allowCoerceRequired = true,
                 trailingByDefault = true,
             )
         )
@@ -119,6 +107,7 @@ class InjectAnnotationHandler : InjectorAnnotationHandler() {
             MethodSignature(
                 listOf(ciParam),
                 PsiTypes.voidType(),
+                allowCoerceRequired = true,
             )
         )
 
@@ -128,8 +117,6 @@ class InjectAnnotationHandler : InjectorAnnotationHandler() {
     override fun canAlwaysBeStatic(method: PsiMethod): Boolean {
         return method.isFabricMixin
     }
-
-    override val allowCoerce = true
 
     override val isShiftAlwaysDiscouraged = false
 

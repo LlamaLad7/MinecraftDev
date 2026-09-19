@@ -20,20 +20,14 @@
 
 package com.demonwav.mcdev.platform.mixin.inspection.injector
 
-import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
-import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
+import com.demonwav.mcdev.platform.mixin.handlers.InsnInjectorAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.CollectVisitor
 import com.demonwav.mcdev.platform.mixin.inspection.MixinInspection
 import com.demonwav.mcdev.platform.mixin.util.LocalInfo
 import com.demonwav.mcdev.platform.mixin.util.MethodTargetMember
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
-import com.demonwav.mcdev.platform.mixin.util.MixinTargetMember
-import com.demonwav.mcdev.platform.mixin.util.hasNamedLocalVariables
-import com.demonwav.mcdev.platform.mixin.util.isMixinExtrasSugar
 import com.demonwav.mcdev.util.Parameter
-import com.demonwav.mcdev.util.findModule
 import com.intellij.codeInsight.intention.LowPriorityAction
-import com.intellij.codeInspection.LocalQuickFix
 import com.intellij.codeInspection.ProblemDescriptor
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.codeInspection.options.OptPane
@@ -45,7 +39,6 @@ import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiParameter
-import com.siyeh.ig.fixes.RenameFix
 
 class MixinParameterNameInspection : MixinInspection() {
     @JvmField
@@ -62,128 +55,127 @@ class MixinParameterNameInspection : MixinInspection() {
 
     override fun buildVisitor(holder: ProblemsHolder) = object : JavaElementVisitor() {
         override fun visitMethod(method: PsiMethod) {
-            val module = method.findModule() ?: return
-            val parameters = method.parameterList.parameters
-            val parametersWithoutSugar = parameters.dropLastWhile { it.isMixinExtrasSugar }
-
-            val validNames = arrayOfNulls<MutableSet<String>>(parameters.size)
-
-            for (annotation in method.annotations) {
-                val handler = MixinAnnotationHandler.forMixinAnnotation(annotation, holder.project)
-                    as? InjectorAnnotationHandler ?: continue
-                for (target in MixinAnnotationHandler.resolveTarget(annotation)) {
-                    if (!collectValidNames(validNames, module, method, parameters, parametersWithoutSugar, annotation, handler, target)) {
-                        return
-                    }
-                }
-            }
-
-            for (index in validNames.indices) {
-                val names = validNames[index] ?: continue
-                if (names.isEmpty()) {
-                    continue
-                }
-
-                if (parameters[index].name !in names) {
-                    val fixes = mutableListOf<LocalQuickFix>()
-
-                    for (name in names) {
-                        fixes += RenameFix(name, false, false)
-                    }
-
-                    fixes += if (index < parametersWithoutSugar.size) {
-                        DontReportForMainSignatureFix()
-                    } else {
-                        DontReportForLocalFix()
-                    }
-
-                    holder.registerProblem(
-                        parameters[index].nameIdentifier ?: parameters[index],
-                        "Parameter name does not match name ${names.joinToString(" / ") { "'$it'" } } in target class",
-                        *fixes.toTypedArray()
-                    )
-                }
-            }
+//            val module = method.findModule() ?: return
+//            val parameters = method.parameterList.parameters
+//            val parametersWithoutSugar = parameters.dropLastWhile { it.isMixinExtrasSugar }
+//
+//            val validNames = arrayOfNulls<MutableSet<String>>(parameters.size)
+//
+//            for (annotation in method.annotations) {
+//                val handler = MixinAnnotationHandler.forMixinAnnotation(annotation, holder.project)
+//                    as? InjectorAnnotationHandler ?: continue
+//                for (target in MixinAnnotationHandler.resolveTarget(annotation)) {
+//                    if (!collectValidNames(validNames, module, method, parameters, parametersWithoutSugar, annotation, handler, target)) {
+//                        return
+//                    }
+//                }
+//            }
+//
+//            for (index in validNames.indices) {
+//                val names = validNames[index] ?: continue
+//                if (names.isEmpty()) {
+//                    continue
+//                }
+//
+//                if (parameters[index].name !in names) {
+//                    val fixes = mutableListOf<LocalQuickFix>()
+//
+//                    for (name in names) {
+//                        fixes += RenameFix(name, false, false)
+//                    }
+//
+//                    fixes += if (index < parametersWithoutSugar.size) {
+//                        DontReportForMainSignatureFix()
+//                    } else {
+//                        DontReportForLocalFix()
+//                    }
+//
+//                    holder.registerProblem(
+//                        parameters[index].nameIdentifier ?: parameters[index],
+//                        "Parameter name does not match name ${names.joinToString(" / ") { "'$it'" } } in target class",
+//                        *fixes.toTypedArray()
+//                    )
+//                }
+//            }
         }
     }
 
-    private fun collectValidNames(
-        validNames: Array<MutableSet<String>?>,
-        module: Module, method: PsiMethod,
-        parameters: Array<PsiParameter>,
-        parametersWithoutSugar: List<PsiParameter>,
-        annotation: PsiAnnotation,
-        handler: InjectorAnnotationHandler,
-        target: MixinTargetMember
-    ): Boolean {
-        if (target !is MethodTargetMember) {
-            return true
-        }
-
-        if (!method.hasNamedLocalVariables(target.classAndMethod.clazz.name.replace('/', '.'))) {
-            return true
-        }
-
-        val validNamesForThisTarget = arrayOfNulls<MutableSet<String>>(parameters.size)
-
-        if (reportForMainSignature) {
-            val expectedSignatures =
-                handler.expectedMethodSignature(annotation, target.classAndMethod.clazz, target.classAndMethod.method)
-                    ?: return false
-            var anyValidSignatures = false
-
-            for (expectedSignature in expectedSignatures) {
-                if (!InvalidInjectorMethodSignatureInspection.Util.checkParameters(
-                        method.parameterList,
-                        expectedSignature,
-                        handler.allowCoerce
-                    )
-                ) {
-                    continue
-                }
-
-                anyValidSignatures = true
-
-                checkExpectedSignatureForKnownNames(
-                    validNamesForThisTarget,
-                    expectedSignature.requiredParams + expectedSignature.trailingParams,
-                    parametersWithoutSugar
-                )
-            }
-
-            if (!anyValidSignatures) {
-                return false
-            }
-        }
-
-        if (reportForLocal) {
-            for (pos in parametersWithoutSugar.size until parameters.size) {
-                if (!checkSugarForKnownNames(
-                        validNamesForThisTarget,
-                        module,
-                        handler,
-                        annotation,
-                        target,
-                        parameters[pos],
-                        pos
-                    )
-                ) {
-                    return false
-                }
-            }
-        }
-
-        for (index in validNamesForThisTarget.indices) {
-            val names = validNamesForThisTarget[index] ?: continue
-            if (validNames[index] == null) {
-                validNames[index] = names
-            } else {
-                validNames[index]!!.retainAll(names)
-            }
-        }
-
-        return true
-    }
+//    private fun collectValidNames(
+//        validNames: Array<MutableSet<String>?>,
+//        module: Module, method: PsiMethod,
+//        parameters: Array<PsiParameter>,
+//        parametersWithoutSugar: List<PsiParameter>,
+//        annotation: PsiAnnotation,
+//        handler: InjectorAnnotationHandler,
+//        target: MixinTargetMember
+//    ): Boolean {
+//        if (target !is MethodTargetMember) {
+//            return true
+//        }
+//
+//        if (!method.hasNamedLocalVariables(target.classAndMethod.clazz.name.replace('/', '.'))) {
+//            return true
+//        }
+//
+//        val validNamesForThisTarget = arrayOfNulls<MutableSet<String>>(parameters.size)
+//
+//        if (reportForMainSignature) {
+//            val expectedSignatures =
+//                handler.expectedMethodSignature(annotation, target.classAndMethod.clazz, target.classAndMethod.method)
+//                    ?: return false
+//            var anyValidSignatures = false
+//
+//            for (expectedSignature in expectedSignatures) {
+//                if (!InvalidInjectorMethodSignatureInspection.Util.checkParameters(
+//                        method.parameterList,
+//                        expectedSignature
+//                    )
+//                ) {
+//                    continue
+//                }
+//
+//                anyValidSignatures = true
+//
+//                checkExpectedSignatureForKnownNames(
+//                    validNamesForThisTarget,
+//                    expectedSignature.requiredParams + expectedSignature.trailingParams,
+//                    parametersWithoutSugar
+//                )
+//            }
+//
+//            if (!anyValidSignatures) {
+//                return false
+//            }
+//        }
+//
+//        if (reportForLocal) {
+//            for (pos in parametersWithoutSugar.size until parameters.size) {
+//                if (!checkSugarForKnownNames(
+//                        validNamesForThisTarget,
+//                        module,
+//                        handler,
+//                        annotation,
+//                        target,
+//                        parameters[pos],
+//                        pos
+//                    )
+//                ) {
+//                    return false
+//                }
+//            }
+//        }
+//
+//        for (index in validNamesForThisTarget.indices) {
+//            val names = validNamesForThisTarget[index] ?: continue
+//            if (validNames[index] == null) {
+//                validNames[index] = names
+//            } else {
+//                validNames[index]!!.retainAll(names)
+//            }
+//        }
+//
+//        return true
+//    }
 
     private fun checkExpectedSignatureForKnownNames(
         validNamesForThisTarget: Array<MutableSet<String>?>,
@@ -209,7 +201,7 @@ class MixinParameterNameInspection : MixinInspection() {
     private fun checkSugarForKnownNames(
         validNamesForThisTarget: Array<MutableSet<String>?>,
         module: Module,
-        handler: InjectorAnnotationHandler,
+        handler: InsnInjectorAnnotationHandler,
         annotation: PsiAnnotation,
         target: MethodTargetMember,
         parameter: PsiParameter,

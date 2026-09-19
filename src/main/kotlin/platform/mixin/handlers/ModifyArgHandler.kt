@@ -20,12 +20,14 @@
 
 package com.demonwav.mcdev.platform.mixin.handlers
 
+import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.TargetInsn
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
-import com.demonwav.mcdev.platform.mixin.util.fakeResolve
-import com.demonwav.mcdev.platform.mixin.util.getParameter
+import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
+import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
+import com.demonwav.mcdev.platform.mixin.util.getBytecodeParameter
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
+import com.demonwav.mcdev.util.MemberReference
 import com.demonwav.mcdev.util.constantValue
-import com.demonwav.mcdev.util.descriptor
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiMethod
@@ -36,7 +38,7 @@ import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
 
-class ModifyArgHandler : InjectorAnnotationHandler() {
+class ModifyArgHandler : InsnInjectorAnnotationHandler() {
     override fun isInsnAllowed(insn: AbstractInsnNode, decorations: Map<String, Any?>): Boolean {
         return insn is MethodInsnNode
     }
@@ -47,90 +49,68 @@ class ModifyArgHandler : InjectorAnnotationHandler() {
         annotation: PsiAnnotation,
         targetClass: ClassNode,
         targetMethod: MethodNode,
+        targetInsn: TargetInsn,
     ): List<MethodSignature>? {
+        val insn = targetInsn.insn
+        if (insn !is MethodInsnNode) {
+            return null
+        }
+        val project = annotation.project
         val index = annotation.findDeclaredAttributeValue("index")?.constantValue as? Int
-        val validSingleArgTypes = mutableSetOf<String>()
-        var mayHaveValidFullSignature = true
-        var validFullSignature: String? = null
-        val insns = resolveInstructions(annotation, targetClass, targetMethod).ifEmpty { return emptyList() }
-        for (insn in insns) {
-            if (insn.insn !is MethodInsnNode) return null
 
-            // normalize return type so whole signature matches
-            val desc = insn.insn.desc.replaceAfterLast(')', "V")
+        val argTypes = Type.getArgumentTypes(insn.desc)
 
-            if (index == null) {
-                val validArgTypes = Type.getArgumentTypes(desc).mapTo(mutableListOf()) { it.descriptor }
-                // remove duplicates completely, they are invalid
-                val toRemove = validArgTypes.filter { e -> validArgTypes.count { it == e } > 1 }.toSet()
-                validArgTypes.removeIf { toRemove.contains(it) }
-                if (validArgTypes.isEmpty()) {
-                    return listOf()
-                }
+        val validTypes = if (index == null) {
+            argTypes.groupingBy { it }.eachCount().asSequence().filter { it.value == 1 }.map { it.key }.toList()
+        } else {
+            listOfNotNull(argTypes.getOrNull(index))
+        }
 
-                if (validSingleArgTypes.isEmpty()) {
-                    validSingleArgTypes.addAll(validArgTypes)
-                } else {
-                    validSingleArgTypes.retainAll(validArgTypes.toSet())
-                    if (validSingleArgTypes.isEmpty()) {
-                        return listOf()
-                    }
-                }
-            } else {
-                val singleArgType = Type.getArgumentTypes(desc).getOrNull(index)?.descriptor ?: return listOf()
-                if (validSingleArgTypes.isEmpty()) {
-                    validSingleArgTypes += singleArgType
-                } else {
-                    validSingleArgTypes.removeIf { it != singleArgType }
-                    if (validSingleArgTypes.isEmpty()) {
-                        return listOf()
-                    }
-                }
-            }
-
-            if (mayHaveValidFullSignature) {
-                if (validFullSignature == null) {
-                    validFullSignature = desc
-                } else {
-                    if (desc != validFullSignature) {
-                        validFullSignature = null
-                        mayHaveValidFullSignature = false
-                    }
-                }
-            }
+        if (validTypes.isEmpty()) {
+            return emptyList()
         }
 
         // get the source method for parameter names
-        val (bytecodeClass, bytecodeMethod) = (insns[0].insn as MethodInsnNode).fakeResolve()
-        val sourceMethod = insns[0].target as? PsiMethod
+        val sourceMethod = MemberReference(
+            insn.name,
+            insn.desc,
+            insn.owner.replace('/', '.')
+        ).resolveMember(project) as PsiMethod?
         val elementFactory = JavaPsiFacade.getElementFactory(annotation.project)
-        return validSingleArgTypes.flatMap { type ->
-            val paramList = sourceMethod?.parameterList
-            val psiParameter = paramList?.parameters?.firstOrNull { it.type.descriptor == type }
-            val psiType = psiParameter?.type ?: Type.getType(type).toPsiType(elementFactory, null)
+        return validTypes.flatMap { type ->
+            val psiParams = argTypes.indices.map { index -> sourceMethod?.getBytecodeParameter(index) }
+            val targetParam = psiParams[index ?: argTypes.indexOf(type)]
+            val psiType = targetParam?.type ?: type.toPsiType(elementFactory)
             val singleSignature = MethodSignature(
                 listOf(
-                    sanitizedParameter(psiType, psiParameter?.name),
+                    sanitizedParameter(psiType, targetParam?.name),
                 ),
-                psiType,
+                sanitizedReturnType(psiType),
+                allowCoerceRequired = false,
             )
-            if (validFullSignature != null) {
+            if (argTypes.size > 1) {
                 val fullParams =
-                    Type.getArgumentTypes(validFullSignature).withIndex().map { (index, argType) ->
-                        val psiParam = paramList?.let { bytecodeMethod.getParameter(bytecodeClass, index, it) }
+                    psiParams.zip(argTypes) { param, argType ->
                         sanitizedParameter(
-                            psiParam?.type ?: argType.toPsiType(elementFactory),
-                            psiParam?.name,
+                            param?.type ?: argType.toPsiType(elementFactory),
+                            param?.name,
                         )
                     }
                 listOf(
                     singleSignature,
-                    MethodSignature(fullParams, psiType),
+                    MethodSignature(fullParams, sanitizedReturnType(psiType), allowCoerceRequired = false),
                 )
             } else {
                 listOf(singleSignature)
             }
         }
+    }
+
+    override fun suggestedMethodSignature(
+        annotation: PsiAnnotation,
+        targets: List<ClassAndMethodNode>
+    ): SuggestedSignature? {
+        return SuggestedSignature.modifierNoCoerce(annotation, targets, this)
     }
 
     override val mixinExtrasExpressionContextType = ExpressionContext.Type.MODIFY_ARG

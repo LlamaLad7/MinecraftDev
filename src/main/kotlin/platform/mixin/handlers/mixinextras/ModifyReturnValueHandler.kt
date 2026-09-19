@@ -33,7 +33,7 @@ class ModifyReturnValueHandler : MixinExtrasInjectorAnnotationHandler() {
 
     override val allowedInsnDescription = "return instructions"
 
-    override fun expectedMethodSignature(
+    override fun expectedMethodSignatureImpl(
         annotation: PsiAnnotation,
         targetClass: ClassNode,
         targetMethod: MethodNode,

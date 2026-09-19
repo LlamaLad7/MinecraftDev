@@ -22,11 +22,12 @@ package com.demonwav.mcdev.platform.mixin.inspection.injector
 
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.COERCE
 import com.demonwav.mcdev.platform.mixin.util.isAssignable
+import com.demonwav.mcdev.platform.mixin.util.isMixinExtrasSugar
 import com.demonwav.mcdev.util.Parameter
+import com.demonwav.mcdev.util.countIsLessThan
 import com.demonwav.mcdev.util.normalize
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiParameter
-import com.intellij.psi.PsiPrimitiveType
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypeElement
 import com.intellij.psi.PsiTypes
@@ -34,26 +35,67 @@ import com.intellij.psi.PsiTypes
 data class MethodSignature(
     val requiredParams: List<Parameter>,
     val returnType: PsiType,
+    val allowCoerceRequired: Boolean,
     val trailingParams: List<Parameter> = emptyList(),
+    val allowCoerceTrailing: Boolean = true,
     val trailingByDefault: Boolean = false,
-    val intLikeTypes: List<TypePosition> = emptyList()
+    val intLikeTypes: Set<TypePosition> = emptySet()
 ) {
-    fun matchParams(parameters: List<PsiParameter>, allowCoerce: Boolean): Boolean {
-        return parameters.size in requiredParams.size..requiredParams.size + trailingParams.size
-            && matchParams(requiredParams, parameters, allowCoerce)
-            && matchParams(trailingParams, parameters.subList(requiredParams.size, parameters.size), allowCoerce)
+    fun matches(method: PsiMethod): Boolean {
+        val returnType = method.returnType ?: return false
+        val parameters = method.parameterList.parameters.dropLastWhile { it.isMixinExtrasSugar }
+
+        return intLikeTypes.asSequence().map { it.getElement(method)?.type }.distinct().countIsLessThan(2)
+            && matchReturnType(returnType, method.hasAnnotation(COERCE))
+            && parameters.size in requiredParams.size..requiredParams.size + trailingParams.size
+            && matchParams(requiredParams, parameters, allowCoerceRequired, 0)
+            && matchParams(trailingParams, parameters, allowCoerceTrailing, requiredParams.size)
     }
 
-    sealed interface TypePosition {
+    sealed interface TypePosition : Comparable<TypePosition> {
         fun getElement(method: PsiMethod): PsiTypeElement?
 
         data object Return : TypePosition {
             override fun getElement(method: PsiMethod) = method.returnTypeElement
+
+            override fun compareTo(other: TypePosition): Int = if (other is Return) 0 else -1
         }
 
         data class Param(val index: Int) : TypePosition {
             override fun getElement(method: PsiMethod) = method.parameterList.parameters[index].typeElement
+
+            override fun compareTo(other: TypePosition): Int = if (other is Param) index.compareTo(other.index) else 1
         }
+    }
+
+    private fun matchReturnType(returnType: PsiType, hasCoerce: Boolean): Boolean =
+        matchType(returnType, this.returnType, allowCoerceRequired && hasCoerce, TypePosition.Return)
+
+    private fun matchParams(
+        expectedParams: List<Parameter>,
+        actualParams: List<PsiParameter>,
+        allowCoerce: Boolean,
+        startIndex: Int,
+    ): Boolean {
+        return expectedParams.asSequence()
+            .zip(actualParams.asSequence().withIndex().drop(startIndex))
+            .all { (expected, indexAndActual) ->
+                val (index, actual) = indexAndActual
+                matchType(
+                    actual.type,
+                    expected.type,
+                    allowCoerce && actual.hasAnnotation(COERCE),
+                    TypePosition.Param(index),
+                )
+            }
+    }
+
+    private fun matchType(actual: PsiType, expected: PsiType, coerce: Boolean, typePos: TypePosition): Boolean = when {
+        typePos in intLikeTypes -> actual in INT_TYPES
+        actual.normalize() == expected.normalize() -> true
+        !coerce -> false
+        expected in INT_TYPES -> actual == PsiTypes.intType()
+        else -> isAssignable(actual.normalize(), expected.normalize())
     }
 
     companion object {
@@ -64,34 +106,5 @@ data class MethodSignature(
             PsiTypes.byteType(),
             PsiTypes.booleanType()
         )
-
-        private fun matchParams(
-            expectedParams: List<Parameter>,
-            actualParams: List<PsiParameter>,
-            allowCoerce: Boolean
-        ): Boolean {
-            return expectedParams.asSequence()
-                .zip(actualParams.asSequence())
-                .all { (expected, actual) -> matchParam(expected.type, actual, allowCoerce) }
-        }
-
-        private fun matchParam(expectedType: PsiType, parameter: PsiParameter, allowCoerce: Boolean): Boolean {
-            val normalizedExpected = expectedType.normalize()
-            val normalizedParameter = parameter.type.normalize()
-            if (normalizedExpected == normalizedParameter) {
-                return true
-            }
-            if (!allowCoerce || !parameter.hasAnnotation(COERCE)) {
-                return false
-            }
-
-            if (normalizedExpected is PsiPrimitiveType) {
-                if (normalizedParameter !is PsiPrimitiveType) {
-                    return false
-                }
-                return normalizedExpected in INT_TYPES && normalizedParameter in INT_TYPES
-            }
-            return isAssignable(normalizedParameter, normalizedExpected)
-        }
     }
 }

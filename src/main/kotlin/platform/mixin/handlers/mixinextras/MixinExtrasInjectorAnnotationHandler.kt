@@ -20,7 +20,7 @@
 
 package com.demonwav.mcdev.platform.mixin.handlers.mixinextras
 
-import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
+import com.demonwav.mcdev.platform.mixin.handlers.InsnInjectorAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.NewInsnInjectionPoint
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
 import com.demonwav.mcdev.platform.mixin.util.FieldTargetMember
@@ -48,7 +48,7 @@ import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
 import org.objectweb.asm.tree.TypeInsnNode
 
-abstract class MixinExtrasInjectorAnnotationHandler : InjectorAnnotationHandler() {
+abstract class MixinExtrasInjectorAnnotationHandler : InsnInjectorAnnotationHandler() {
     open val oldSuperBehavior = false
 
     enum class InstructionType {
@@ -98,7 +98,7 @@ abstract class MixinExtrasInjectorAnnotationHandler : InjectorAnnotationHandler(
         return supportedInstructionTypes.any { it.matches(TargetInsn(insn, decorations)) }
     }
 
-    abstract fun expectedMethodSignature(
+    abstract fun expectedMethodSignatureImpl(
         annotation: PsiAnnotation,
         targetClass: ClassNode,
         targetMethod: MethodNode,
@@ -107,70 +107,26 @@ abstract class MixinExtrasInjectorAnnotationHandler : InjectorAnnotationHandler(
 
     open fun intLikeTypePositions(
         target: TargetInsn
-    ): List<MethodSignature.TypePosition> = emptyList()
+    ): Set<MethodSignature.TypePosition> = emptySet()
 
-    override val allowCoerce = true
-
-    override fun expectedMethodSignature(
-        annotation: PsiAnnotation,
-        targetClass: ClassNode,
-        targetMethod: MethodNode
-    ): List<MethodSignature>? {
-        val insns = resolveInstructions(annotation, targetClass, targetMethod)
-            .ifEmpty { return emptyList() }
-            .map { TargetInsn(it.insn, it.decorations) }
-        val signatures = insns.map { insn ->
-            expectedMethodSignature(annotation, targetClass, targetMethod, insn)
-        }
-        val firstMatch = signatures[0] ?: return emptyList()
-        if (signatures.drop(1).any { it != firstMatch }) return emptyList()
-        val intLikeTypePositions = insns.map { intLikeTypePositions(it) }.distinct().singleOrNull().orEmpty()
-        return allPossibleSignatures(
-            annotation,
-            targetClass,
-            targetMethod,
-            firstMatch.first,
-            firstMatch.second,
-            intLikeTypePositions
-        )
-    }
-
-    private fun allPossibleSignatures(
+    final override fun expectedMethodSignature(
         annotation: PsiAnnotation,
         targetClass: ClassNode,
         targetMethod: MethodNode,
-        params: List<Parameter>,
-        returnType: PsiType,
-        intLikeTypePositions: List<MethodSignature.TypePosition>
+        targetInsn: TargetInsn
     ): List<MethodSignature> {
-        if (intLikeTypePositions.isEmpty()) {
-            return listOf(
-                makeSignature(annotation, targetClass, targetMethod, params, returnType, intLikeTypePositions)
+        val signature = expectedMethodSignatureImpl(annotation, targetClass, targetMethod, targetInsn) ?: return emptyList()
+        val intLikeTypePositions = intLikeTypePositions(targetInsn)
+        return listOf(
+            makeSignature(
+                annotation,
+                targetClass,
+                targetMethod,
+                signature.first,
+                signature.second,
+                intLikeTypePositions,
             )
-        }
-        return buildList {
-            for (actualType in intLikePsiTypes) {
-                val newParams = params.toMutableList()
-                var newReturnType = returnType
-                for (pos in intLikeTypePositions) {
-                    when (pos) {
-                        is MethodSignature.TypePosition.Return -> newReturnType = actualType
-                        is MethodSignature.TypePosition.Param ->
-                            newParams[pos.index] = newParams[pos.index].copy(type = actualType)
-                    }
-                }
-                add(
-                    makeSignature(
-                        annotation,
-                        targetClass,
-                        targetMethod,
-                        newParams,
-                        newReturnType,
-                        intLikeTypePositions
-                    )
-                )
-            }
-        }
+        )
     }
 
     private fun makeSignature(
@@ -179,12 +135,13 @@ abstract class MixinExtrasInjectorAnnotationHandler : InjectorAnnotationHandler(
         targetMethod: MethodNode,
         params: List<Parameter>,
         returnType: PsiType,
-        intLikeTypePositions: List<MethodSignature.TypePosition>
+        intLikeTypePositions: Set<MethodSignature.TypePosition>
     ) = MethodSignature(
         params,
         returnType,
-        collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
-        intLikeTypes = intLikeTypePositions
+        trailingParams = collectTargetMethodParameters(annotation.project, targetClass, targetMethod),
+        allowCoerceRequired = true,
+        intLikeTypes = intLikeTypePositions,
     )
 
     protected fun getInsnReturnType(insn: AbstractInsnNode): Type? {

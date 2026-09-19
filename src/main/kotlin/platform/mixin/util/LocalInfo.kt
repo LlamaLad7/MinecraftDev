@@ -132,7 +132,7 @@ class LocalInfo(
         }
 
         // implicit mode
-        if (mode == CollectVisitor.Mode.COMPLETION) {
+        if (!mode.assumeCorrectSignature) {
             return locals.asSequence()
                 .filterNotNull()
                 .filter { local -> locals.count { it?.desc == local.desc } == 1 }

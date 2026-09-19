@@ -66,7 +66,7 @@ class WrapWithConditionHandler : MixinExtrasInjectorAnnotationHandler() {
         return getPsiParameters(insn, targetClass, annotation)?.size ?: 0
     }
 
-    override fun expectedMethodSignature(
+    override fun expectedMethodSignatureImpl(
         annotation: PsiAnnotation,
         targetClass: ClassNode,
         targetMethod: MethodNode,
