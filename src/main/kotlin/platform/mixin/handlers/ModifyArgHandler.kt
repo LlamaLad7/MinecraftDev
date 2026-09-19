@@ -24,7 +24,7 @@ import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.TargetInsn
 import com.demonwav.mcdev.platform.mixin.inspection.injector.ExpectedSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.ModifierSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
-import com.demonwav.mcdev.platform.mixin.inspection.injector.knownSignatures
+import com.demonwav.mcdev.platform.mixin.inspection.injector.collectSignatures
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.getBytecodeParameter
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
@@ -108,7 +108,7 @@ class ModifyArgHandler : InsnInjectorAnnotationHandler() {
     ): SuggestedSignature? {
         return SuggestedSignature.modifierNoCoerce(
             annotation,
-            expectedMethodSignatures(annotation, targets).knownSignatures<ModifierSignatures>() ?: return null,
+            expectedMethodSignatures(annotation, targets).collectSignatures<ModifierSignatures>() ?: return null,
         )
     }
 

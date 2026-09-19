@@ -22,7 +22,7 @@ package com.demonwav.mcdev.platform.mixin.handlers.mixinextras
 
 import com.demonwav.mcdev.platform.mixin.inspection.injector.GeneralSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
-import com.demonwav.mcdev.platform.mixin.inspection.injector.knownSignatures
+import com.demonwav.mcdev.platform.mixin.inspection.injector.collectSignatures
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.intellij.psi.PsiAnnotation
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
@@ -65,7 +65,7 @@ class ModifyReceiverHandler : MixinExtrasInjectorAnnotationHandler() {
     ): SuggestedSignature? {
         return SuggestedSignature.general(
             annotation,
-            expectedMethodSignatures(annotation, targets).knownSignatures<GeneralSignatures>() ?: return null
+            expectedMethodSignatures(annotation, targets).collectSignatures<GeneralSignatures>() ?: return null
         )
     }
 

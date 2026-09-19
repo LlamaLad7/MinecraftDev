@@ -109,10 +109,10 @@ abstract class InjectorAnnotationHandler : MixinAnnotationHandler {
         targets: List<ClassAndMethodNode>,
     ): List<ExpectedSignatures<*>>
 
-    open fun suggestedMethodSignature(
+    abstract fun suggestedMethodSignature(
         annotation: PsiAnnotation,
         targets: List<ClassAndMethodNode>,
-    ): SuggestedSignature? = null
+    ): SuggestedSignature?
 
     open fun canAlwaysBeStatic(method: PsiMethod): Boolean {
         return true
@@ -172,6 +172,11 @@ object DefaultInjectorAnnotationHandler : InsnInjectorAnnotationHandler() {
         targetMethod: MethodNode,
         targetInsn: TargetInsn,
     ): ExpectedSignatures<Nothing> = ExpectedSignatures.Unknown
+
+    override fun suggestedMethodSignature(
+        annotation: PsiAnnotation,
+        targets: List<ClassAndMethodNode>
+    ): SuggestedSignature? = null
 
     override val isSoft = true
 

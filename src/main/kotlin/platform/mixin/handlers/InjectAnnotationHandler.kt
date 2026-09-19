@@ -24,7 +24,7 @@ import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.TargetInsn
 import com.demonwav.mcdev.platform.mixin.inspection.injector.ExpectedSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.InjectSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
-import com.demonwav.mcdev.platform.mixin.inspection.injector.knownSignatures
+import com.demonwav.mcdev.platform.mixin.inspection.injector.collectSignatures
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.LocalVariables
 import com.demonwav.mcdev.platform.mixin.util.getGenericReturnType
@@ -97,7 +97,7 @@ class InjectAnnotationHandler : InsnInjectorAnnotationHandler() {
     ): SuggestedSignature? {
         return SuggestedSignature.inject(
             annotation,
-            expectedMethodSignatures(annotation, targets).knownSignatures<InjectSignatures>() ?: return null,
+            expectedMethodSignatures(annotation, targets).collectSignatures<InjectSignatures>() ?: return null,
         )
     }
 

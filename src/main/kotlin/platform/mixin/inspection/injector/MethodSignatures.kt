@@ -47,7 +47,7 @@ sealed interface ExpectedSignatures<out T : MethodSignatures> {
     }
 }
 
-inline fun <reified R> List<ExpectedSignatures<*>>.knownSignatures(): List<R>? =
+inline fun <reified R> List<ExpectedSignatures<*>>.collectSignatures(): List<R>? =
     mapNotNull {
         when (it) {
             ExpectedSignatures.Unknown -> null

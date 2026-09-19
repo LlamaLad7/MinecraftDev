@@ -41,7 +41,7 @@ data class SuggestedSignature(
     data class Param(val name: String?, val type: PsiType, val coerce: Boolean = false)
 
     fun intersectCoerce(other: SuggestedSignature, manager: PsiManager): SuggestedSignature? {
-        if (roughShapeOf(this) != roughShapeOf(other)) {
+        if (!kindsMatch(this, other)) {
             return null
         }
         val intLikeForcings = mutableSetOf<PsiType>()
@@ -113,7 +113,7 @@ data class SuggestedSignature(
             )
         }
 
-        fun modifierNoCoerce(annotation: PsiAnnotation, signatures: List<ModifierSignatures>, ): SuggestedSignature? {
+        fun modifierNoCoerce(annotation: PsiAnnotation, signatures: List<ModifierSignatures>): SuggestedSignature? {
             val parameterOptions = signatures.map { it.paramOptions.ifEmpty { return null } }
             val psiManager = PsiManager.getInstance(annotation.project)
 
@@ -151,7 +151,7 @@ data class SuggestedSignature(
 
         fun general(annotation: PsiAnnotation, signatures: List<GeneralSignatures>): SuggestedSignature? {
             val signaturesByReturnKind = signatures.asSequence().flatMap { sig ->
-                sig.returnTypeOptions.keys.map { it to sig }
+                sig.returnTypeOptions.keys.asSequence().map { it to sig }
             }.groupBy({ it.first }, { it.second })
             val returnKind =
                 signaturesByReturnKind.entries.firstOrNull { it.value.size == signatures.size }?.key ?: return null
@@ -163,7 +163,7 @@ data class SuggestedSignature(
                     .map {
                         val signature = it.specificSignature(returnKind)
                         exact(signature, takeTrailing = numParams - signature.requiredParams.size)
-                    }
+                    },
             ) ?: return null
 
             for (signature in signatures) {
@@ -203,9 +203,10 @@ data class SuggestedSignature(
     }
 }
 
-private fun roughShapeOf(signature: SuggestedSignature): Shape<TypeKind> {
-    return Shape(signature.params.map { TypeKind.of(it.type) }, TypeKind.of(signature.returnType))
-}
+private fun kindsMatch(a: SuggestedSignature, b: SuggestedSignature) =
+    TypeKind.of(a.returnType) == TypeKind.of(b.returnType)
+        && a.params.size == b.params.size
+        && a.params.indices.all { TypeKind.of(a.params[it].type) == TypeKind.of(b.params[it].type) }
 
 private fun List<Parameter>.kinds() = map { TypeKind.of(it.type) }
 
@@ -230,7 +231,7 @@ private fun getSupertype(
             aIsIntLike -> TypeMergeResult(
                 intLikeAssignment ?: b,
                 isIntLike = intLikeAssignment == null && bIsIntLike,
-                coerce = intLikeAssignment != null && intLikeAssignment != b,
+                coerce = intLikeAssignment != null && !bIsIntLike && intLikeAssignment != b,
             )
             bIsIntLike -> TypeMergeResult(a, isIntLike = false, coerce = false)
             a == b -> TypeMergeResult(a, isIntLike = false, coerce = false)
@@ -245,47 +246,3 @@ private fun getSupertype(
 }
 
 private data class TypeMergeResult(val type: PsiType, val isIntLike: Boolean, val coerce: Boolean)
-
-private data class Shape<out T>(val params: List<T>, val returnType: T)
-
-//private class Shape<out T>(private val init: Shape<T>?, private val last: T) {
-//    private val hashCode = init.hashCode() * 31 + last.hashCode()
-//
-//    override fun equals(other: Any?): Boolean {
-//        if (other !is Shape<*>) {
-//            return false
-//        }
-//        @Suppress("UNCHECKED_CAST")
-//        other as Shape<T>
-//
-//        var a: Shape<T>? = this
-//        var b: Shape<T>? = other
-//        while (a != null && b != null) {
-//            if (a === b) {
-//                return true
-//            }
-//            if (a.hashCode != b.hashCode || a.last != b.last) {
-//                return false
-//            }
-//            a = a.init
-//            b = b.init
-//        }
-//        return a == null && b == null
-//    }
-//
-//    override fun hashCode() = hashCode
-//
-//    override fun toString() = buildString {
-//        append('[')
-//        this@Shape.append(this@buildString)
-//        append(']')
-//    }
-//
-//    private fun append(builder: StringBuilder) {
-//        init?.let {
-//            it.append(builder)
-//            builder.append(", ")
-//        }
-//        builder.append(last)
-//    }
-//}

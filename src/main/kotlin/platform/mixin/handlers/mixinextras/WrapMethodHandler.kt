@@ -25,7 +25,7 @@ import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InsnResolutionI
 import com.demonwav.mcdev.platform.mixin.inspection.injector.ExpectedSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.OperationWrapperSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
-import com.demonwav.mcdev.platform.mixin.inspection.injector.knownSignatures
+import com.demonwav.mcdev.platform.mixin.inspection.injector.collectSignatures
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.findSourceElement
 import com.demonwav.mcdev.platform.mixin.util.getGenericReturnType
@@ -59,7 +59,7 @@ class WrapMethodHandler : InjectorAnnotationHandler() {
     ): SuggestedSignature? {
         return SuggestedSignature.operationWrapper(
             annotation,
-            expectedMethodSignatures(annotation, targets).knownSignatures<OperationWrapperSignatures>() ?: return null
+            expectedMethodSignatures(annotation, targets).collectSignatures<OperationWrapperSignatures>() ?: return null
         )
     }
 

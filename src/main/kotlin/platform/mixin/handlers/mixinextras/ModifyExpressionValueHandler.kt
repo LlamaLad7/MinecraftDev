@@ -23,7 +23,7 @@ package com.demonwav.mcdev.platform.mixin.handlers.mixinextras
 import com.demonwav.mcdev.platform.mixin.inspection.injector.GeneralSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
 import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
-import com.demonwav.mcdev.platform.mixin.inspection.injector.knownSignatures
+import com.demonwav.mcdev.platform.mixin.inspection.injector.collectSignatures
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
 import com.demonwav.mcdev.util.Parameter
@@ -80,7 +80,7 @@ class ModifyExpressionValueHandler : MixinExtrasInjectorAnnotationHandler() {
     ): SuggestedSignature? {
         return SuggestedSignature.general(
             annotation,
-            expectedMethodSignatures(annotation, targets).knownSignatures<GeneralSignatures>() ?: return null
+            expectedMethodSignatures(annotation, targets).collectSignatures<GeneralSignatures>() ?: return null
         )
     }
 
