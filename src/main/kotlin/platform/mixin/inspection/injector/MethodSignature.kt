@@ -26,7 +26,6 @@ import com.demonwav.mcdev.platform.mixin.util.isMixinExtrasSugar
 import com.demonwav.mcdev.util.Parameter
 import com.demonwav.mcdev.util.allEqual
 import com.intellij.psi.PsiMethod
-import com.intellij.psi.PsiParameter
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypeElement
 
@@ -39,14 +38,56 @@ data class MethodSignature(
     val intLikeTypes: Set<TypePosition> = emptySet()
 ) {
     fun matches(method: PsiMethod): Boolean {
-        val returnType = method.returnType ?: return false
-        val parameters = method.parameterList.parameters.dropLastWhile { it.isMixinExtrasSugar }
+        return matches(
+            method.parameterList.parameters.dropLastWhile { it.isMixinExtrasSugar },
+            method.returnType ?: return false,
+            method.hasAnnotation(COERCE),
+            { it.type },
+            { it.hasAnnotation(COERCE) },
+        )
+    }
 
-        return intLikeTypes.asSequence().map { it.getElement(method)?.type }.allEqual()
-            && matchReturnType(returnType, method.hasAnnotation(COERCE))
-            && parameters.size in requiredParams.size..requiredParams.size + trailingParams.size
-            && matchParams(requiredParams, parameters, allowCoerceRequired, 0)
-            && matchParams(trailingParams, parameters, allowCoerceTrailing, requiredParams.size)
+    fun matches(suggested: SuggestedSignature): Boolean {
+        return matches(
+            suggested.params,
+            suggested.returnType,
+            suggested.coerceReturnType,
+            { it.type },
+            { it.coerce },
+        )
+    }
+
+    private fun <ParamT : Any> matches(
+        params: List<ParamT>,
+        returnType: PsiType,
+        returnCoerce: Boolean,
+        paramType: (ParamT) -> PsiType,
+        paramCoerce: (ParamT) -> Boolean,
+    ): Boolean {
+        fun matchParams(expected: List<Parameter>, allowCoerce: Boolean, startIndex: Int): Boolean {
+            return expected.asSequence()
+                .zip(params.asSequence().withIndex().drop(startIndex))
+                .all { (expected, indexAndActual) ->
+                    val (index, actual) = indexAndActual
+                    matchType(
+                        expected.type,
+                        paramType(actual),
+                        allowCoerce && paramCoerce(actual),
+                        TypePosition.Param(index),
+                    )
+                }
+        }
+
+        return params.size in requiredParams.size..requiredParams.size + trailingParams.size
+            && intLikeTypes.asSequence().mapNotNull { pos ->
+                    when (pos) {
+                        TypePosition.Return -> returnType
+                        is TypePosition.Param -> params.getOrNull(pos.index)?.let(paramType)
+                    }
+                }.allEqual()
+            && matchReturnType(returnType, returnCoerce)
+            && matchParams(requiredParams, allowCoerceRequired, 0)
+            && matchParams(trailingParams, allowCoerceTrailing, requiredParams.size)
     }
 
     sealed interface TypePosition : Comparable<TypePosition> {
@@ -67,25 +108,6 @@ data class MethodSignature(
 
     private fun matchReturnType(returnType: PsiType, hasCoerce: Boolean): Boolean =
         matchType(returnType, this.returnType, allowCoerceRequired && hasCoerce, TypePosition.Return)
-
-    private fun matchParams(
-        expectedParams: List<Parameter>,
-        actualParams: List<PsiParameter>,
-        allowCoerce: Boolean,
-        startIndex: Int,
-    ): Boolean {
-        return expectedParams.asSequence()
-            .zip(actualParams.asSequence().withIndex().drop(startIndex))
-            .all { (expected, indexAndActual) ->
-                val (index, actual) = indexAndActual
-                matchType(
-                    expected.type,
-                    actual.type,
-                    allowCoerce && actual.hasAnnotation(COERCE),
-                    TypePosition.Param(index),
-                )
-            }
-    }
 
     private fun matchType(expected: PsiType, actual: PsiType, coerce: Boolean, typePos: TypePosition) =
         checkCoerce(expected, actual, coerce, typePos in intLikeTypes)

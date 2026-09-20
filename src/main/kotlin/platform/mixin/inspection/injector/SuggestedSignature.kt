@@ -156,11 +156,15 @@ data class SuggestedSignature(
 
         fun general(annotation: PsiAnnotation, signatures: List<GeneralSignatures>): SuggestedSignature? {
             val numParams = signatures.maxOf { it.params.size }
-            val candidatesByReturnKind = signatures.asSequence().flatMap { sig ->
-                sig.returnTypeOptions.keys.asSequence().map { it to sig.specificSignature(it) }
-            }.groupBy({ it.first }, { it.second })
 
-            for (candidates in candidatesByReturnKind.values) {
+            val candidatesByReturnKind = signatures.asSequence()
+                .flatMap { sig ->
+                    sig.returnTypeOptions.keys.asSequence().map { it to sig.specificSignature(it) }
+                }
+                .groupBy({ it.first }, { it.second })
+                .values
+
+            for (candidates in candidatesByReturnKind) {
                 if (candidates.size < signatures.size) {
                     // Not viable
                     continue
@@ -174,34 +178,11 @@ data class SuggestedSignature(
                         },
                 ) ?: return null
 
-                for (signature in candidates) {
-                    if (signature.allowCoerceRequired) {
-                        continue
-                    }
+                val actuallyValid = candidates.all {
+                    it.allowCoerceRequired || it.matches(intersected)
+                }
 
-                    // Match strictly
-                    val returnTypeMatches = checkCoerce(
-                        signature.returnType,
-                        intersected.returnType,
-                        coerce = false,
-                        MethodSignature.TypePosition.Return in signature.intLikeTypes,
-                    )
-                    if (!returnTypeMatches) {
-                        break
-                    }
-
-                    val paramsMatch = signature.requiredParams.withIndex().all { (index, param) ->
-                        checkCoerce(
-                            param.type,
-                            intersected.params[index].type,
-                            coerce = false,
-                            MethodSignature.TypePosition.Param(index) in signature.intLikeTypes,
-                        )
-                    }
-                    if (!paramsMatch) {
-                        break
-                    }
-
+                if (actuallyValid) {
                     return intersected
                 }
             }
