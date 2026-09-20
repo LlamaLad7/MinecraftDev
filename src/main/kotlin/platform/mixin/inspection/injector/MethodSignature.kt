@@ -26,6 +26,7 @@ import com.demonwav.mcdev.platform.mixin.util.isMixinExtrasSugar
 import com.demonwav.mcdev.util.Parameter
 import com.demonwav.mcdev.util.allEqual
 import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiParameterList
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypeElement
 
@@ -37,6 +38,22 @@ data class MethodSignature(
     val allowCoerceTrailing: Boolean = true,
     val intLikeTypes: Set<TypePosition> = emptySet()
 ) {
+    sealed interface TypePosition : Comparable<TypePosition> {
+        fun getElement(method: PsiMethod): PsiTypeElement?
+
+        data object Return : TypePosition {
+            override fun getElement(method: PsiMethod) = method.returnTypeElement
+
+            override fun compareTo(other: TypePosition): Int = if (other is Return) 0 else -1
+        }
+
+        data class Param(val index: Int) : TypePosition {
+            override fun getElement(method: PsiMethod) = method.parameterList.parameters[index].typeElement
+
+            override fun compareTo(other: TypePosition): Int = if (other is Param) index.compareTo(other.index) else 1
+        }
+    }
+
     fun matches(method: PsiMethod): Boolean {
         return matches(
             method.parameterList.parameters.dropLastWhile { it.isMixinExtrasSugar },
@@ -57,10 +74,38 @@ data class MethodSignature(
         )
     }
 
+    fun matchesParams(params: PsiParameterList): Boolean {
+        return matchesParams(
+            params.parameters.dropLastWhile { it.isMixinExtrasSugar },
+            { it.type },
+            { it.hasAnnotation(COERCE) },
+        )
+    }
+
+    fun matchesReturnType(returnType: PsiType, hasCoerce: Boolean): Boolean =
+        matchType(this.returnType, returnType, allowCoerceRequired && hasCoerce, TypePosition.Return)
+
     private fun <ParamT : Any> matches(
         params: List<ParamT>,
         returnType: PsiType,
         returnCoerce: Boolean,
+        paramType: (ParamT) -> PsiType,
+        paramCoerce: (ParamT) -> Boolean,
+    ): Boolean {
+        val intLikeMismatch = TypePosition.Return in intLikeTypes
+            && intLikeTypes.asSequence()
+            .filterIsInstance<TypePosition.Param>()
+            .mapNotNull { params.getOrNull(it.index) }
+            .take(1)
+            .any { paramType(it) != returnType }
+
+        return !intLikeMismatch
+            && matchesReturnType(returnType, returnCoerce)
+            && matchesParams(params, paramType, paramCoerce)
+    }
+
+    private fun <ParamT : Any> matchesParams(
+        params: List<ParamT>,
         paramType: (ParamT) -> PsiType,
         paramCoerce: (ParamT) -> Boolean,
     ): Boolean {
@@ -79,35 +124,12 @@ data class MethodSignature(
         }
 
         return params.size in requiredParams.size..requiredParams.size + trailingParams.size
-            && intLikeTypes.asSequence().mapNotNull { pos ->
-                    when (pos) {
-                        TypePosition.Return -> returnType
-                        is TypePosition.Param -> params.getOrNull(pos.index)?.let(paramType)
-                    }
-                }.allEqual()
-            && matchReturnType(returnType, returnCoerce)
+            && intLikeTypes.asSequence().filterIsInstance<TypePosition.Param>().mapNotNull { (index) ->
+                    params.getOrNull(index)?.let(paramType)
+               }.allEqual()
             && matchParams(requiredParams, allowCoerceRequired, 0)
             && matchParams(trailingParams, allowCoerceTrailing, requiredParams.size)
     }
-
-    sealed interface TypePosition : Comparable<TypePosition> {
-        fun getElement(method: PsiMethod): PsiTypeElement?
-
-        data object Return : TypePosition {
-            override fun getElement(method: PsiMethod) = method.returnTypeElement
-
-            override fun compareTo(other: TypePosition): Int = if (other is Return) 0 else -1
-        }
-
-        data class Param(val index: Int) : TypePosition {
-            override fun getElement(method: PsiMethod) = method.parameterList.parameters[index].typeElement
-
-            override fun compareTo(other: TypePosition): Int = if (other is Param) index.compareTo(other.index) else 1
-        }
-    }
-
-    private fun matchReturnType(returnType: PsiType, hasCoerce: Boolean): Boolean =
-        matchType(returnType, this.returnType, allowCoerceRequired && hasCoerce, TypePosition.Return)
 
     private fun matchType(expected: PsiType, actual: PsiType, coerce: Boolean, typePos: TypePosition) =
         checkCoerce(expected, actual, coerce, typePos in intLikeTypes)

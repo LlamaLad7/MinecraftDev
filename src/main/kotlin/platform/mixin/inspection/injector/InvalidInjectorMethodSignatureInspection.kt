@@ -180,9 +180,12 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
                 return
             }
 
-            val suggestedSignature = handler.suggestedMethodSignature(annotation, targetMethods)?.let(::lazyOf)
+            val signatureOptions =
+                handler.expectedMethodSignatures(annotation, targetMethods).collectSignatures<MethodSignatures>()
+            val signatureSuggestion = signatureOptions?.let { SuggestedReturnType.forParams(parameters, it) }
+                ?: handler.suggestedMethodSignature(annotation, targetMethods)
 
-            if (suggestedSignature == null) {
+            if (signatureSuggestion == null) {
                 holder.registerProblem(
                     parameters,
                     "There are no possible signatures for this injector",
@@ -191,7 +194,7 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
                 val annotationName = annotation.nameReferenceElement?.referenceName
                 val description =
                     "Method signature does not match expected signature for $annotationName"
-                val quickFix = SignatureQuickFix(method, suggestedSignature)
+                val quickFix = SignatureQuickFix(method, signatureSuggestion)
                 val declarationStart = (method.returnTypeElement ?: identifier).startOffsetInParent
                 val declarationEnd = method.parameterList.textRangeInParent.endOffset
                 holder.registerProblem(
@@ -207,10 +210,9 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
 
     private class SignatureQuickFix(
         method: PsiMethod,
-        suggestedSignature: Lazy<SuggestedSignature>,
+        @SafeFieldForPreview
+        private val signatureSuggestion: SignatureSuggestion,
     ) : LocalQuickFixAndIntentionActionOnPsiElement(method) {
-        @delegate:SafeFieldForPreview
-        private val suggestedSignature by suggestedSignature
 
         private val fixName = "Fix method signature"
 
@@ -249,6 +251,7 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
         }
 
         private fun fixParameters(project: Project, parameters: PsiParameterList, preview: Boolean) {
+            val suggestedParams = signatureSuggestion.params ?: return
             // We want to preserve captured locals
             val locals = parameters.parameters.dropWhile {
                 val fqname = (it.type as? PsiClassType)?.fullQualifiedName ?: return@dropWhile true
@@ -264,7 +267,7 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
             val languageLevel = PsiUtil.getLanguageLevel(parameters)
 
             val usedNames = mutableSetOf<String>()
-            val newParams = suggestedSignature.params.mapIndexedTo(mutableListOf()) { i, p ->
+            val newParams = suggestedParams.mapIndexedTo(mutableListOf()) { i, p ->
                 val paramName = p.name?.takeIf { name -> nameHelper.isIdentifier(name, languageLevel) }
                     ?: VariableNameGenerator(parameters, VariableKind.PARAMETER)
                         .byType(p.type)
@@ -290,7 +293,7 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
         }
 
         private fun fixReturnType(method: PsiMethod, editor: Editor, file: PsiFile, preview: Boolean) {
-            val fix = QuickFixFactory.getInstance().createMethodReturnFix(method, suggestedSignature.returnType, false)
+            val fix = QuickFixFactory.getInstance().createMethodReturnFix(method, signatureSuggestion.returnType, false)
             if (preview) {
                 fix.generatePreview(file.project, editor, file)
             } else {
@@ -300,7 +303,7 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
 
         private fun fixCoerce(project: Project, method: PsiMethod, preview: Boolean) {
             val existingCoerce = method.modifierList.findAnnotation(COERCE)
-            val needsCoerce = suggestedSignature.coerceReturnType
+            val needsCoerce = signatureSuggestion.coerceReturnType
             val returnTypeElement = method.returnTypeElement!!
 
             val fixCoerce: () -> Unit = when {
@@ -325,13 +328,13 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
         }
 
         private fun fixIntLikeTypes(project: Project, method: PsiMethod, editor: Editor, preview: Boolean) {
-            if (preview || suggestedSignature.intLikeTypes.isEmpty()) {
+            if (preview || signatureSuggestion.intLikeTypes.isEmpty()) {
                 return
             }
             runWriteAction {
                 PsiDocumentManager.getInstance(project).doPostponedOperationsAndUnblockDocument(editor.document)
 
-                val template = makeIntLikeTypeTemplate(method, suggestedSignature.intLikeTypes)
+                val template = makeIntLikeTypeTemplate(method, signatureSuggestion.intLikeTypes)
                 if (template != null) {
                     editor.caretModel.moveToOffset(method.startOffset)
                     TemplateManager.getInstance(method.project)

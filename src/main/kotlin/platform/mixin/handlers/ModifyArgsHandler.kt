@@ -24,6 +24,7 @@ import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.TargetInsn
 import com.demonwav.mcdev.platform.mixin.inspection.injector.BasicSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.ExpectedSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
+import com.demonwav.mcdev.platform.mixin.inspection.injector.SignatureSuggestion
 import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Classes.ARGS
@@ -76,7 +77,7 @@ class ModifyArgsHandler : InsnInjectorAnnotationHandler() {
         val argsType = JavaPsiFacade.getElementFactory(annotation.project)
             .createTypeByFQClassName(ARGS, annotation.resolveScope)
         return SuggestedSignature(
-            listOf(SuggestedSignature.Param("args", argsType)),
+            listOf(SignatureSuggestion.Param("args", argsType)),
             PsiTypes.voidType(),
         )
     }
