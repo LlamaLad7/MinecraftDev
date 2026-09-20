@@ -31,6 +31,7 @@ import com.demonwav.mcdev.platform.mixin.reference.parseMixinSelector
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.MethodTargetMember
 import com.demonwav.mcdev.platform.mixin.util.MixinTargetMember
+import com.demonwav.mcdev.platform.mixin.util.findMethods
 import com.demonwav.mcdev.platform.mixin.util.getGenericParameterTypes
 import com.demonwav.mcdev.platform.mixin.util.hasAccess
 import com.demonwav.mcdev.platform.mixin.util.mixinTargets
@@ -46,8 +47,10 @@ import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiEllipsisType
 import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiType
 import com.intellij.psi.util.PsiModificationTracker
+import com.intellij.psi.util.findParentOfType
 import com.llamalad7.mixinextras.expression.impl.point.ExpressionContext
 import java.util.concurrent.ConcurrentHashMap
 import org.objectweb.asm.Opcodes
@@ -63,21 +66,19 @@ abstract class InjectorAnnotationHandler : MixinAnnotationHandler {
         val selectors = method.mapNotNull { parseMixinSelector(it, methodAttr!!) } +
             desc.mapNotNull { DescSelectorParser.Util.descSelectorFromAnnotation(it) }
 
-        val targetClassMethods = selectors.associateWith { selector ->
-            val actualTarget = selector.getCustomOwner(targetClass)
-            (actualTarget to actualTarget.methods)
+        val targetsBySelector = selectors.associateWith { selector ->
+            selector.getCustomOwner(targetClass)
         }
+        val allowStatic = annotation.findParentOfType<PsiMethod>()?.hasModifierProperty(PsiModifier.STATIC) ?: true
 
-        return targetClassMethods.flatMap { (selector, pair) ->
-            val (clazz, methods) = pair
-            methods.mapNotNull { method ->
-                if (selector.matchMethod(method, clazz)) {
-                    MethodTargetMember(clazz, method)
-                } else {
-                    null
-                }
+        return targetsBySelector.asSequence()
+            .flatMap { (selector, targetClass) ->
+                targetClass.findMethods(selector, allowStatic)
+                    .map { ClassAndMethodNode(targetClass, it) }
             }
-        }
+            .distinct()
+            .map { MethodTargetMember(it) }
+            .toList()
     }
 
     override fun isUnresolved(annotation: PsiAnnotation, targetClass: ClassNode): InsnResolutionInfo.Failure? {

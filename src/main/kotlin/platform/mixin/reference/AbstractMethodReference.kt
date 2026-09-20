@@ -48,6 +48,8 @@ import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiArrayInitializerMemberValue
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiSubstitutor
 import com.intellij.psi.ResolveResult
 import com.intellij.psi.util.parentOfType
@@ -82,13 +84,15 @@ abstract class AbstractMethodReference : PolyReferenceResolver(), MixinReference
             return false
         }
 
+        val allowStatic = context.parentOfType<PsiMethod>()?.hasModifierProperty(PsiModifier.STATIC) ?: true
         val stringValue = context.constantStringValue ?: return false
         val targetMethodInfo = parseSelector(stringValue, context) ?: return false
         val minMatches = targetMethodInfo.quantifier.min(Quantifier.Context.MEMBER).coerceAtLeast(1)
         val targets = getTargets(context) ?: return false
 
         return targets.any {
-            targetMethodInfo.getCustomOwner(it).findMethods(targetMethodInfo).countIsLessThan(minMatches)
+            targetMethodInfo.getCustomOwner(it).findMethods(targetMethodInfo, allowStatic)
+                .countIsLessThan(minMatches)
         }
     }
 
@@ -104,10 +108,13 @@ abstract class AbstractMethodReference : PolyReferenceResolver(), MixinReference
     }
 
     private fun isAmbiguous(targets: Collection<ClassNode>, targetReference: MemberInfo): Boolean {
-        return targets.any { it.findMethods(targetReference.withQuantifier(Quantifier.Any)).countIsAtLeast(2) }
+        return targets.any {
+            it.findMethods(targetReference.withQuantifier(Quantifier.Any), allowStatic = true).countIsAtLeast(2)
+        }
     }
 
     fun resolve(context: PsiElement): Sequence<ClassAndMethodNode>? {
+        val allowStatic = context.parentOfType<PsiMethod>()?.hasModifierProperty(PsiModifier.STATIC) ?: true
         val targets = getTargets(context) ?: return null
         val targetedMethods = when (context) {
             is PsiArrayInitializerMemberValue -> context.initializers.mapNotNull { it.constantStringValue }
@@ -116,18 +123,19 @@ abstract class AbstractMethodReference : PolyReferenceResolver(), MixinReference
 
         return targetedMethods.asSequence().flatMap { method ->
             val targetReference = parseSelector(method, context) ?: return@flatMap emptySequence()
-            return@flatMap resolve(targets, targetReference)
+            return@flatMap resolve(targets, targetReference, allowStatic)
         }
     }
 
     private fun resolve(
         targets: Collection<ClassNode>,
         selector: MixinSelector,
+        allowStatic: Boolean,
     ): Sequence<ClassAndMethodNode> {
         return targets.asSequence()
             .flatMap { target ->
                 val actualTarget = selector.getCustomOwner(target)
-                actualTarget.findMethods(selector).map { ClassAndMethodNode(actualTarget, it) }
+                actualTarget.findMethods(selector, allowStatic).map { ClassAndMethodNode(actualTarget, it) }
             }
     }
 

@@ -143,7 +143,7 @@ class NewInsnInjectionPoint : InjectionPoint<PsiMember>() {
             val anonymousName = anonymousClass?.fullQualifiedName?.replace('.', '/')
             if (anonymousName != null) {
                 val methods = findClassNodeByPsiClass(anonymousClass)
-                    ?.findMethods(selector.withQuantifier(Quantifier.Default))
+                    ?.findMethods(selector.withQuantifier(Quantifier.Any), allowStatic = true)
                     .orEmpty()
 
                 if (methods.any { selector.matchMethod(anonymousName, it.name, it.desc) }) {
