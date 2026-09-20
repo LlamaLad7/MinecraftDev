@@ -107,6 +107,7 @@ abstract class InsnInjectorAnnotationHandler : InjectorAnnotationHandler() {
     final override fun expectedMethodSignatures(
         annotation: PsiAnnotation,
         targets: List<ClassAndMethodNode>,
+        mode: CollectVisitor.Mode,
     ): List<ExpectedSignatures<*>> {
         return resolveInstructions(annotation, targets).map { (target, result) ->
             val (targetClass, targetMethod) = target

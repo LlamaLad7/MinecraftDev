@@ -22,17 +22,13 @@ package com.demonwav.mcdev.platform.mixin.inspection.injector
 
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.COERCE
 import com.demonwav.mcdev.platform.mixin.util.checkCoerce
-import com.demonwav.mcdev.platform.mixin.util.isAssignable
 import com.demonwav.mcdev.platform.mixin.util.isMixinExtrasSugar
 import com.demonwav.mcdev.util.Parameter
-import com.demonwav.mcdev.util.allSame
-import com.demonwav.mcdev.util.countIsLessThan
-import com.demonwav.mcdev.util.normalize
+import com.demonwav.mcdev.util.allEqual
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiParameter
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypeElement
-import com.intellij.psi.PsiTypes
 
 data class MethodSignature(
     val requiredParams: List<Parameter>,
@@ -46,7 +42,7 @@ data class MethodSignature(
         val returnType = method.returnType ?: return false
         val parameters = method.parameterList.parameters.dropLastWhile { it.isMixinExtrasSugar }
 
-        return intLikeTypes.asSequence().map { it.getElement(method)?.type }.allSame()
+        return intLikeTypes.asSequence().map { it.getElement(method)?.type }.allEqual()
             && matchReturnType(returnType, method.hasAnnotation(COERCE))
             && parameters.size in requiredParams.size..requiredParams.size + trailingParams.size
             && matchParams(requiredParams, parameters, allowCoerceRequired, 0)

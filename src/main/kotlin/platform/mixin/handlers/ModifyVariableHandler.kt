@@ -54,16 +54,15 @@ class ModifyVariableHandler : InsnInjectorAnnotationHandler() {
         val info = LocalInfo.fromAnnotation(localType, annotation)
 
         val elementFactory = JavaPsiFacade.getElementFactory(annotation.project)
-        val seenParams = mutableSetOf<String>()
-        val result = mutableListOf<Parameter>()
+        val result = mutableMapOf<Type, Parameter>()
         val matchedLocals = info.matchLocals(
             module, targetClass, targetMethod, targetInsn.insn,
             CollectVisitor.Mode.SUGGESTION, matchType = false
         ).orEmpty()
         for (local in matchedLocals) {
-            if (seenParams.add(local.desc + local.name)) {
-                val localType = Type.getType(local.desc).toPsiType(elementFactory)
-                result += sanitizedParameter(localType, local.name, local.isNamed)
+            val type = Type.getType(local.desc ?: continue)
+            result.computeIfAbsent(type) {
+                sanitizedParameter(type.toPsiType(elementFactory), local.name, local.isNamed)
             }
         }
 

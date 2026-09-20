@@ -22,6 +22,7 @@ package com.demonwav.mcdev.platform.mixin.handlers
 
 import com.demonwav.mcdev.asset.MixinAssets
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.AtResolver
+import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.CollectVisitor
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InsnResolutionInfo
 import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.TargetInsn
 import com.demonwav.mcdev.platform.mixin.inspection.injector.ExpectedSignatures
@@ -107,6 +108,7 @@ abstract class InjectorAnnotationHandler : MixinAnnotationHandler {
     abstract fun expectedMethodSignatures(
         annotation: PsiAnnotation,
         targets: List<ClassAndMethodNode>,
+        mode: CollectVisitor.Mode = CollectVisitor.Mode.SUGGESTION,
     ): List<ExpectedSignatures<*>>
 
     abstract fun suggestedMethodSignature(

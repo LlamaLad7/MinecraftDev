@@ -23,7 +23,7 @@ package com.demonwav.mcdev.platform.mixin.inspection.injector
 import com.demonwav.mcdev.platform.mixin.util.TypeKind
 import com.demonwav.mcdev.platform.mixin.util.checkCoerce
 import com.demonwav.mcdev.util.Parameter
-import com.demonwav.mcdev.util.allSame
+import com.demonwav.mcdev.util.allEqual
 import com.demonwav.mcdev.util.normalize
 import com.demonwav.mcdev.util.sharedPrefixLength
 import com.intellij.psi.GenericsUtil
@@ -114,10 +114,12 @@ data class SuggestedSignature(
         }
 
         fun modifierNoCoerce(annotation: PsiAnnotation, signatures: List<ModifierSignatures>): SuggestedSignature? {
-            val parameterOptions = signatures.map { it.paramOptions.ifEmpty { return null } }
+            val parameterOptions = signatures.map { it.paramOptions }
             val psiManager = PsiManager.getInstance(annotation.project)
 
-            val optionsByType = parameterOptions.asSequence().flatten().groupBy { it.type.normalize() }
+            val optionsByType = parameterOptions.asSequence()
+                .flatMap { it.entries }
+                .groupBy({ it.key }, { it.value })
             val chosenParams = optionsByType.values.firstOrNull { it.size == parameterOptions.size } ?: return null
 
             val name = chosenParams.asSequence().map { it.name }.distinct().singleOrNull() ?: "original"
@@ -132,7 +134,7 @@ data class SuggestedSignature(
         }
 
         fun inject(annotation: PsiAnnotation, signatures: List<InjectSignatures>): SuggestedSignature? {
-            if (!signatures.asSequence().map { it.params.kinds() }.allSame()) {
+            if (!signatures.asSequence().map { it.params.kinds() }.allEqual()) {
                 // Shape mismatch, use short form
                 return intersectCoerce(
                     annotation,

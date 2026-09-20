@@ -30,6 +30,7 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypes
 import java.util.SequencedMap
+import org.objectweb.asm.Type
 
 sealed interface ExpectedSignatures<out T : MethodSignatures> {
     fun matches(method: PsiMethod): Boolean
@@ -52,7 +53,7 @@ inline fun <reified R> List<ExpectedSignatures<*>>.collectSignatures(): List<R>?
         when (it) {
             ExpectedSignatures.Unknown -> null
             ExpectedSignatures.Invalid -> return null
-            is ExpectedSignatures.Valid<*> -> it.expected as R
+            is ExpectedSignatures.Valid -> it.expected as R
         }
     }
 
@@ -61,12 +62,12 @@ interface MethodSignatures {
 }
 
 class ModifierSignatures(
-    val paramOptions: List<Parameter>,
+    val paramOptions: Map<Type, Parameter>,
     val allowCoerce: Boolean,
     val fullParams: List<Parameter>? = null,
     val trailingParams: List<Parameter> = emptyList(),
 ) : MethodSignatures {
-    override val options = paramOptions.flatMap { param ->
+    override val options = paramOptions.values.flatMap { param ->
         listOfNotNull(
             MethodSignature(
                 listOf(param),

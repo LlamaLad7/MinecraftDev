@@ -21,6 +21,7 @@
 package com.demonwav.mcdev.platform.mixin.handlers.mixinextras
 
 import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
+import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.CollectVisitor
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InsnResolutionInfo
 import com.demonwav.mcdev.platform.mixin.inspection.injector.ExpectedSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.OperationWrapperSignatures
@@ -39,6 +40,7 @@ class WrapMethodHandler : InjectorAnnotationHandler() {
     override fun expectedMethodSignatures(
         annotation: PsiAnnotation,
         targets: List<ClassAndMethodNode>,
+        mode: CollectVisitor.Mode,
     ): List<ExpectedSignatures<*>> {
         return targets.map { (targetClass, targetMethod) ->
             val returnType = targetMethod.getGenericReturnType(targetClass, annotation.project)

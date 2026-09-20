@@ -55,4 +55,4 @@ fun Sequence<*>.countIsAtLeast(n: Int) = n <= 0 || drop(n - 1).any()
 
 fun Sequence<*>.countIsLessThan(n: Int) = n > 0 && drop(n - 1).none()
 
-fun Sequence<*>.allSame() = zipWithNext().all { (a, b) -> a == b }
+fun Sequence<*>.allEqual() = zipWithNext().all { (a, b) -> a == b }

@@ -50,6 +50,8 @@ import java.util.Locale
 import java.util.Locale.getDefault
 import java.util.concurrent.CancellationException
 import java.util.regex.PatternSyntaxException
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 import kotlin.math.min
 import kotlin.reflect.KClass
 import org.intellij.lang.annotations.Language
@@ -154,6 +156,9 @@ inline fun <T : Collection<*>> T.ifEmpty(func: () -> Unit): T {
 }
 
 inline fun <T, R : Collection<*>> T?.ifNullOrEmpty(func: () -> R): R where T : R {
+    contract {
+        callsInPlace(func, InvocationKind.AT_MOST_ONCE)
+    }
     if (isNullOrEmpty()) {
         return func()
     }

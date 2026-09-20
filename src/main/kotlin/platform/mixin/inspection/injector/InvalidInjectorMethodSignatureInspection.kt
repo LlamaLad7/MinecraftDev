@@ -23,6 +23,7 @@ package com.demonwav.mcdev.platform.mixin.inspection.injector
 import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.InsnInjectorAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
+import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.CollectVisitor
 import com.demonwav.mcdev.platform.mixin.inspection.MixinInspection
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.COERCE
@@ -169,8 +170,11 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
                 }
             }
 
-            val isAlreadyValid = handler.expectedMethodSignatures(annotation, targetMethods)
-                .all { it.matches(method) }
+            val isAlreadyValid = handler.expectedMethodSignatures(
+                annotation,
+                targetMethods,
+                CollectVisitor.Mode.RESOLUTION,
+            ).all { it.matches(method) }
 
             if (isAlreadyValid) {
                 return

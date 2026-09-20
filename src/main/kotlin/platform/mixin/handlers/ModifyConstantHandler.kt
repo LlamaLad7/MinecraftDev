@@ -32,6 +32,7 @@ import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
 import com.demonwav.mcdev.platform.mixin.inspection.injector.collectSignatures
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.util.Parameter
+import com.demonwav.mcdev.util.descriptor
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElement
@@ -156,7 +157,7 @@ class ModifyConstantHandler : InsnInjectorAnnotationHandler() {
 
     private fun makeSignatures(type: PsiType, trailingParams: List<Parameter>): ModifierSignatures {
         return ModifierSignatures(
-            listOf(sanitizedParameter(type, "constant")),
+            mapOf(Type.getType(type.descriptor) to sanitizedParameter(type, "constant")),
             allowCoerce = true,
             trailingParams = trailingParams,
         )
