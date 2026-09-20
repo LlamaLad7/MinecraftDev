@@ -96,7 +96,6 @@ class ModifyArgHandler : InsnInjectorAnnotationHandler() {
         return ExpectedSignatures.Valid(
             ModifierSignatures(
                 paramOptions,
-                allowCoerce = false,
                 fullParams,
             )
         )

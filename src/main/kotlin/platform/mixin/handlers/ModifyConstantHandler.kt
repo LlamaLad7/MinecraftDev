@@ -23,16 +23,13 @@ package com.demonwav.mcdev.platform.mixin.handlers
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.ConstantInjectionPoint
 import com.demonwav.mcdev.platform.mixin.handlers.injectionPoint.InjectionPoint
 import com.demonwav.mcdev.platform.mixin.handlers.mixinextras.TargetInsn
-import com.demonwav.mcdev.platform.mixin.inspection.injector.BasicSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.ExpectedSignatures
-import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignature
-import com.demonwav.mcdev.platform.mixin.inspection.injector.MethodSignatures
-import com.demonwav.mcdev.platform.mixin.inspection.injector.ModifierSignatures
+import com.demonwav.mcdev.platform.mixin.inspection.injector.GeneralSignatures
 import com.demonwav.mcdev.platform.mixin.inspection.injector.SuggestedSignature
 import com.demonwav.mcdev.platform.mixin.inspection.injector.collectSignatures
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
+import com.demonwav.mcdev.platform.mixin.util.TypeKind
 import com.demonwav.mcdev.util.Parameter
-import com.demonwav.mcdev.util.descriptor
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElement
@@ -83,7 +80,7 @@ class ModifyConstantHandler : InsnInjectorAnnotationHandler() {
         targetClass: ClassNode,
         targetMethod: MethodNode,
         targetInsn: TargetInsn,
-    ): ExpectedSignatures<*> {
+    ): ExpectedSignatures<GeneralSignatures> {
         val targetParams = collectTargetMethodParameters(annotation.project, targetClass, targetMethod)
         val cst = constantInjectionPoint.getTargetedConstant(targetInsn.insn) ?: return ExpectedSignatures.Invalid
         return ExpectedSignatures.Valid(expectedSignatures(annotation, targetInsn.insn, cst, targetParams))
@@ -93,27 +90,10 @@ class ModifyConstantHandler : InsnInjectorAnnotationHandler() {
         annotation: PsiAnnotation,
         targets: List<ClassAndMethodNode>
     ): SuggestedSignature? {
-        val isTypeCheck =
-            resolveInstructions(annotation, targets).asSequence()
-                .map { it.result.insn.opcode == Opcodes.INSTANCEOF }
-                .distinct()
-                .singleOrNull() ?: return null
-
-        return if (isTypeCheck) {
-            SuggestedSignature.exact(
-                makeTypeCheckMethodSignature(
-                    PsiManager.getInstance(annotation.project),
-                    annotation,
-                    PsiTypes.booleanType(),
-                    emptyList(),
-                )
-            )
-        } else {
-            SuggestedSignature.modifierNoCoerce(
-                annotation,
-                expectedMethodSignatures(annotation, targets).collectSignatures<ModifierSignatures>() ?: return null,
-            )
-        }
+        return SuggestedSignature.general(
+            annotation,
+            expectedMethodSignatures(annotation, targets).collectSignatures<GeneralSignatures>() ?: return null
+        )
     }
 
     private fun expectedSignatures(
@@ -121,23 +101,18 @@ class ModifyConstantHandler : InsnInjectorAnnotationHandler() {
         targetInsn: AbstractInsnNode,
         cst: Any,
         trailingParams: List<Parameter>,
-    ): MethodSignatures {
+    ): GeneralSignatures {
         val psiManager = PsiManager.getInstance(annotation.project)
 
         return if (targetInsn is TypeInsnNode) {
-            BasicSignatures(
-                makeTypeCheckMethodSignature(
-                    psiManager,
-                    annotation,
-                    PsiTypes.booleanType(),
-                    trailingParams,
+            GeneralSignatures(
+                makeTypeCheckParams(psiManager, annotation),
+                linkedMapOf(
+                    TypeKind.INT_LIKE to PsiTypes.booleanType(),
+                    TypeKind.OBJECT to getClassType(psiManager, annotation),
                 ),
-                makeTypeCheckMethodSignature(
-                    psiManager,
-                    annotation,
-                    getClassType(psiManager, annotation),
-                    trailingParams,
-                ),
+                allowCoerce = false,
+                trailingParams,
             )
         } else {
             makeSignatures(
@@ -165,28 +140,18 @@ class ModifyConstantHandler : InsnInjectorAnnotationHandler() {
         else -> null
     }
 
-    private fun makeSignatures(type: PsiType, trailingParams: List<Parameter>): ModifierSignatures {
-        return ModifierSignatures(
-            linkedMapOf(Type.getType(type.descriptor) to sanitizedParameter(type, "constant")),
-            allowCoerce = true,
-            trailingParams = trailingParams,
+    private fun makeSignatures(type: PsiType, trailingParams: List<Parameter>): GeneralSignatures {
+        return GeneralSignatures(
+            listOf(sanitizedParameter(type, "constant")),
+            type,
+            trailingParams,
         )
     }
 
-    private fun makeTypeCheckMethodSignature(
-        psiManager: PsiManager,
-        context: PsiElement,
-        returnType: PsiType,
-        trailingParams: List<Parameter>,
-    ): MethodSignature {
-        return MethodSignature(
-            listOf(
-                sanitizedParameter(PsiType.getJavaLangObject(psiManager, context.resolveScope), "instance"),
-                sanitizedParameter(getClassType(psiManager, context), "type"),
-            ),
-            returnType,
-            allowCoerceRequired = false,
-            trailingParams = trailingParams,
+    private fun makeTypeCheckParams(psiManager: PsiManager, context: PsiElement): List<Parameter> {
+        return listOf(
+            sanitizedParameter(PsiType.getJavaLangObject(psiManager, context.resolveScope), "instance"),
+            sanitizedParameter(getClassType(psiManager, context), "type"),
         )
     }
 

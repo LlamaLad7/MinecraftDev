@@ -63,7 +63,6 @@ interface MethodSignatures {
 
 class ModifierSignatures(
     val paramOptions: SequencedMap<Type, Parameter>,
-    val allowCoerce: Boolean,
     val fullParams: List<Parameter>? = null,
     val trailingParams: List<Parameter> = emptyList(),
 ) : MethodSignatures {
@@ -72,14 +71,14 @@ class ModifierSignatures(
             MethodSignature(
                 listOf(param),
                 param.type,
-                allowCoerceRequired = allowCoerce,
+                allowCoerceRequired = false,
                 trailingParams = trailingParams,
             ),
             fullParams?.let {
                 MethodSignature(
                     it,
                     param.type,
-                    allowCoerceRequired = allowCoerce,
+                    allowCoerceRequired = false,
                     trailingParams = trailingParams,
                 )
             },

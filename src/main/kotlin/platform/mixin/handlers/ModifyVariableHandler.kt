@@ -69,7 +69,6 @@ class ModifyVariableHandler : InsnInjectorAnnotationHandler() {
         return ExpectedSignatures.Valid(
             ModifierSignatures(
                 result,
-                allowCoerce = false,
                 trailingParams = targetParams,
             )
         )
