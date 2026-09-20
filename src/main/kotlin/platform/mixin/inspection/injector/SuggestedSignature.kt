@@ -155,51 +155,58 @@ data class SuggestedSignature(
         }
 
         fun general(annotation: PsiAnnotation, signatures: List<GeneralSignatures>): SuggestedSignature? {
-            val signaturesByReturnKind = signatures.asSequence().flatMap { sig ->
-                sig.returnTypeOptions.keys.asSequence().map { it to sig }
-            }.groupBy({ it.first }, { it.second })
-            val returnKind =
-                signaturesByReturnKind.entries.firstOrNull { it.value.size == signatures.size }?.key ?: return null
-
             val numParams = signatures.maxOf { it.params.size }
-            val intersected = intersectCoerce(
-                annotation,
-                signatures.asSequence()
-                    .map {
-                        val signature = it.specificSignature(returnKind)
-                        exact(signature, takeTrailing = numParams - signature.requiredParams.size)
-                    },
-            ) ?: return null
+            val candidatesByReturnKind = signatures.asSequence().flatMap { sig ->
+                sig.returnTypeOptions.keys.asSequence().map { it to sig.specificSignature(it) }
+            }.groupBy({ it.first }, { it.second })
 
-            for (signature in signatures) {
-                if (signature.allowCoerce) {
+            for (candidates in candidatesByReturnKind.values) {
+                if (candidates.size < signatures.size) {
+                    // Not viable
                     continue
                 }
-                val specific = signature.specificSignature(returnKind)
-                // Match strictly
-                val returnTypeMatches = checkCoerce(
-                    specific.returnType,
-                    intersected.returnType,
-                    intersected.coerceReturnType,
-                    MethodSignature.TypePosition.Return in specific.intLikeTypes,
-                )
-                if (!returnTypeMatches) {
-                    return null
-                }
-                val paramsMatch = specific.requiredParams.withIndex().all { (index, param) ->
-                    checkCoerce(
-                        param.type,
-                        intersected.params[index].type,
+
+                val intersected = intersectCoerce(
+                    annotation,
+                    candidates.asSequence()
+                        .map {
+                            exact(it, takeTrailing = numParams - it.requiredParams.size)
+                        },
+                ) ?: return null
+
+                for (signature in candidates) {
+                    if (signature.allowCoerceRequired) {
+                        continue
+                    }
+
+                    // Match strictly
+                    val returnTypeMatches = checkCoerce(
+                        signature.returnType,
+                        intersected.returnType,
                         coerce = false,
-                        MethodSignature.TypePosition.Param(index) in specific.intLikeTypes,
+                        MethodSignature.TypePosition.Return in signature.intLikeTypes,
                     )
-                }
-                if (!paramsMatch) {
-                    return null
+                    if (!returnTypeMatches) {
+                        break
+                    }
+
+                    val paramsMatch = signature.requiredParams.withIndex().all { (index, param) ->
+                        checkCoerce(
+                            param.type,
+                            intersected.params[index].type,
+                            coerce = false,
+                            MethodSignature.TypePosition.Param(index) in signature.intLikeTypes,
+                        )
+                    }
+                    if (!paramsMatch) {
+                        break
+                    }
+
+                    return intersected
                 }
             }
 
-            return intersected
+            return null
         }
 
         private fun intersectCoerce(
@@ -242,6 +249,7 @@ private fun getSupertype(
                 isIntLike = intLikeAssignment == null && bIsIntLike,
                 coerce = intLikeAssignment != null && !bIsIntLike && intLikeAssignment != b,
             )
+
             bIsIntLike -> TypeMergeResult(a, isIntLike = false, coerce = false)
             a == b -> TypeMergeResult(a, isIntLike = false, coerce = false)
             else -> TypeMergeResult(PsiTypes.intType(), isIntLike = false, coerce = true)
