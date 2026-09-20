@@ -23,15 +23,19 @@ package com.demonwav.mcdev.platform.mixin.inspection.injector
 import com.demonwav.mcdev.platform.mixin.util.TypeKind
 import com.demonwav.mcdev.util.Parameter
 import com.demonwav.mcdev.util.allEqual
+import com.demonwav.mcdev.util.descriptor
 import com.demonwav.mcdev.util.normalize
 import com.demonwav.mcdev.util.sharedPrefixLength
 import com.intellij.psi.GenericsUtil
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiManager
+import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiParameterList
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypes
+import com.intellij.psi.util.parentOfType
+import org.objectweb.asm.Type
 
 sealed interface SignatureSuggestion {
     val params: List<Param>?
@@ -250,7 +254,12 @@ data class SuggestedSignature(
             val optionsByType = parameterOptions.asSequence()
                 .flatMap { it.entries }
                 .groupBy({ it.key }, { it.value })
-            val chosenParams = optionsByType.values.firstOrNull { it.size == parameterOptions.size } ?: return null
+
+            val existingReturnType = annotation.parentOfType<PsiMethod>()?.returnType
+            val forExistingReturnType = existingReturnType?.let { optionsByType[Type.getType(it.descriptor)] }
+
+            val chosenParams = forExistingReturnType?.takeIf { it.size == parameterOptions.size }
+                ?: optionsByType.values.firstOrNull { it.size == parameterOptions.size } ?: return null
 
             val name = chosenParams.asSequence().map { it.name }.distinct().singleOrNull() ?: "original"
             val type = chosenParams.asSequence().map { it.type }
