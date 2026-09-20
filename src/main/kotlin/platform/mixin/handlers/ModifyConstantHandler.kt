@@ -45,6 +45,7 @@ import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
+import org.objectweb.asm.tree.TypeInsnNode
 
 class ModifyConstantHandler : InsnInjectorAnnotationHandler() {
     private val constantInjectionPoint by lazy { InjectionPoint.byAtCode("CONSTANT") as ConstantInjectionPoint }
@@ -85,7 +86,7 @@ class ModifyConstantHandler : InsnInjectorAnnotationHandler() {
     ): ExpectedSignatures<*> {
         val targetParams = collectTargetMethodParameters(annotation.project, targetClass, targetMethod)
         val cst = constantInjectionPoint.getTargetedConstant(targetInsn.insn) ?: return ExpectedSignatures.Invalid
-        return ExpectedSignatures.Valid(expectedSignatures(annotation, cst, targetParams))
+        return ExpectedSignatures.Valid(expectedSignatures(annotation, targetInsn.insn, cst, targetParams))
     }
 
     override fun suggestedMethodSignature(
@@ -115,10 +116,15 @@ class ModifyConstantHandler : InsnInjectorAnnotationHandler() {
         }
     }
 
-    private fun expectedSignatures(annotation: PsiAnnotation, cst: Any, trailingParams: List<Parameter>): MethodSignatures {
+    private fun expectedSignatures(
+        annotation: PsiAnnotation,
+        targetInsn: AbstractInsnNode,
+        cst: Any,
+        trailingParams: List<Parameter>,
+    ): MethodSignatures {
         val psiManager = PsiManager.getInstance(annotation.project)
 
-        return if (cst is Type) {
+        return if (targetInsn is TypeInsnNode) {
             BasicSignatures(
                 makeTypeCheckMethodSignature(
                     psiManager,
@@ -149,7 +155,11 @@ class ModifyConstantHandler : InsnInjectorAnnotationHandler() {
         is Double -> PsiTypes.doubleType()
         is String -> PsiType.getJavaLangString(
             PsiManager.getInstance(context.project),
-            context.resolveScope
+            context.resolveScope,
+        )
+        is Type -> getClassType(
+            PsiManager.getInstance(context.project),
+            context,
         )
 
         else -> null
