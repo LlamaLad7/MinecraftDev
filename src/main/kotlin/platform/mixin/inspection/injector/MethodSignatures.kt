@@ -62,7 +62,7 @@ interface MethodSignatures {
 }
 
 class ModifierSignatures(
-    val paramOptions: Map<Type, Parameter>,
+    val paramOptions: SequencedMap<Type, Parameter>,
     val allowCoerce: Boolean,
     val fullParams: List<Parameter>? = null,
     val trailingParams: List<Parameter> = emptyList(),
@@ -149,7 +149,11 @@ data class GeneralSignatures(
         returnTypeOptions.getValue(returnKind),
         allowCoerceRequired = allowCoerce,
         trailingParams = trailingParams,
-        intLikeTypes = intLikePositions,
+        intLikeTypes = if (returnKind == TypeKind.INT_LIKE) {
+            intLikePositions
+        } else {
+            intLikePositions - MethodSignature.TypePosition.Return
+        },
     )
 }
 

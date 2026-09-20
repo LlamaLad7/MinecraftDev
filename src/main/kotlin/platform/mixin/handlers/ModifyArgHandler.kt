@@ -80,7 +80,7 @@ class ModifyArgHandler : InsnInjectorAnnotationHandler() {
         ).resolveMember(project) as PsiMethod?
         val elementFactory = JavaPsiFacade.getElementFactory(annotation.project)
         val psiParams = argTypes.indices.map { index -> sourceMethod?.getBytecodeParameter(index) }
-        val paramOptions = validTypes.associateWith { type ->
+        val paramOptions = validTypes.associateWithTo(linkedMapOf()) { type ->
             val targetParam = psiParams[index ?: argTypes.indexOf(type)]
             val psiType = targetParam?.type ?: type.toPsiType(elementFactory)
             sanitizedParameter(psiType, targetParam?.name)

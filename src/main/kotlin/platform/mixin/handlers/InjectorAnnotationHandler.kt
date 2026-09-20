@@ -155,15 +155,6 @@ abstract class InjectorAnnotationHandler : MixinAnnotationHandler {
                 Parameter(name?.toJavaIdentifier(), type, knownName)
             }
         }
-
-        @JvmStatic
-        protected fun sanitizedReturnType(type: PsiType): PsiType {
-            return if (type is PsiEllipsisType) {
-                type.toArrayType()
-            } else {
-                type
-            }
-        }
     }
 }
 

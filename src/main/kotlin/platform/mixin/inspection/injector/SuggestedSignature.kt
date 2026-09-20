@@ -129,7 +129,10 @@ data class SuggestedSignature(
             return SuggestedSignature(listOf(Param(name, type)), type)
         }
 
-        fun operationWrapper(annotation: PsiAnnotation, signatures: List<OperationWrapperSignatures>): SuggestedSignature? {
+        fun operationWrapper(
+            annotation: PsiAnnotation,
+            signatures: List<OperationWrapperSignatures>,
+        ): SuggestedSignature? {
             return intersectCoerce(annotation, signatures.asSequence().map { exact(it.signature) })
         }
 
@@ -172,22 +175,23 @@ data class SuggestedSignature(
                 if (signature.allowCoerce) {
                     continue
                 }
+                val specific = signature.specificSignature(returnKind)
                 // Match strictly
                 val returnTypeMatches = checkCoerce(
-                    signature.returnTypeOptions.getValue(returnKind),
+                    specific.returnType,
                     intersected.returnType,
                     intersected.coerceReturnType,
-                    MethodSignature.TypePosition.Return in signature.intLikePositions,
+                    MethodSignature.TypePosition.Return in specific.intLikeTypes,
                 )
                 if (!returnTypeMatches) {
                     return null
                 }
-                val paramsMatch = signature.params.withIndex().all { (index, param) ->
+                val paramsMatch = specific.requiredParams.withIndex().all { (index, param) ->
                     checkCoerce(
                         param.type,
                         intersected.params[index].type,
                         coerce = false,
-                        MethodSignature.TypePosition.Param(index) in signature.intLikePositions,
+                        MethodSignature.TypePosition.Param(index) in specific.intLikeTypes,
                     )
                 }
                 if (!paramsMatch) {
@@ -198,7 +202,10 @@ data class SuggestedSignature(
             return intersected
         }
 
-        private fun intersectCoerce(annotation: PsiAnnotation, signatures: Sequence<SuggestedSignature>): SuggestedSignature? {
+        private fun intersectCoerce(
+            annotation: PsiAnnotation,
+            signatures: Sequence<SuggestedSignature>,
+        ): SuggestedSignature? {
             val manager = PsiManager.getInstance(annotation.project)
             return signatures.reduceOrNull<SuggestedSignature?, _> { acc, it -> acc?.intersectCoerce(it, manager) }
         }

@@ -157,7 +157,7 @@ class ModifyConstantHandler : InsnInjectorAnnotationHandler() {
 
     private fun makeSignatures(type: PsiType, trailingParams: List<Parameter>): ModifierSignatures {
         return ModifierSignatures(
-            mapOf(Type.getType(type.descriptor) to sanitizedParameter(type, "constant")),
+            linkedMapOf(Type.getType(type.descriptor) to sanitizedParameter(type, "constant")),
             allowCoerce = true,
             trailingParams = trailingParams,
         )
