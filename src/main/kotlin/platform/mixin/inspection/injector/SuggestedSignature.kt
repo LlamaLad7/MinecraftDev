@@ -257,7 +257,7 @@ data class SuggestedSignature(
             )
         }
 
-        fun modifierNoCoerce(annotation: PsiAnnotation, signatures: List<ModifierSignatures>): SuggestedSignature? {
+        fun modifier(annotation: PsiAnnotation, signatures: List<ModifierSignatures>): SuggestedSignature? {
             val parameterOptions = signatures.map { it.paramOptions }
             val psiManager = PsiManager.getInstance(annotation.project)
 

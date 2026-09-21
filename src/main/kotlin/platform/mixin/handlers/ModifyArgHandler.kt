@@ -105,7 +105,7 @@ class ModifyArgHandler : InsnInjectorAnnotationHandler() {
         annotation: PsiAnnotation,
         targets: List<ClassAndMethodNode>
     ): SuggestedSignature? {
-        return SuggestedSignature.modifierNoCoerce(
+        return SuggestedSignature.modifier(
             annotation,
             expectedMethodSignatures(annotation, targets).collectSignatures<ModifierSignatures>() ?: return null,
         )
