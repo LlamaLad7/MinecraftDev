@@ -21,11 +21,8 @@
 package com.demonwav.mcdev.platform.mixin.inspection.injector
 
 import com.demonwav.mcdev.platform.mixin.util.TypeKind
-import com.demonwav.mcdev.util.Parameter
-import com.demonwav.mcdev.util.allEqual
 import com.demonwav.mcdev.util.descriptor
 import com.demonwav.mcdev.util.normalize
-import com.demonwav.mcdev.util.sharedPrefixLength
 import com.intellij.psi.GenericsUtil
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElement
@@ -59,14 +56,18 @@ data class SuggestedReturnType(
             return null
         }
 
+        val aIntLikeAssignment = other.returnType.takeIf { this.returnTypeIsIntLike && !other.returnTypeIsIntLike }
+        val bIntLikeAssignment = this.returnType.takeIf { other.returnTypeIsIntLike && !this.returnTypeIsIntLike }
+
         val (returnType, returnTypeIsIntLike, coerceReturnType) = getSupertype(
             manager,
             this.returnType,
             other.returnType,
             this.returnTypeIsIntLike,
             other.returnTypeIsIntLike,
-            intLikeAssignment = null,
-        )
+            aIntLikeAssignment,
+            bIntLikeAssignment,
+        ) ?: return null
 
         return SuggestedReturnType(returnType, returnTypeIsIntLike, coerceReturnType)
     }
@@ -154,6 +155,9 @@ data class SuggestedReturnType(
                     }
                 }
             }
+            if (TypeKind.of(returnType) == TypeKind.INT_LIKE && returnType != PsiTypes.intType()) {
+                return returnType
+            }
 
             return returnType.takeUnless { allowCoerceRequired }
         }
@@ -178,18 +182,8 @@ data class SuggestedSignature(
         if (!kindsMatch(this, other)) {
             return null
         }
-        val intLikeForcings = mutableSetOf<PsiType>()
-        for (pos in this.intLikeTypes) {
-            if (pos !in other.intLikeTypes) {
-                intLikeForcings.add(other.getType(pos))
-            }
-        }
-        for (pos in other.intLikeTypes) {
-            if (pos !in this.intLikeTypes) {
-                intLikeForcings.add(this.getType(pos))
-            }
-        }
-        val intLikeAssignment = if (intLikeForcings.size > 1) PsiTypes.intType() else intLikeForcings.singleOrNull()
+        val aIntLikeAssignment = this.intLikeAssignment(other, onConflict = { return null })
+        val bIntLikeAssignment = other.intLikeAssignment(this, onConflict = { return null })
 
         val intLikeTypes = mutableSetOf<MethodSignature.TypePosition>()
 
@@ -199,8 +193,10 @@ data class SuggestedSignature(
             other.returnType,
             MethodSignature.TypePosition.Return in this.intLikeTypes,
             MethodSignature.TypePosition.Return in other.intLikeTypes,
-            intLikeAssignment,
-        )
+            aIntLikeAssignment,
+            bIntLikeAssignment,
+        ) ?: return null
+
         if (returnTypeIsIntLike) {
             intLikeTypes.add(MethodSignature.TypePosition.Return)
         }
@@ -214,8 +210,9 @@ data class SuggestedSignature(
                     b.type,
                     pos in this.intLikeTypes,
                     pos in other.intLikeTypes,
-                    intLikeAssignment,
-                )
+                    aIntLikeAssignment,
+                    bIntLikeAssignment,
+                ) ?: return null
                 if (isIntLike) {
                     intLikeTypes.add(pos)
                 }
@@ -231,6 +228,20 @@ data class SuggestedSignature(
     private fun getType(pos: MethodSignature.TypePosition) = when (pos) {
         is MethodSignature.TypePosition.Param -> params[pos.index].type
         MethodSignature.TypePosition.Return -> returnType
+    }
+
+    private inline fun intLikeAssignment(other: SuggestedSignature, onConflict: () -> Nothing): PsiType? {
+        var result: PsiType? = null
+        for (pos in this.intLikeTypes) {
+            if (pos !in other.intLikeTypes) {
+                result = if (result == null) {
+                    other.getType(pos)
+                } else {
+                    mergeIntTypes(result, other.getType(pos))?.first ?: onConflict()
+                }
+            }
+        }
+        return result
     }
 
     companion object {
@@ -276,20 +287,18 @@ data class SuggestedSignature(
         }
 
         fun inject(annotation: PsiAnnotation, signatures: List<InjectSignatures>): SuggestedSignature? {
-            if (!signatures.asSequence().map { it.params.kinds() }.allEqual()) {
-                // Shape mismatch, use short form
-                return intersectCoerce(
-                    annotation,
-                    signatures.asSequence().map { exact(it.shortSignature ?: it.longSignature) },
-                )
-            }
+            val localsToUse =
+                coerciblePrefixLength(signatures.asSequence().map { sig -> sig.locals.asSequence().map { it.type } })
 
-            val localsToUse = sharedPrefixLength(signatures.map { it.locals.kinds() })
-
-            return intersectCoerce(
+            val longForm = intersectCoerce(
                 annotation,
                 signatures.asSequence()
                     .map { exact(it.longSignature, takeTrailing = localsToUse) },
+            )
+
+            return longForm ?: intersectCoerce(
+                annotation,
+                signatures.asSequence().map { exact(it.shortSignature ?: it.longSignature) },
             )
         }
 
@@ -315,7 +324,7 @@ data class SuggestedSignature(
                         .map {
                             exact(it, takeTrailing = numParams - it.requiredParams.size)
                         },
-                ) ?: return null
+                ) ?: continue
 
                 val actuallyValid = candidates.all {
                     it.allowCoerceRequired || it.matches(intersected)
@@ -344,16 +353,15 @@ private fun kindsMatch(a: SuggestedSignature, b: SuggestedSignature) =
         && a.params.size == b.params.size
         && a.params.indices.all { TypeKind.of(a.params[it].type) == TypeKind.of(b.params[it].type) }
 
-private fun List<Parameter>.kinds() = map { TypeKind.of(it.type) }
-
 private fun getSupertype(
     manager: PsiManager,
     a: PsiType,
     b: PsiType,
     aIsIntLike: Boolean,
     bIsIntLike: Boolean,
-    intLikeAssignment: PsiType?,
-): TypeMergeResult = when (TypeKind.of(a)) {
+    aIntLikeAssignment: PsiType?,
+    bIntLikeAssignment: PsiType?,
+): TypeMergeResult? = when (TypeKind.of(a)) {
     TypeKind.OBJECT -> {
         TypeMergeResult(
             GenericsUtil.getLeastUpperBound(a, b, manager)!!,
@@ -364,15 +372,19 @@ private fun getSupertype(
 
     TypeKind.INT_LIKE -> {
         when {
-            aIsIntLike -> TypeMergeResult(
-                intLikeAssignment ?: b,
-                isIntLike = intLikeAssignment == null && bIsIntLike,
-                coerce = intLikeAssignment != null && !bIsIntLike && intLikeAssignment != b,
-            )
-
-            bIsIntLike -> TypeMergeResult(a, isIntLike = false, coerce = false)
-            a == b -> TypeMergeResult(a, isIntLike = false, coerce = false)
-            else -> TypeMergeResult(PsiTypes.intType(), isIntLike = false, coerce = true)
+            aIsIntLike && bIsIntLike && (aIntLikeAssignment != null || bIntLikeAssignment != null) -> {
+                if (aIntLikeAssignment == bIntLikeAssignment) {
+                    TypeMergeResult(aIntLikeAssignment!!, isIntLike = false, coerce = false)
+                } else {
+                    null
+                }
+            }
+            aIsIntLike && bIsIntLike -> TypeMergeResult(a, isIntLike = true, coerce = false)
+            aIsIntLike -> TypeMergeResult(aIntLikeAssignment!!, isIntLike = false, coerce = b != aIntLikeAssignment)
+            bIsIntLike -> TypeMergeResult(bIntLikeAssignment!!, isIntLike = false, coerce = a != bIntLikeAssignment)
+            else -> mergeIntTypes(a, b)?.let { (type, coerce) ->
+                TypeMergeResult(type, isIntLike = false, coerce = coerce)
+            }
         }
     }
 
@@ -383,3 +395,41 @@ private fun getSupertype(
 }
 
 private data class TypeMergeResult(val type: PsiType, val isIntLike: Boolean, val coerce: Boolean)
+
+private fun mergeIntTypes(a: PsiType, b: PsiType): Pair<PsiType, Boolean>? = when {
+    a == b -> a to false
+    a == PsiTypes.intType() -> b to true
+    b == PsiTypes.intType() -> a to true
+    else -> null
+}
+
+private fun coerciblePrefixLength(types: Sequence<Sequence<PsiType>>): Int {
+    val iterators = types.map { it.iterator() }.toList()
+    var i = 0
+
+    while (true) {
+        var kind: TypeKind? = null
+        var forcedIntType: PsiType? = null
+
+        for (iterator in iterators) {
+            val candidate = if (iterator.hasNext()) iterator.next() else return i
+            val candidateKind = TypeKind.of(candidate)
+
+            when (kind) {
+                null -> kind = candidateKind
+                candidateKind -> {}
+                else -> return i
+            }
+
+            if (candidateKind == TypeKind.INT_LIKE && candidate != PsiTypes.intType()) {
+                when (forcedIntType) {
+                    null -> forcedIntType = candidate
+                    candidate -> {}
+                    else -> return i
+                }
+            }
+        }
+
+        i++
+    }
+}

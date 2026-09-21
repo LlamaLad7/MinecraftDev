@@ -336,13 +336,13 @@ private val INT_TYPES = setOf(
     PsiTypes.shortType(),
     PsiTypes.charType(),
     PsiTypes.byteType(),
-    PsiTypes.booleanType()
+    PsiTypes.booleanType(),
 )
 
 fun checkCoerce(expected: PsiType, actual: PsiType, coerce: Boolean, expectedIntLike: Boolean): Boolean = when {
     expectedIntLike -> actual in INT_TYPES
     actual.normalize() == expected.normalize() -> true
     !coerce -> false
-    expected in INT_TYPES -> actual == PsiTypes.intType()
+    actual in INT_TYPES -> expected == PsiTypes.intType()
     else -> isAssignable(actual.normalize(), expected.normalize())
 }
