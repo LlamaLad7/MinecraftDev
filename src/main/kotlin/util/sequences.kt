@@ -56,3 +56,14 @@ fun Sequence<*>.countIsAtLeast(n: Int) = n <= 0 || drop(n - 1).any()
 fun Sequence<*>.countIsLessThan(n: Int) = n > 0 && drop(n - 1).none()
 
 fun Sequence<*>.allEqual() = zipWithNext().all { (a, b) -> a == b }
+
+inline fun <S : Any, T : S> Sequence<T>.reduceFallible(operation: (acc: S, T) -> S?): S? =
+    reduceOrNull<S, _> { acc, it -> operation(acc, it) ?: return null }
+
+inline fun <T, K, R : Any> Grouping<T, K>.mapReduceFallible(
+    mapper: (T) -> R,
+    operation: (key: K, accumulator: R, element: R) -> R?
+): Map<K, R>? =
+    fold({ _, it -> mapper(it) }) { key, accumulator, element ->
+        operation(key, accumulator, mapper(element)) ?: return null
+    }

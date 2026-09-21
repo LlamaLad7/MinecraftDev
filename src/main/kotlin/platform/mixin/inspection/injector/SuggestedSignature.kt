@@ -21,8 +21,11 @@
 package com.demonwav.mcdev.platform.mixin.inspection.injector
 
 import com.demonwav.mcdev.platform.mixin.util.TypeKind
+import com.demonwav.mcdev.util.allEqual
 import com.demonwav.mcdev.util.descriptor
+import com.demonwav.mcdev.util.mapReduceFallible
 import com.demonwav.mcdev.util.normalize
+import com.demonwav.mcdev.util.reduceFallible
 import com.intellij.psi.GenericsUtil
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElement
@@ -51,22 +54,13 @@ data class SuggestedReturnType(
     override val intLikeTypes = if (returnTypeIsIntLike) setOf(MethodSignature.TypePosition.Return) else emptySet()
     override val params: Nothing? get() = null
 
-    fun intersectCoerce(other: SuggestedReturnType, manager: PsiManager): SuggestedReturnType? {
-        if (TypeKind.of(this.returnType) != TypeKind.of(other.returnType)) {
-            return null
-        }
-
-        val aIntLikeAssignment = other.returnType.takeIf { this.returnTypeIsIntLike && !other.returnTypeIsIntLike }
-        val bIntLikeAssignment = this.returnType.takeIf { other.returnTypeIsIntLike && !this.returnTypeIsIntLike }
-
+    private fun intersectCoerce(other: SuggestedReturnType, manager: PsiManager): SuggestedReturnType? {
         val (returnType, returnTypeIsIntLike, coerceReturnType) = getSupertype(
             manager,
             this.returnType,
             other.returnType,
             this.returnTypeIsIntLike,
             other.returnTypeIsIntLike,
-            aIntLikeAssignment,
-            bIntLikeAssignment,
         ) ?: return null
 
         return SuggestedReturnType(returnType, returnTypeIsIntLike, coerceReturnType)
@@ -108,7 +102,7 @@ data class SuggestedReturnType(
                     .groupBy { TypeKind.of(it.returnType) }
                 val chosen =
                     optionsByKind.entries.firstOrNull { it.value.size == signatures.size }?.value ?: return null
-                return intersectReturnTypes(params, chosen.asSequence().map { exact(it) })
+                return intersectCoerce(params, chosen.map { exact(it) })
             }
 
             outer@ for (returnType in returnTypeOptions) {
@@ -139,7 +133,7 @@ data class SuggestedReturnType(
                         }
                     } ?: continue@outer
                 }
-                return intersectReturnTypes(params, choices.asSequence())
+                return intersectCoerce(params, choices)
             }
 
             return null
@@ -162,12 +156,41 @@ data class SuggestedReturnType(
             return returnType.takeUnless { allowCoerceRequired }
         }
 
-        private fun intersectReturnTypes(
+        private fun intersectCoerce(
             context: PsiElement,
-            types: Sequence<SuggestedReturnType>,
+            types: List<SuggestedReturnType>,
         ): SuggestedReturnType? {
+            if (!types.asSequence().map { TypeKind.of(it.returnType) }.allEqual()) {
+                return null
+            }
+            val intLikeAssignment = types
+                .filter { !it.returnTypeIsIntLike && TypeKind.of(it.returnType) == TypeKind.INT_LIKE }
+                .let { types ->
+                    if (types.isEmpty()) {
+                        null
+                    } else {
+                        types.asSequence()
+                            .map { it.returnType }
+                            .reduceFallible { acc, it -> mergeIntTypes(acc, it)?.first }
+                            ?: return null
+                    }
+                }
+
+            val transformedTypes = if (intLikeAssignment == null) {
+                types.asSequence()
+            } else {
+                types.asSequence()
+                    .map { type ->
+                        if (!type.returnTypeIsIntLike) {
+                            type
+                        } else {
+                            type.copy(returnType = intLikeAssignment, returnTypeIsIntLike = false)
+                        }
+                    }
+            }
+
             val manager = PsiManager.getInstance(context.project)
-            return types.reduceOrNull<SuggestedReturnType?, _> { acc, it -> acc?.intersectCoerce(it, manager) }
+            return transformedTypes.reduceFallible { acc, it -> acc.intersectCoerce(it, manager) }
         }
     }
 }
@@ -178,13 +201,7 @@ data class SuggestedSignature(
     override val intLikeTypes: Set<MethodSignature.TypePosition> = emptySet(),
     override val coerceReturnType: Boolean = false,
 ) : SignatureSuggestion {
-    fun intersectCoerce(other: SuggestedSignature, manager: PsiManager): SuggestedSignature? {
-        if (!kindsMatch(this, other)) {
-            return null
-        }
-        val aIntLikeAssignment = this.intLikeAssignment(other, onConflict = { return null })
-        val bIntLikeAssignment = other.intLikeAssignment(this, onConflict = { return null })
-
+    private fun intersectCoerce(other: SuggestedSignature, manager: PsiManager): SuggestedSignature? {
         val intLikeTypes = mutableSetOf<MethodSignature.TypePosition>()
 
         val (returnType, returnTypeIsIntLike, coerceReturnType) = getSupertype(
@@ -193,8 +210,6 @@ data class SuggestedSignature(
             other.returnType,
             MethodSignature.TypePosition.Return in this.intLikeTypes,
             MethodSignature.TypePosition.Return in other.intLikeTypes,
-            aIntLikeAssignment,
-            bIntLikeAssignment,
         ) ?: return null
 
         if (returnTypeIsIntLike) {
@@ -210,8 +225,6 @@ data class SuggestedSignature(
                     b.type,
                     pos in this.intLikeTypes,
                     pos in other.intLikeTypes,
-                    aIntLikeAssignment,
-                    bIntLikeAssignment,
                 ) ?: return null
                 if (isIntLike) {
                     intLikeTypes.add(pos)
@@ -228,20 +241,6 @@ data class SuggestedSignature(
     private fun getType(pos: MethodSignature.TypePosition) = when (pos) {
         is MethodSignature.TypePosition.Param -> params[pos.index].type
         MethodSignature.TypePosition.Return -> returnType
-    }
-
-    private inline fun intLikeAssignment(other: SuggestedSignature, onConflict: () -> Nothing): PsiType? {
-        var result: PsiType? = null
-        for (pos in this.intLikeTypes) {
-            if (pos !in other.intLikeTypes) {
-                result = if (result == null) {
-                    other.getType(pos)
-                } else {
-                    mergeIntTypes(result, other.getType(pos))?.first ?: onConflict()
-                }
-            }
-        }
-        return result
     }
 
     companion object {
@@ -283,7 +282,7 @@ data class SuggestedSignature(
             annotation: PsiAnnotation,
             signatures: List<OperationWrapperSignatures>,
         ): SuggestedSignature? {
-            return intersectCoerce(annotation, signatures.asSequence().map { exact(it.signature) })
+            return intersectCoerce(annotation, signatures.map { exact(it.signature) })
         }
 
         fun inject(annotation: PsiAnnotation, signatures: List<InjectSignatures>): SuggestedSignature? {
@@ -292,13 +291,12 @@ data class SuggestedSignature(
 
             val longForm = intersectCoerce(
                 annotation,
-                signatures.asSequence()
-                    .map { exact(it.longSignature, takeTrailing = localsToUse) },
+                signatures.map { exact(it.longSignature, takeTrailing = localsToUse) },
             )
 
             return longForm ?: intersectCoerce(
                 annotation,
-                signatures.asSequence().map { exact(it.shortSignature ?: it.longSignature) },
+                signatures.map { exact(it.shortSignature ?: it.longSignature) },
             )
         }
 
@@ -320,10 +318,9 @@ data class SuggestedSignature(
 
                 val intersected = intersectCoerce(
                     annotation,
-                    candidates.asSequence()
-                        .map {
-                            exact(it, takeTrailing = numParams - it.requiredParams.size)
-                        },
+                    candidates.map {
+                        exact(it, takeTrailing = numParams - it.requiredParams.size)
+                    },
                 ) ?: continue
 
                 val actuallyValid = candidates.all {
@@ -340,10 +337,107 @@ data class SuggestedSignature(
 
         private fun intersectCoerce(
             context: PsiElement,
-            signatures: Sequence<SuggestedSignature>,
+            signatures: List<SuggestedSignature>,
         ): SuggestedSignature? {
+            if (signatures.asSequence().zipWithNext { a, b -> !kindsMatch(a, b) }.any { it }) {
+                return null
+            }
+            val intLikeAssignments = decideIntLikeAssignments(signatures) ?: return null
+            val transformedSignatures = signatures.zip(intLikeAssignments) { sig, assignment ->
+                if (assignment == null) {
+                    sig
+                } else {
+                    val params = sig.params.toMutableList()
+                    var returnType = sig.returnType
+                    for (pos in sig.intLikeTypes) {
+                        when (pos) {
+                            is MethodSignature.TypePosition.Param -> {
+                                params[pos.index] = params[pos.index].copy(type = assignment)
+                            }
+                            MethodSignature.TypePosition.Return -> {
+                                returnType = assignment
+                            }
+                        }
+                    }
+                    SuggestedSignature(params, returnType)
+                }
+            }
             val manager = PsiManager.getInstance(context.project)
-            return signatures.reduceOrNull<SuggestedSignature?, _> { acc, it -> acc?.intersectCoerce(it, manager) }
+            return transformedSignatures.asSequence()
+                .reduceFallible { acc, it -> acc.intersectCoerce(it, manager) }
+        }
+
+        private fun decideIntLikeAssignments(signatures: List<SuggestedSignature>): List<PsiType?>? {
+            val intLikeForcingsByPos = signatures.asSequence()
+                .flatMap { sig ->
+                    val positions = sig.params.indices.asSequence().map { MethodSignature.TypePosition.Param(it) } +
+                        MethodSignature.TypePosition.Return
+                    positions
+                        .filter { TypeKind.of(sig.getType(it)) == TypeKind.INT_LIKE }
+                        .filter { it !in sig.intLikeTypes }
+                        .map { it to sig.getType(it) }
+                }
+                .groupingBy { it.first }
+                .mapReduceFallible({ it.second }) { _, acc, it -> mergeIntTypes(acc, it)?.first }
+                ?: return null
+
+            val forcings = signatures
+                .mapTo(mutableListOf()) { sig ->
+                    sig.intLikeTypes
+                        .mapNotNull { intLikeForcingsByPos[it] }
+                        .ifEmpty { return@mapTo null }
+                        .asSequence()
+                        .reduceFallible { acc, it -> mergeIntTypes(acc, it)?.first }
+                        ?: return null
+                }
+
+            val signaturesByIntLikePos = signatures.asSequence()
+                .withIndex()
+                .flatMap { (index, sig) ->
+                    sig.intLikeTypes.asSequence().map { it to index }
+                }
+                .groupBy({ it.first }, { it.second })
+
+            val visited = BooleanArray(signatures.size)
+
+            fun linkDfs(start: Int): List<Int> {
+                val result = mutableListOf<Int>()
+                val stack = mutableListOf(start)
+
+                while (stack.isNotEmpty()) {
+                    val current = stack.removeLast()
+                    result.add(current)
+                    val linked = signatures[current].intLikeTypes.asSequence()
+                        .flatMap { signaturesByIntLikePos.getValue(it) }
+                    for (child in linked) {
+                        if (!visited[child]) {
+                            visited[child] = true
+                            stack.add(child)
+                        }
+                    }
+                }
+
+                return result
+            }
+
+            for (i in visited.indices) {
+                if (visited[i]) {
+                    continue
+                }
+                visited[i] = true
+                val group = linkDfs(i)
+                val assignment = group
+                    .mapNotNull { forcings[it] }
+                    .ifEmpty { continue }
+                    .asSequence()
+                    .reduceFallible { acc, it -> mergeIntTypes(acc, it)?.first }
+                    ?: return null
+                for (member in group) {
+                    forcings[member] = assignment
+                }
+            }
+
+            return forcings
         }
     }
 }
@@ -359,8 +453,6 @@ private fun getSupertype(
     b: PsiType,
     aIsIntLike: Boolean,
     bIsIntLike: Boolean,
-    aIntLikeAssignment: PsiType?,
-    bIntLikeAssignment: PsiType?,
 ): TypeMergeResult? = when (TypeKind.of(a)) {
     TypeKind.OBJECT -> {
         TypeMergeResult(
@@ -372,16 +464,8 @@ private fun getSupertype(
 
     TypeKind.INT_LIKE -> {
         when {
-            aIsIntLike && bIsIntLike && (aIntLikeAssignment != null || bIntLikeAssignment != null) -> {
-                if (aIntLikeAssignment == bIntLikeAssignment) {
-                    TypeMergeResult(aIntLikeAssignment!!, isIntLike = false, coerce = false)
-                } else {
-                    null
-                }
-            }
             aIsIntLike && bIsIntLike -> TypeMergeResult(a, isIntLike = true, coerce = false)
-            aIsIntLike -> TypeMergeResult(aIntLikeAssignment!!, isIntLike = false, coerce = b != aIntLikeAssignment)
-            bIsIntLike -> TypeMergeResult(bIntLikeAssignment!!, isIntLike = false, coerce = a != bIntLikeAssignment)
+            aIsIntLike || bIsIntLike -> error("Int-like type should have been forced")
             else -> mergeIntTypes(a, b)?.let { (type, coerce) ->
                 TypeMergeResult(type, isIntLike = false, coerce = coerce)
             }
