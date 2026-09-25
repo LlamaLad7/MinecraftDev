@@ -38,3 +38,4 @@ fun <T> sharedPrefixLength(lists: List<List<T>>): Int {
 
     return firstList.size
 }
+

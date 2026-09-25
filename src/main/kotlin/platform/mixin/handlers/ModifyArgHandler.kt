@@ -29,6 +29,7 @@ import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.getBytecodeParameter
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
 import com.demonwav.mcdev.util.MemberReference
+import com.demonwav.mcdev.util.SequencedMap
 import com.demonwav.mcdev.util.constantValue
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
@@ -95,7 +96,7 @@ class ModifyArgHandler : InsnInjectorAnnotationHandler() {
         } else null
         return ExpectedSignatures.Valid(
             ModifierSignatures(
-                paramOptions,
+                SequencedMap(paramOptions),
                 fullParams,
             )
         )

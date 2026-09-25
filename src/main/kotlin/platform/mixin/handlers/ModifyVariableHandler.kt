@@ -30,6 +30,7 @@ import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.LocalInfo
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
 import com.demonwav.mcdev.util.Parameter
+import com.demonwav.mcdev.util.SequencedMap
 import com.demonwav.mcdev.util.findContainingMethod
 import com.demonwav.mcdev.util.findModule
 import com.intellij.psi.JavaPsiFacade
@@ -68,7 +69,7 @@ class ModifyVariableHandler : InsnInjectorAnnotationHandler() {
 
         return ExpectedSignatures.Valid(
             ModifierSignatures(
-                result,
+                SequencedMap(result),
                 trailingParams = targetParams,
             )
         )

@@ -30,6 +30,7 @@ import com.demonwav.mcdev.platform.mixin.inspection.injector.collectSignatures
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.TypeKind
 import com.demonwav.mcdev.util.Parameter
+import com.demonwav.mcdev.util.sequencedMapOf
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElement
@@ -107,7 +108,7 @@ class ModifyConstantHandler : InsnInjectorAnnotationHandler() {
         return if (targetInsn is TypeInsnNode) {
             GeneralSignatures(
                 makeTypeCheckParams(psiManager, annotation),
-                linkedMapOf(
+                sequencedMapOf(
                     TypeKind.INT_LIKE to PsiTypes.booleanType(),
                     TypeKind.OBJECT to getClassType(psiManager, annotation),
                 ),

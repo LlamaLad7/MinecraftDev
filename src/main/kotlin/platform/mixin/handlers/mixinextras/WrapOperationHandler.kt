@@ -27,6 +27,7 @@ import com.demonwav.mcdev.platform.mixin.inspection.injector.collectSignatures
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
 import com.demonwav.mcdev.util.Parameter
+import com.demonwav.mcdev.util.buildSequencedSet
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiType
@@ -76,17 +77,17 @@ class WrapOperationHandler : MixinExtrasInjectorAnnotationHandler() {
         )
     }
 
-    private fun intLikeTypePositions(target: TargetInsn) = buildSet {
+    private fun intLikeTypePositions(target: TargetInsn) = buildSequencedSet {
+        target.getDecoration<Array<Type>>(ExpressionDecorations.SIMPLE_OPERATION_ARGS)?.forEachIndexed { i, it ->
+            if (it == ExpressionASMUtils.INTLIKE_TYPE) {
+                add(MethodSignature.TypePosition.Param(i))
+            }
+        }
         if (
             target.getDecoration<Type>(ExpressionDecorations.SIMPLE_OPERATION_RETURN_TYPE)
             == ExpressionASMUtils.INTLIKE_TYPE
         ) {
             add(MethodSignature.TypePosition.Return)
-        }
-        target.getDecoration<Array<Type>>(ExpressionDecorations.SIMPLE_OPERATION_ARGS)?.forEachIndexed { i, it ->
-            if (it == ExpressionASMUtils.INTLIKE_TYPE) {
-                add(MethodSignature.TypePosition.Param(i))
-            }
         }
     }
 

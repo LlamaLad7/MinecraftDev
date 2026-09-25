@@ -27,6 +27,9 @@ import com.demonwav.mcdev.platform.mixin.inspection.injector.collectSignatures
 import com.demonwav.mcdev.platform.mixin.util.ClassAndMethodNode
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
 import com.demonwav.mcdev.util.Parameter
+import com.demonwav.mcdev.util.SequencedSet
+import com.demonwav.mcdev.util.emptySequencedSet
+import com.demonwav.mcdev.util.sequencedSetOf
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiType
@@ -84,12 +87,12 @@ class ModifyExpressionValueHandler : MixinExtrasInjectorAnnotationHandler() {
         )
     }
 
-    private fun intLikeTypePositions(target: TargetInsn): Set<MethodSignature.TypePosition> {
+    private fun intLikeTypePositions(target: TargetInsn): SequencedSet<MethodSignature.TypePosition> {
         val expressionType = target.getDecoration<Type>(ExpressionDecorations.SIMPLE_EXPRESSION_TYPE)
         if (expressionType == ExpressionASMUtils.INTLIKE_TYPE) {
-            return setOf(MethodSignature.TypePosition.Return, MethodSignature.TypePosition.Param(0))
+            return sequencedSetOf(MethodSignature.TypePosition.Return, MethodSignature.TypePosition.Param(0))
         }
-        return emptySet()
+        return emptySequencedSet()
     }
 
     private fun getReturnType(

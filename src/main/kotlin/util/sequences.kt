@@ -20,6 +20,8 @@
 
 package com.demonwav.mcdev.util
 
+import java.util.LinkedList
+
 inline fun <reified T> Sequence<T>.toTypedArray(): Array<T> {
     return toList().toTypedArray()
 }
@@ -67,3 +69,18 @@ inline fun <T, K, R : Any> Grouping<T, K>.mapReduceFallible(
     fold({ _, it -> mapper(it) }) { key, accumulator, element ->
         operation(key, accumulator, mapper(element)) ?: return null
     }
+
+fun <T> Sequence<Iterable<T>>.interleaved(): Sequence<IndexedValue<T>> = sequence {
+    val iterators = this@interleaved.mapIndexedTo(LinkedList()) { i, it -> IndexedValue(i, it.iterator()) }
+    while (iterators.isNotEmpty()) {
+        val outer = iterators.iterator()
+        while (outer.hasNext()) {
+            val (index, inner) = outer.next()
+            if (inner.hasNext()) {
+                yield(IndexedValue(index, inner.next()))
+            } else {
+                outer.remove()
+            }
+        }
+    }
+}

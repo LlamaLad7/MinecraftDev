@@ -20,12 +20,19 @@
 
 package com.demonwav.mcdev.platform.mixin.inspection.injector
 
+import com.demonwav.mcdev.platform.mixin.util.IntLikeAnchorSolver
+import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.COERCE
 import com.demonwav.mcdev.platform.mixin.util.TypeKind
+import com.demonwav.mcdev.util.MutableSequencedSet
+import com.demonwav.mcdev.util.SequencedSet
 import com.demonwav.mcdev.util.allEqual
 import com.demonwav.mcdev.util.descriptor
-import com.demonwav.mcdev.util.mapReduceFallible
+import com.demonwav.mcdev.util.emptySequencedSet
+import com.demonwav.mcdev.util.interleaved
 import com.demonwav.mcdev.util.normalize
 import com.demonwav.mcdev.util.reduceFallible
+import com.demonwav.mcdev.util.sequencedSetOf
+import com.demonwav.mcdev.util.sequencedSetOfNotNull
 import com.intellij.psi.GenericsUtil
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElement
@@ -35,12 +42,13 @@ import com.intellij.psi.PsiParameterList
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypes
 import com.intellij.psi.util.parentOfType
+import java.util.IdentityHashMap
 import org.objectweb.asm.Type
 
 sealed interface SignatureSuggestion {
     val params: List<Param>?
     val returnType: PsiType
-    val intLikeTypes: Set<MethodSignature.TypePosition>
+    val intLikeTypes: SequencedSet<MethodSignature.TypePosition>
     val coerceReturnType: Boolean
 
     data class Param(val name: String?, val type: PsiType, val coerce: Boolean = false)
@@ -51,7 +59,7 @@ data class SuggestedReturnType(
     val returnTypeIsIntLike: Boolean,
     override val coerceReturnType: Boolean = false,
 ) : SignatureSuggestion {
-    override val intLikeTypes = if (returnTypeIsIntLike) setOf(MethodSignature.TypePosition.Return) else emptySet()
+    override val intLikeTypes = if (returnTypeIsIntLike) sequencedSetOf(MethodSignature.TypePosition.Return) else emptySequencedSet()
     override val params: Nothing? get() = null
 
     private fun intersectCoerce(other: SuggestedReturnType, manager: PsiManager): SuggestedReturnType? {
@@ -63,7 +71,11 @@ data class SuggestedReturnType(
             other.returnTypeIsIntLike,
         ) ?: return null
 
-        return SuggestedReturnType(returnType, returnTypeIsIntLike, coerceReturnType)
+        return SuggestedReturnType(
+            returnType,
+            returnTypeIsIntLike,
+            this.coerceReturnType || other.coerceReturnType || coerceReturnType,
+        )
     }
 
     companion object {
@@ -79,81 +91,126 @@ data class SuggestedReturnType(
                 expected.options.filter { it.matchesParams(params) }.ifEmpty { return null }
             }
 
-            var returnTypeOptions: MutableSet<PsiType>? = null
-            outer@ for (options in validSignatures) {
-                val ourReturnTypeOptions = options.mapTo(mutableSetOf()) {
-                    it.forcedReturnType(params)?.normalize() ?: continue@outer
-                }
-                if (returnTypeOptions == null) {
-                    returnTypeOptions = ourReturnTypeOptions
-                } else {
-                    returnTypeOptions.retainAll(ourReturnTypeOptions)
-                }
-            }
+            val forcedReturnTypesBySig = validSignatures.asSequence()
+                .flatten()
+                .mapNotNull { sig -> sig.forcedReturnTypes(params)?.let { sig to it } }
+                .toMap(IdentityHashMap())
 
-            if (returnTypeOptions == null) {
-                // Can choose whatever we like
-                val optionsByKind = validSignatures.asSequence()
-                    .flatMap { options ->
-                        options.asSequence()
-                            .filter { it.forcedReturnType(params) == null }
-                            .distinctBy { TypeKind.of(it.returnType) }
+            val constrainedSignatures = mutableMapOf<PsiType, MutableMap<Int, MethodSignature>>()
+            val unconstrainedSignatures = mutableMapOf<TypeKind, MutableMap<Int, MethodSignature>>()
+            val typesByKind = mutableMapOf<TypeKind, MutableSequencedSet<PsiType>>()
+            val preferences = linkedSetOf<ReturnTypePreference>()
+
+            for ((index, signature) in validSignatures.asSequence().interleaved()) {
+                val forcedReturnTypes = forcedReturnTypesBySig[signature]
+                if (forcedReturnTypes != null) {
+                    for (forcedReturnType in forcedReturnTypes) {
+                        val normalized = forcedReturnType.normalize()
+                        constrainedSignatures.getOrPut(normalized, ::mutableMapOf).putIfAbsent(index, signature)
+                        typesByKind.getOrPut(TypeKind.of(normalized), ::linkedSetOf).add(normalized)
+                        preferences.add(ReturnTypePreference.Constrained(normalized))
                     }
-                    .groupBy { TypeKind.of(it.returnType) }
-                val chosen =
-                    optionsByKind.entries.firstOrNull { it.value.size == signatures.size }?.value ?: return null
-                return intersectCoerce(params, chosen.map { exact(it) })
+                } else {
+                    val kind = TypeKind.of(signature.returnType)
+                    unconstrainedSignatures.getOrPut(kind, ::mutableMapOf).putIfAbsent(index, signature)
+                    preferences.add(ReturnTypePreference.Unconstrained(kind))
+                }
             }
 
-            outer@ for (returnType in returnTypeOptions) {
-                val choices = validSignatures.map { signatures ->
-                    signatures.firstNotNullOfOrNull { signature ->
-                        val forcedReturnType = signature.forcedReturnType(params)
-                        if (forcedReturnType != null) {
-                            if (forcedReturnType.normalize() == returnType) {
-                                SuggestedReturnType(
-                                    forcedReturnType,
-                                    returnTypeIsIntLike = false,
-                                )
-                            } else {
-                                null
-                            }
-                        } else {
-                            // Here, the signature definitely allows coercion, or it would force a return type.
-                            // Additionally, if the signature's return type is "int-like", we must have free choice
-                            // since none of its parameters forced the return type
-                            if (signature.matchesReturnType(returnType, hasCoerce = true)) {
-                                SuggestedReturnType(
-                                    signature.returnType,
-                                    returnTypeIsIntLike = MethodSignature.TypePosition.Return in signature.intLikeTypes,
-                                )
-                            } else {
-                                null
-                            }
-                        }
-                    } ?: continue@outer
+            val visitedReturnTypes = mutableSetOf<PsiType>()
+
+            fun tryReturnType(option: PsiType): SuggestedReturnType? {
+                if (!visitedReturnTypes.add(option)) {
+                    return null
                 }
-                return intersectCoerce(params, choices)
+                val unconstrained = unconstrainedSignatures[TypeKind.of(option)].orEmpty()
+                val constrained = constrainedSignatures.getValue(option)
+                val combined = unconstrained + constrained
+                if (combined.size != signatures.size) {
+                    return null
+                }
+                val intersected = intersectCoerce(
+                    params,
+                    combined.values.map { sig ->
+                        val forcedReturnTypes = forcedReturnTypesBySig[sig]
+                        if (forcedReturnTypes == null) {
+                            exact(sig)
+                        } else {
+                            SuggestedReturnType(
+                                forcedReturnTypes.first { it.normalize() == option },
+                                returnTypeIsIntLike = false,
+                            )
+                        }
+                    },
+                ) ?: return null
+
+                return intersected.takeIf { it.returnType.normalize() == option }
+            }
+
+            for (preference in preferences) {
+                when (preference) {
+                    is ReturnTypePreference.Constrained -> {
+                        tryReturnType(preference.type)?.let { return it }
+                    }
+                    is ReturnTypePreference.Unconstrained -> {
+                        val unconstrained = unconstrainedSignatures.getValue(preference.kind)
+                        if (unconstrained.size == signatures.size) {
+                            // Will definitely work
+                            return intersectCoerce(
+                                params,
+                                signatures.indices.map { exact(unconstrained.getValue(it)) },
+                            )!!
+                        }
+                        val returnTypeOptions = typesByKind[preference.kind] ?: continue
+                        for (option in returnTypeOptions) {
+                            tryReturnType(option)?.let { return it }
+                        }
+                    }
+                }
             }
 
             return null
         }
 
-        private fun MethodSignature.forcedReturnType(params: PsiParameterList): PsiType? {
+        /**
+         * Returns null iff the signature can be intersected with all types of its kind. Otherwise, returns the possible
+         * return types that this signature can support.
+         */
+        private fun MethodSignature.forcedReturnTypes(parameterList: PsiParameterList): SequencedSet<PsiType>? {
             if (MethodSignature.TypePosition.Return in intLikeTypes) {
-                val params = params.parameters
-                return intLikeTypes.firstNotNullOfOrNull {
-                    when (it) {
-                        is MethodSignature.TypePosition.Param -> params.getOrNull(it.index)?.type
-                        is MethodSignature.TypePosition.Return -> null
+                val params = parameterList.parameters
+                val anchor = (intLikeTypes.first() as? MethodSignature.TypePosition.Param)
+                    ?.let { params[it.index]?.type }
+                return when (anchor) {
+                    PsiTypes.intType() -> null
+                    null -> {
+                        val intLikeParams = intLikeTypes.asSequence()
+                            .mapNotNull { it.getParam(params) }
+                            .groupBy { it.type }
+                        when {
+                            intLikeParams.isEmpty() -> null
+                            PsiTypes.intType() in intLikeParams -> sequencedSetOf(PsiTypes.intType())
+                            intLikeParams.size == 1 -> sequencedSetOfNotNull(
+                                intLikeParams.keys.single(),
+                                PsiTypes.intType()
+                                    .takeIf { intLikeParams.values.single().all { it.hasAnnotation(COERCE) } },
+                            )
+                            else -> {
+                                for ((type, params) in intLikeParams) {
+                                    check(type == PsiTypes.intType() || params.all { it.hasAnnotation(COERCE) })
+                                }
+                                sequencedSetOf(PsiTypes.intType())
+                            }
+                        }
                     }
+                    else -> sequencedSetOf(anchor)
                 }
             }
             if (TypeKind.of(returnType) == TypeKind.INT_LIKE && returnType != PsiTypes.intType()) {
-                return returnType
+                return sequencedSetOf(returnType)
             }
 
-            return returnType.takeUnless { allowCoerceRequired }
+            return sequencedSetOf(returnType).takeUnless { allowCoerceRequired }
         }
 
         private fun intersectCoerce(
@@ -163,34 +220,15 @@ data class SuggestedReturnType(
             if (!types.asSequence().map { TypeKind.of(it.returnType) }.allEqual()) {
                 return null
             }
-            val intLikeAssignment = types
-                .filter { !it.returnTypeIsIntLike && TypeKind.of(it.returnType) == TypeKind.INT_LIKE }
-                .let { types ->
-                    if (types.isEmpty()) {
-                        null
-                    } else {
-                        types.asSequence()
-                            .map { it.returnType }
-                            .reduceFallible { acc, it -> mergeIntTypes(acc, it)?.first }
-                            ?: return null
-                    }
-                }
-
-            val transformedTypes = if (intLikeAssignment == null) {
-                types.asSequence()
-            } else {
-                types.asSequence()
-                    .map { type ->
-                        if (!type.returnTypeIsIntLike) {
-                            type
-                        } else {
-                            type.copy(returnType = intLikeAssignment, returnTypeIsIntLike = false)
-                        }
-                    }
-            }
 
             val manager = PsiManager.getInstance(context.project)
-            return transformedTypes.reduceFallible { acc, it -> acc.intersectCoerce(it, manager) }
+            return types.asSequence().reduceFallible { acc, it -> acc.intersectCoerce(it, manager) }
+        }
+
+        private sealed interface ReturnTypePreference {
+            data class Constrained(val type: PsiType) : ReturnTypePreference
+
+            data class Unconstrained(val kind: TypeKind) : ReturnTypePreference
         }
     }
 }
@@ -198,11 +236,11 @@ data class SuggestedReturnType(
 data class SuggestedSignature(
     override val params: List<SignatureSuggestion.Param>,
     override val returnType: PsiType,
-    override val intLikeTypes: Set<MethodSignature.TypePosition> = emptySet(),
+    override val intLikeTypes: SequencedSet<MethodSignature.TypePosition> = emptySequencedSet(),
     override val coerceReturnType: Boolean = false,
 ) : SignatureSuggestion {
     private fun intersectCoerce(other: SuggestedSignature, manager: PsiManager): SuggestedSignature? {
-        val intLikeTypes = mutableSetOf<MethodSignature.TypePosition>()
+        val intLikeTypes = linkedSetOf<MethodSignature.TypePosition>()
 
         val (returnType, returnTypeIsIntLike, coerceReturnType) = getSupertype(
             manager,
@@ -233,27 +271,39 @@ data class SuggestedSignature(
                 SignatureSuggestion.Param(name, type, a.coerce || b.coerce || coerce)
             },
             returnType,
-            intLikeTypes,
+            SequencedSet(intLikeTypes),
             this.coerceReturnType || other.coerceReturnType || coerceReturnType,
         )
     }
 
-    private fun getType(pos: MethodSignature.TypePosition) = when (pos) {
-        is MethodSignature.TypePosition.Param -> params[pos.index].type
-        MethodSignature.TypePosition.Return -> returnType
-    }
-
     companion object {
-        fun exact(signature: MethodSignature, takeTrailing: Int = 0): SuggestedSignature {
-            return SuggestedSignature(
-                (signature.requiredParams + signature.trailingParams.take(takeTrailing)).map {
+        fun exact(
+            signature: MethodSignature,
+            takeTrailing: Int = 0,
+            intLikeAssignment: PsiType? = null,
+        ): SuggestedSignature {
+            var returnType = signature.returnType
+            val params =
+                (signature.requiredParams.asSequence() + signature.trailingParams.asSequence().take(takeTrailing)).map {
                     SignatureSuggestion.Param(
                         it.name,
                         it.type,
                     )
-                },
-                signature.returnType,
-                signature.intLikeTypes,
+                }.toMutableList()
+            if (intLikeAssignment != null) {
+                for (pos in signature.intLikeTypes) {
+                    when (pos) {
+                        MethodSignature.TypePosition.Return -> returnType = intLikeAssignment
+                        is MethodSignature.TypePosition.Param -> {
+                            params[pos.index] = params[pos.index].copy(type = intLikeAssignment)
+                        }
+                    }
+                }
+            }
+            return SuggestedSignature(
+                params,
+                returnType,
+                if (intLikeAssignment == null) signature.intLikeTypes else emptySequencedSet(),
             )
         }
 
@@ -282,7 +332,11 @@ data class SuggestedSignature(
             annotation: PsiAnnotation,
             signatures: List<OperationWrapperSignatures>,
         ): SuggestedSignature? {
-            return intersectCoerce(annotation, signatures.map { exact(it.signature) })
+            return intersectCoerce(
+                annotation,
+                signatures.map { it.signature },
+                numParams = { it.requiredParams.size },
+            )
         }
 
         fun inject(annotation: PsiAnnotation, signatures: List<InjectSignatures>): SuggestedSignature? {
@@ -291,12 +345,14 @@ data class SuggestedSignature(
 
             val longForm = intersectCoerce(
                 annotation,
-                signatures.map { exact(it.longSignature, takeTrailing = localsToUse) },
+                signatures.map { it.longSignature },
+                numParams = { it.requiredParams.size + localsToUse },
             )
 
             return longForm ?: intersectCoerce(
                 annotation,
-                signatures.map { exact(it.shortSignature ?: it.longSignature) },
+                signatures.map { it.shortSignature ?: it.longSignature },
+                numParams = { it.requiredParams.size },
             )
         }
 
@@ -316,20 +372,16 @@ data class SuggestedSignature(
                     continue
                 }
 
-                val intersected = intersectCoerce(
+                val (soft, hard) = candidates.partition { it.allowCoerceRequired }
+
+                val intersected = intersect(
                     annotation,
-                    candidates.map {
-                        exact(it, takeTrailing = numParams - it.requiredParams.size)
-                    },
+                    softSignatures = soft,
+                    hardSignatures = hard,
+                    numParams = { numParams },
                 ) ?: continue
 
-                val actuallyValid = candidates.all {
-                    it.allowCoerceRequired || it.matches(intersected)
-                }
-
-                if (actuallyValid) {
-                    return intersected
-                }
+                return intersected
             }
 
             return null
@@ -337,107 +389,72 @@ data class SuggestedSignature(
 
         private fun intersectCoerce(
             context: PsiElement,
-            signatures: List<SuggestedSignature>,
+            signatures: List<MethodSignature>,
+            numParams: (MethodSignature) -> Int,
         ): SuggestedSignature? {
-            if (signatures.asSequence().zipWithNext { a, b -> !kindsMatch(a, b) }.any { it }) {
-                return null
-            }
-            val intLikeAssignments = decideIntLikeAssignments(signatures) ?: return null
-            val transformedSignatures = signatures.zip(intLikeAssignments) { sig, assignment ->
-                if (assignment == null) {
-                    sig
-                } else {
-                    val params = sig.params.toMutableList()
-                    var returnType = sig.returnType
-                    for (pos in sig.intLikeTypes) {
-                        when (pos) {
-                            is MethodSignature.TypePosition.Param -> {
-                                params[pos.index] = params[pos.index].copy(type = assignment)
-                            }
-                            MethodSignature.TypePosition.Return -> {
-                                returnType = assignment
-                            }
-                        }
-                    }
-                    SuggestedSignature(params, returnType)
-                }
-            }
-            val manager = PsiManager.getInstance(context.project)
-            return transformedSignatures.asSequence()
-                .reduceFallible { acc, it -> acc.intersectCoerce(it, manager) }
+            return intersect(
+                context,
+                softSignatures = signatures,
+                hardSignatures = emptyList(),
+                numParams = numParams,
+            )
         }
 
-        private fun decideIntLikeAssignments(signatures: List<SuggestedSignature>): List<PsiType?>? {
-            val intLikeForcingsByPos = signatures.asSequence()
-                .flatMap { sig ->
-                    val positions = sig.params.indices.asSequence().map { MethodSignature.TypePosition.Param(it) } +
-                        MethodSignature.TypePosition.Return
-                    positions
-                        .filter { TypeKind.of(sig.getType(it)) == TypeKind.INT_LIKE }
-                        .filter { it !in sig.intLikeTypes }
-                        .map { it to sig.getType(it) }
-                }
-                .groupingBy { it.first }
-                .mapReduceFallible({ it.second }) { _, acc, it -> mergeIntTypes(acc, it)?.first }
-                ?: return null
+        private fun intersect(
+            context: PsiElement,
+            softSignatures: List<MethodSignature>,
+            hardSignatures: List<MethodSignature>,
+            numParams: (MethodSignature) -> Int,
+        ): SuggestedSignature? {
+            val allSignatures = softSignatures.asSequence() + hardSignatures
+            val paramsToUse = allSignatures.map { numParams(it) }.distinct().singleOrNull() ?: return null
 
-            val forcings = signatures
-                .mapTo(mutableListOf()) { sig ->
-                    sig.intLikeTypes
-                        .mapNotNull { intLikeForcingsByPos[it] }
-                        .ifEmpty { return@mapTo null }
-                        .asSequence()
-                        .reduceFallible { acc, it -> mergeIntTypes(acc, it)?.first }
-                        ?: return null
-                }
-
-            val signaturesByIntLikePos = signatures.asSequence()
-                .withIndex()
-                .flatMap { (index, sig) ->
-                    sig.intLikeTypes.asSequence().map { it to index }
-                }
-                .groupBy({ it.first }, { it.second })
-
-            val visited = BooleanArray(signatures.size)
-
-            fun linkDfs(start: Int): List<Int> {
-                val result = mutableListOf<Int>()
-                val stack = mutableListOf(start)
-
-                while (stack.isNotEmpty()) {
-                    val current = stack.removeLast()
-                    result.add(current)
-                    val linked = signatures[current].intLikeTypes.asSequence()
-                        .flatMap { signaturesByIntLikePos.getValue(it) }
-                    for (child in linked) {
-                        if (!visited[child]) {
-                            visited[child] = true
-                            stack.add(child)
+            val intLikeAnchor = run {
+                allSignatures.mapNotNull { it.intLikeTypes.firstOrNull() }.toList()
+                    .ifEmpty { return@run null }
+                    .asSequence()
+                    .distinct()
+                    .singleOrNull() ?: return null
+            }
+            val intLikeAssignment = if (intLikeAnchor == null) {
+                null
+            } else {
+                val solver = IntLikeAnchorSolver()
+                val signatures =
+                    softSignatures.asSequence().map { it to false } + hardSignatures.asSequence().map { it to true }
+                for ((signature, isHard) in signatures) {
+                    for (pos in signature.allPositions(paramsToUse)) {
+                        if (pos in signature.intLikeTypes) {
+                            continue
+                        }
+                        val isValid = solver.constrain(
+                            pos.getType(signature),
+                            isAnchor = pos == intLikeAnchor,
+                            isHard = isHard,
+                        )
+                        if (!isValid) {
+                            return null
                         }
                     }
                 }
-
-                return result
+                solver.solve()
             }
 
-            for (i in visited.indices) {
-                if (visited[i]) {
-                    continue
-                }
-                visited[i] = true
-                val group = linkDfs(i)
-                val assignment = group
-                    .mapNotNull { forcings[it] }
-                    .ifEmpty { continue }
-                    .asSequence()
-                    .reduceFallible { acc, it -> mergeIntTypes(acc, it)?.first }
-                    ?: return null
-                for (member in group) {
-                    forcings[member] = assignment
-                }
+            val suggestedSignatures = allSignatures.map {
+                exact(it, takeTrailing = paramsToUse - it.requiredParams.size, intLikeAssignment = intLikeAssignment)
+            }.toList()
+
+            if (suggestedSignatures.asSequence().zipWithNext { a, b -> !kindsMatch(a, b) }.any { it }) {
+                return null
             }
 
-            return forcings
+            val manager = PsiManager.getInstance(context.project)
+            val intersected = suggestedSignatures.asSequence()
+                .reduceFallible { acc, it -> acc.intersectCoerce(it, manager) } ?: return null
+
+            return intersected.takeIf {
+                hardSignatures.all { it.matches(intersected) }
+            }
         }
     }
 }

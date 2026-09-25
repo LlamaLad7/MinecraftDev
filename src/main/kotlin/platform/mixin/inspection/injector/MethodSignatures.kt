@@ -25,11 +25,15 @@ import com.demonwav.mcdev.platform.mixin.util.callbackInfoReturnableType
 import com.demonwav.mcdev.platform.mixin.util.callbackInfoType
 import com.demonwav.mcdev.platform.mixin.util.mixinExtrasOperationType
 import com.demonwav.mcdev.util.Parameter
+import com.demonwav.mcdev.util.SequencedMap
+import com.demonwav.mcdev.util.SequencedSet
+import com.demonwav.mcdev.util.emptySequencedSet
+import com.demonwav.mcdev.util.minus
+import com.demonwav.mcdev.util.sequencedMapOf
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypes
-import java.util.SequencedMap
 import org.objectweb.asm.Type
 
 sealed interface ExpectedSignatures<out T : MethodSignatures> {
@@ -93,7 +97,7 @@ class BasicSignatures(override val options: List<MethodSignature>) : MethodSigna
 class OperationWrapperSignatures private constructor(
     val params: List<Parameter>,
     val returnType: PsiType,
-    val intLikePositions: Set<MethodSignature.TypePosition>,
+    val intLikePositions: SequencedSet<MethodSignature.TypePosition>,
     val trailingParams: List<Parameter>,
     operationType: PsiType,
 ) : MethodSignatures {
@@ -112,7 +116,7 @@ class OperationWrapperSignatures private constructor(
             context: PsiElement,
             params: List<Parameter>,
             returnType: PsiType,
-            intLikePositions: Set<MethodSignature.TypePosition> = emptySet(),
+            intLikePositions: SequencedSet<MethodSignature.TypePosition> = emptySequencedSet(),
             trailingParams: List<Parameter> = emptyList(),
         ) = mixinExtrasOperationType(context, returnType)?.let {
             OperationWrapperSignatures(params, returnType, intLikePositions, trailingParams, it)
@@ -125,17 +129,17 @@ data class GeneralSignatures(
     val returnTypeOptions: SequencedMap<TypeKind, PsiType>,
     val allowCoerce: Boolean,
     val trailingParams: List<Parameter>,
-    val intLikePositions: Set<MethodSignature.TypePosition> = emptySet(),
+    val intLikePositions: SequencedSet<MethodSignature.TypePosition> = emptySequencedSet(),
 ) : MethodSignatures {
     constructor(
         params: List<Parameter>,
         returnType: PsiType,
         trailingParams: List<Parameter>,
         allowCoerce: Boolean = true,
-        intLikePositions: Set<MethodSignature.TypePosition> = emptySet(),
+        intLikePositions: SequencedSet<MethodSignature.TypePosition> = emptySequencedSet(),
     ) : this(
         params,
-        linkedMapOf(TypeKind.of(returnType) to returnType),
+        sequencedMapOf(TypeKind.of(returnType) to returnType),
         allowCoerce,
         trailingParams,
         intLikePositions,

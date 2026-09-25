@@ -36,6 +36,7 @@ import com.demonwav.mcdev.platform.mixin.util.getGenericType
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
 import com.demonwav.mcdev.util.MemberReference
 import com.demonwav.mcdev.util.Parameter
+import com.demonwav.mcdev.util.sequencedMapOf
 import com.demonwav.mcdev.util.toJavaIdentifier
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
@@ -366,7 +367,7 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
                 // drop the instance parameter, return the constructed type
                 sig.copy(
                     params = sig.params.drop(1),
-                    returnTypeOptions = linkedMapOf(TypeKind.OBJECT to constructedType),
+                    returnTypeOptions = sequencedMapOf(TypeKind.OBJECT to constructedType),
                 )
             }
         }
@@ -392,7 +393,7 @@ class RedirectInjectorHandler : InsnInjectorAnnotationHandler() {
             )
             return GeneralSignatures(
                 parameters,
-                linkedMapOf(
+                sequencedMapOf(
                     TypeKind.INT_LIKE to PsiTypes.booleanType(),
                     TypeKind.OBJECT to classType,
                 ),

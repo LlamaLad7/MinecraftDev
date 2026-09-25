@@ -32,6 +32,7 @@ import com.demonwav.mcdev.platform.mixin.util.hasAccess
 import com.demonwav.mcdev.platform.mixin.util.isConstructor
 import com.demonwav.mcdev.platform.mixin.util.isMixinExtrasSugar
 import com.demonwav.mcdev.platform.mixin.util.mixinTargets
+import com.demonwav.mcdev.util.SequencedSet
 import com.demonwav.mcdev.util.findContainingClass
 import com.demonwav.mcdev.util.findKeyword
 import com.demonwav.mcdev.util.fullQualifiedName
@@ -345,9 +346,8 @@ class InvalidInjectorMethodSignatureInspection : MixinInspection() {
 
         private fun makeIntLikeTypeTemplate(
             method: PsiMethod,
-            positionSet: Set<MethodSignature.TypePosition>
+            positions: SequencedSet<MethodSignature.TypePosition>
         ): Template? {
-            val positions = positionSet.sorted()
             val builder = TemplateBuilderImpl(method)
             builder.replaceElement(
                 positions.first().getElement(method) ?: return null,

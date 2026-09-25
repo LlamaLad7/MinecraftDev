@@ -24,11 +24,15 @@ import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.COERCE
 import com.demonwav.mcdev.platform.mixin.util.checkCoerce
 import com.demonwav.mcdev.platform.mixin.util.isMixinExtrasSugar
 import com.demonwav.mcdev.util.Parameter
+import com.demonwav.mcdev.util.SequencedSet
 import com.demonwav.mcdev.util.allEqual
+import com.demonwav.mcdev.util.emptySequencedSet
 import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiParameter
 import com.intellij.psi.PsiParameterList
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypeElement
+import com.intellij.psi.PsiTypes
 
 data class MethodSignature(
     val requiredParams: List<Parameter>,
@@ -36,22 +40,35 @@ data class MethodSignature(
     val allowCoerceRequired: Boolean,
     val trailingParams: List<Parameter> = emptyList(),
     val allowCoerceTrailing: Boolean = true,
-    val intLikeTypes: Set<TypePosition> = emptySet()
+    val intLikeTypes: SequencedSet<TypePosition> = emptySequencedSet(),
 ) {
-    sealed interface TypePosition : Comparable<TypePosition> {
+    sealed interface TypePosition {
         fun getElement(method: PsiMethod): PsiTypeElement?
+
+        fun getType(signature: MethodSignature): PsiType
+
+        fun getParam(params: Array<PsiParameter>): PsiParameter?
 
         data object Return : TypePosition {
             override fun getElement(method: PsiMethod) = method.returnTypeElement
 
-            override fun compareTo(other: TypePosition): Int = if (other is Return) 0 else -1
+            override fun getType(signature: MethodSignature) = signature.returnType
+
+            override fun getParam(params: Array<PsiParameter>) = null
         }
 
         data class Param(val index: Int) : TypePosition {
             override fun getElement(method: PsiMethod) = method.parameterList.parameters[index].typeElement
 
-            override fun compareTo(other: TypePosition): Int = if (other is Param) index.compareTo(other.index) else 1
+            override fun getType(signature: MethodSignature) = signature.requiredParams[index].type
+
+            override fun getParam(params: Array<PsiParameter>) = params[index]
         }
+    }
+
+    fun allPositions(numParams: Int): Sequence<TypePosition> {
+        require(numParams >= requiredParams.size)
+        return sequenceOf(TypePosition.Return) + (0..<numParams).map { TypePosition.Param(it) }
     }
 
     fun matches(method: PsiMethod): Boolean {
@@ -79,11 +96,17 @@ data class MethodSignature(
             params.parameters.dropLastWhile { it.isMixinExtrasSugar },
             { it.type },
             { it.hasAnnotation(COERCE) },
+            knownIntLikeAssignment = null,
         )
     }
 
     fun matchesReturnType(returnType: PsiType, hasCoerce: Boolean): Boolean =
-        matchType(this.returnType, returnType, allowCoerceRequired && hasCoerce, TypePosition.Return)
+        matchType(
+            this.returnType,
+            returnType,
+            coerce = allowCoerceRequired && hasCoerce,
+            isIntLike = TypePosition.Return in intLikeTypes,
+        )
 
     private fun <ParamT : Any> matches(
         params: List<ParamT>,
@@ -92,23 +115,52 @@ data class MethodSignature(
         paramType: (ParamT) -> PsiType,
         paramCoerce: (ParamT) -> Boolean,
     ): Boolean {
-        val intLikeMismatch = TypePosition.Return in intLikeTypes
-            && intLikeTypes.asSequence()
-            .filterIsInstance<TypePosition.Param>()
-            .mapNotNull { params.getOrNull(it.index) }
-            .take(1)
-            .any { paramType(it) != returnType }
-
-        return !intLikeMismatch
-            && matchesReturnType(returnType, returnCoerce)
-            && matchesParams(params, paramType, paramCoerce)
+        val intLikeAssignment = when (val anchor = intLikeTypes.firstOrNull()) {
+            null -> null
+            is TypePosition.Param -> paramType(params.getOrNull(anchor.index) ?: return false)
+            TypePosition.Return -> returnType
+        }
+        val transformedReturnType = if (TypePosition.Return in intLikeTypes) intLikeAssignment!! else returnType
+        return matchesReturnType(transformedReturnType, returnCoerce)
+            && matchesParams(
+            params,
+            paramType,
+            paramCoerce,
+            knownIntLikeAssignment = intLikeAssignment,
+        )
     }
 
     private fun <ParamT : Any> matchesParams(
         params: List<ParamT>,
         paramType: (ParamT) -> PsiType,
         paramCoerce: (ParamT) -> Boolean,
+        knownIntLikeAssignment: PsiType?,
     ): Boolean {
+        if (params.size !in requiredParams.size..requiredParams.size + trailingParams.size) {
+            return false
+        }
+
+        val intLikeAssignment = knownIntLikeAssignment
+            ?: (intLikeTypes.firstOrNull() as? TypePosition.Param)?.let { paramType(params[it.index]) }
+
+        if (intLikeAssignment == null && intLikeTypes.isNotEmpty()) {
+            // We don't know the return type, but we should make sure the combination is feasible for some return type
+            val intLikeIndices = intLikeTypes.mapNotNull { (it as? TypePosition.Param)?.index }
+            val isFeasible = intLikeIndices.asSequence().map { paramType(params[it]) }.allEqual()
+                || intLikeIndices.all { index ->
+                val param = params[index]
+                checkCoerce(
+                    PsiTypes.intType(),
+                    paramType(param),
+                    coerce = paramCoerce(param),
+                    expectedIntLike = false,
+                )
+            }
+            if (!isFeasible) {
+                return false
+            }
+        }
+
         fun matchParams(expected: List<Parameter>, allowCoerce: Boolean, startIndex: Int): Boolean {
             return expected.asSequence()
                 .zip(params.asSequence().withIndex().drop(startIndex))
@@ -117,20 +169,33 @@ data class MethodSignature(
                     matchType(
                         expected.type,
                         paramType(actual),
-                        allowCoerce && paramCoerce(actual),
-                        TypePosition.Param(index),
+                        isIntLike = intLikeAssignment == null && TypePosition.Param(index) in intLikeTypes,
+                        coerce = allowCoerce && paramCoerce(actual),
                     )
                 }
         }
 
-        return params.size in requiredParams.size..requiredParams.size + trailingParams.size
-            && intLikeTypes.asSequence().filterIsInstance<TypePosition.Param>().mapNotNull { (index) ->
+        val transformedRequiredParams = if (intLikeAssignment == null) {
+            requiredParams
+        } else {
+            requiredParams.mapIndexed { i, param ->
+                if (TypePosition.Param(i) in intLikeTypes) {
+                    param.copy(type = intLikeAssignment)
+                } else {
+                    param
+                }
+            }
+        }
+
+        return intLikeTypes.asSequence().filterIsInstance<TypePosition.Param>().mapNotNull { (index) ->
                     params.getOrNull(index)?.let(paramType)
                }.allEqual()
-            && matchParams(requiredParams, allowCoerceRequired, 0)
+            && matchParams(transformedRequiredParams, allowCoerceRequired, 0)
             && matchParams(trailingParams, allowCoerceTrailing, requiredParams.size)
     }
 
-    private fun matchType(expected: PsiType, actual: PsiType, coerce: Boolean, typePos: TypePosition) =
-        checkCoerce(expected, actual, coerce, typePos in intLikeTypes)
+    private companion object {
+        private fun matchType(expected: PsiType, actual: PsiType, isIntLike: Boolean, coerce: Boolean) =
+            checkCoerce(expected, actual, coerce, isIntLike)
+    }
 }
