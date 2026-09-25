@@ -356,7 +356,3 @@ private fun getConstantType(insn: AbstractInsnNode?): Type? {
         }
     }
 }
-
-private val intLikePsiTypes = listOf(
-    PsiTypes.intType(), PsiTypes.booleanType(), PsiTypes.charType(), PsiTypes.byteType(), PsiTypes.shortType()
-)

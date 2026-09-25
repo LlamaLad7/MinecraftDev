@@ -20,8 +20,6 @@
 
 package com.demonwav.mcdev.util
 
-import java.util.Collections
-
 @Suppress("JavaDefaultMethodsNotOverriddenByDelegation")
 @JvmInline
 value class SequencedSet<out T>(private val set: MutableSequencedSet<T>) : Set<T> by set

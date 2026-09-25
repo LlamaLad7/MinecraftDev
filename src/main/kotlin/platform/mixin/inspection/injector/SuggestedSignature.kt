@@ -416,9 +416,7 @@ data class SuggestedSignature(
                     .distinct()
                     .singleOrNull() ?: return null
             }
-            val intLikeAssignment = if (intLikeAnchor == null) {
-                null
-            } else {
+            val intLikeAssignment = intLikeAnchor?.let {
                 val solver = IntLikeAnchorSolver()
                 val signatures =
                     softSignatures.asSequence().map { it to false } + hardSignatures.asSequence().map { it to true }

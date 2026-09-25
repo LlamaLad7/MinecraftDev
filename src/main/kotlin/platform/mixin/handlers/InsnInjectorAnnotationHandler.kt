@@ -109,7 +109,7 @@ abstract class InsnInjectorAnnotationHandler : InjectorAnnotationHandler() {
         targets: List<ClassAndMethodNode>,
         mode: CollectVisitor.Mode,
     ): List<ExpectedSignatures<*>> {
-        return resolveInstructions(annotation, targets).map { (target, result) ->
+        return resolveInstructions(annotation, targets, mode).map { (target, result) ->
             val (targetClass, targetMethod) = target
             val targetInsn = TargetInsn(result.insn, result.decorations)
             expectedMethodSignature(annotation, targetClass, targetMethod, targetInsn)
