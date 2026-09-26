@@ -106,7 +106,7 @@ class OperationWrapperSignatures private constructor(
         returnType,
         allowCoerceRequired = true,
         trailingParams = trailingParams,
-        intLikeTypes = intLikePositions,
+        intLikePositions = intLikePositions,
     )
 
     override val options = listOf(signature)
@@ -152,7 +152,7 @@ data class GeneralSignatures(
         returnTypeOptions.getValue(returnKind),
         allowCoerceRequired = allowCoerce,
         trailingParams = trailingParams,
-        intLikeTypes = if (returnKind == TypeKind.INT_LIKE) {
+        intLikePositions = if (returnKind == TypeKind.INT_LIKE) {
             intLikePositions
         } else {
             intLikePositions - MethodSignature.TypePosition.Return

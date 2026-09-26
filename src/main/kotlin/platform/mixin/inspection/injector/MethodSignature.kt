@@ -40,7 +40,7 @@ data class MethodSignature(
     val allowCoerceRequired: Boolean,
     val trailingParams: List<Parameter> = emptyList(),
     val allowCoerceTrailing: Boolean = true,
-    val intLikeTypes: SequencedSet<TypePosition> = emptySequencedSet(),
+    val intLikePositions: SequencedSet<TypePosition> = emptySequencedSet(),
 ) {
     sealed interface TypePosition {
         fun getElement(method: PsiMethod): PsiTypeElement?
@@ -105,7 +105,7 @@ data class MethodSignature(
             this.returnType,
             returnType,
             coerce = allowCoerceRequired && hasCoerce,
-            isIntLike = TypePosition.Return in intLikeTypes,
+            isIntLike = TypePosition.Return in intLikePositions,
         )
 
     private fun <ParamT : Any> matches(
@@ -115,12 +115,12 @@ data class MethodSignature(
         paramType: (ParamT) -> PsiType,
         paramCoerce: (ParamT) -> Boolean,
     ): Boolean {
-        val intLikeAssignment = when (val anchor = intLikeTypes.firstOrNull()) {
+        val intLikeAssignment = when (val anchor = intLikePositions.firstOrNull()) {
             null -> null
             is TypePosition.Param -> paramType(params.getOrNull(anchor.index) ?: return false)
             TypePosition.Return -> returnType
         }
-        val transformedReturnType = if (TypePosition.Return in intLikeTypes) intLikeAssignment!! else returnType
+        val transformedReturnType = if (TypePosition.Return in intLikePositions) intLikeAssignment!! else returnType
         return matchesReturnType(transformedReturnType, returnCoerce)
             && matchesParams(
             params,
@@ -141,11 +141,11 @@ data class MethodSignature(
         }
 
         val intLikeAssignment = knownIntLikeAssignment
-            ?: (intLikeTypes.firstOrNull() as? TypePosition.Param)?.let { paramType(params[it.index]) }
+            ?: (intLikePositions.firstOrNull() as? TypePosition.Param)?.let { paramType(params[it.index]) }
 
-        if (intLikeAssignment == null && intLikeTypes.isNotEmpty()) {
+        if (intLikeAssignment == null && intLikePositions.isNotEmpty()) {
             // We don't know the return type, but we should make sure the combination is feasible for some return type
-            val intLikeIndices = intLikeTypes.mapNotNull { (it as? TypePosition.Param)?.index }
+            val intLikeIndices = intLikePositions.mapNotNull { (it as? TypePosition.Param)?.index }
             val isFeasible = intLikeIndices.asSequence().map { paramType(params[it]) }.allEqual()
                 || intLikeIndices.all { index ->
                 val param = params[index]
@@ -169,7 +169,7 @@ data class MethodSignature(
                     matchType(
                         expected.type,
                         paramType(actual),
-                        isIntLike = intLikeAssignment == null && TypePosition.Param(index) in intLikeTypes,
+                        isIntLike = intLikeAssignment == null && TypePosition.Param(index) in intLikePositions,
                         coerce = allowCoerce && paramCoerce(actual),
                     )
                 }
@@ -179,7 +179,7 @@ data class MethodSignature(
             requiredParams
         } else {
             requiredParams.mapIndexed { i, param ->
-                if (TypePosition.Param(i) in intLikeTypes) {
+                if (TypePosition.Param(i) in intLikePositions) {
                     param.copy(type = intLikeAssignment)
                 } else {
                     param
@@ -187,7 +187,7 @@ data class MethodSignature(
             }
         }
 
-        return intLikeTypes.asSequence().filterIsInstance<TypePosition.Param>().mapNotNull { (index) ->
+        return intLikePositions.asSequence().filterIsInstance<TypePosition.Param>().mapNotNull { (index) ->
                     params.getOrNull(index)?.let(paramType)
                }.allEqual()
             && matchParams(transformedRequiredParams, allowCoerceRequired, 0)
