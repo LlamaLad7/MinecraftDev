@@ -63,7 +63,7 @@ data class SuggestedReturnType(
     override val params: Nothing? get() = null
 
     private fun intersectCoerce(other: SuggestedReturnType, manager: PsiManager): SuggestedReturnType? {
-        val (returnType, returnTypeIsIntLike, coerceReturnType) = getSupertype(
+        val (returnType, returnTypeIsIntLike, coerceReturnType) = mergeTypes(
             manager,
             this.returnType,
             other.returnType,
@@ -79,13 +79,16 @@ data class SuggestedReturnType(
     }
 
     companion object {
-        fun exact(signature: MethodSignature): SuggestedReturnType {
+        private fun exact(signature: MethodSignature): SuggestedReturnType {
             return SuggestedReturnType(
                 signature.returnType,
                 MethodSignature.TypePosition.Return in signature.intLikeTypes,
             )
         }
 
+        /**
+         * Returns a valid suggested return type iff one is possible while making no changes to the existing parameters.
+         */
         fun forParams(params: PsiParameterList, signatures: List<MethodSignatures>): SuggestedReturnType? {
             val validSignatures = signatures.map { expected ->
                 expected.options.filter { it.matchesParams(params) }.ifEmpty { return null }
@@ -173,46 +176,72 @@ data class SuggestedReturnType(
         }
 
         /**
-         * Returns null iff the signature can be intersected with all types of its kind. Otherwise, returns the possible
-         * return types that this signature can support.
+         * Returns `null` iff the signature's return type can be intersected with all types of its kind. Otherwise,
+         * returns, in order of preference, the possible return types that this signature can support.
+         *
+         * **Precondition:** The parameter list is valid according to the signature.
          */
         private fun MethodSignature.forcedReturnTypes(parameterList: PsiParameterList): SequencedSet<PsiType>? {
             if (MethodSignature.TypePosition.Return in intLikeTypes) {
                 val params = parameterList.parameters
                 val anchor = (intLikeTypes.first() as? MethodSignature.TypePosition.Param)
-                    ?.let { params[it.index]?.type }
+                    ?.let { params[it.index].type }
                 return when (anchor) {
-                    PsiTypes.intType() -> null
+                    PsiTypes.intType() -> {
+                        // Can be coerced to any int-like type
+                        null
+                    }
                     null -> {
+                        // The return type itself is the anchor
                         val intLikeParams = intLikeTypes.asSequence()
                             .mapNotNull { it.getParam(params) }
                             .groupBy { it.type }
                         when {
-                            intLikeParams.isEmpty() -> null
-                            PsiTypes.intType() in intLikeParams -> sequencedSetOf(PsiTypes.intType())
-                            intLikeParams.size == 1 -> sequencedSetOfNotNull(
-                                intLikeParams.keys.single(),
-                                PsiTypes.intType()
-                                    .takeIf { intLikeParams.values.single().all { it.hasAnnotation(COERCE) } },
-                            )
+                            intLikeParams.isEmpty() -> {
+                                // Only the return type is int-like, free choice
+                                null
+                            }
+                            PsiTypes.intType() in intLikeParams -> {
+                                // Only int can be coerced to int (can also be coerced to anything else we found)
+                                sequencedSetOf(PsiTypes.intType())
+                            }
+                            intLikeParams.size == 1 -> {
+                                // Take the specific leaf type we found, plus int iff all the params have @Coerce.
+                                // int is less preferable since it doesn't match exactly.
+                                sequencedSetOfNotNull(
+                                    intLikeParams.keys.single(),
+                                    PsiTypes.intType()
+                                        .takeIf { intLikeParams.values.single().all { it.hasAnnotation(COERCE) } },
+                                )
+                            }
                             else -> {
+                                // Only int can be coerced to multiple types
                                 for ((type, params) in intLikeParams) {
+                                    // We double-check that the parameters are valid as the caller promised
                                     check(type == PsiTypes.intType() || params.all { it.hasAnnotation(COERCE) })
                                 }
                                 sequencedSetOf(PsiTypes.intType())
                             }
                         }
                     }
-                    else -> sequencedSetOf(anchor)
+                    else -> {
+                        // Anchor is a leaf type which can only be coerced to itself
+                        sequencedSetOf(anchor)
+                    }
                 }
             }
             if (TypeKind.of(returnType) == TypeKind.INT_LIKE && returnType != PsiTypes.intType()) {
+                // Leaf types cannot be intersected with any other type
                 return sequencedSetOf(returnType)
             }
 
             return sequencedSetOf(returnType).takeUnless { allowCoerceRequired }
         }
 
+        /**
+         * Returns the most specific suggested return type that satisfies all the constraints, or `null` if no such type
+         * exists.
+         */
         private fun intersectCoerce(
             context: PsiElement,
             types: List<SuggestedReturnType>,
@@ -242,7 +271,7 @@ data class SuggestedSignature(
     private fun intersectCoerce(other: SuggestedSignature, manager: PsiManager): SuggestedSignature? {
         val intLikeTypes = linkedSetOf<MethodSignature.TypePosition>()
 
-        val (returnType, returnTypeIsIntLike, coerceReturnType) = getSupertype(
+        val (returnType, returnTypeIsIntLike, coerceReturnType) = mergeTypes(
             manager,
             this.returnType,
             other.returnType,
@@ -257,7 +286,7 @@ data class SuggestedSignature(
         return SuggestedSignature(
             params.withIndex().zip(other.params) { (index, a), b ->
                 val pos = MethodSignature.TypePosition.Param(index)
-                val (type, isIntLike, coerce) = getSupertype(
+                val (type, isIntLike, coerce) = mergeTypes(
                     manager,
                     a.type,
                     b.type,
@@ -277,7 +306,7 @@ data class SuggestedSignature(
     }
 
     companion object {
-        fun exact(
+        private fun exact(
             signature: MethodSignature,
             takeTrailing: Int = 0,
             intLikeAssignment: PsiType? = null,
@@ -307,6 +336,11 @@ data class SuggestedSignature(
             )
         }
 
+        /**
+         * Returns a suggested signature for the given `@Modify`-style signatures. The resulting signature, if any, will
+         * always have 1 parameter. Preference is given to the existing return type, if any, since this is likely to be
+         * typed before the parameters.
+         */
         fun modifier(annotation: PsiAnnotation, signatures: List<ModifierSignatures>): SuggestedSignature? {
             val parameterOptions = signatures.map { it.paramOptions }
             val psiManager = PsiManager.getInstance(annotation.project)
@@ -328,34 +362,53 @@ data class SuggestedSignature(
             return SuggestedSignature(listOf(SignatureSuggestion.Param(name, type)), type)
         }
 
+        /**
+         * Returns a suggested signature for the given `Operation`-wrapper signatures. Trailing parameters are never
+         * used, and the Operation type is never `@Coerce`d. Doing so would make it possible to reconcile differing
+         * parameter counts in some cases, but would be confusing and impractical to use.
+         */
         fun operationWrapper(
             annotation: PsiAnnotation,
             signatures: List<OperationWrapperSignatures>,
         ): SuggestedSignature? {
-            return intersectCoerce(
+            return intersect(
                 annotation,
                 signatures.map { it.signature },
                 numParams = { it.requiredParams.size },
             )
         }
 
+        /**
+         * Returns a suggested signature for the given `@Inject` signatures. The target method's parameters are captured
+         * if possible, and we take the longest possible prefix of the available locals from each signature. `@Coerce`
+         * is used to rectify any differences in these cases, where possible. The `CallbackInfo(Returnable)` parameter
+         * may be `@Coerce`d to `CallbackInfo` itself, but never to any other type. Doing so would make it possible to
+         * reconcile differing parameter counts in some cases, but would be confusing and impractical to use.
+         */
         fun inject(annotation: PsiAnnotation, signatures: List<InjectSignatures>): SuggestedSignature? {
             val localsToUse =
                 coerciblePrefixLength(signatures.asSequence().map { sig -> sig.locals.asSequence().map { it.type } })
 
-            val longForm = intersectCoerce(
+            val longForm = intersect(
                 annotation,
                 signatures.map { it.longSignature },
                 numParams = { it.requiredParams.size + localsToUse },
             )
 
-            return longForm ?: intersectCoerce(
+            return longForm ?: intersect(
                 annotation,
                 signatures.map { it.shortSignature ?: it.longSignature },
                 numParams = { it.requiredParams.size },
             )
         }
 
+        /**
+         * Returns a suggested signature for the given signatures. The signature shapes are relatively flexible with
+         * constraints as per the structure of [GeneralSignatures]. The resulting signature, if any, will have as many
+         * parameters as the longest input signature mandates, with trailing parameters being taken from any shorter
+         * signatures to fill the gaps. `@Coerce` is used to reconcile differences in parameter and return types, where
+         * the input signatures allow it.
+         */
         fun general(annotation: PsiAnnotation, signatures: List<GeneralSignatures>): SuggestedSignature? {
             val numParams = signatures.maxOf { it.params.size }
 
@@ -372,12 +425,9 @@ data class SuggestedSignature(
                     continue
                 }
 
-                val (soft, hard) = candidates.partition { it.allowCoerceRequired }
-
                 val intersected = intersect(
                     annotation,
-                    softSignatures = soft,
-                    hardSignatures = hard,
+                    candidates,
                     numParams = { numParams },
                 ) ?: continue
 
@@ -387,48 +437,51 @@ data class SuggestedSignature(
             return null
         }
 
-        private fun intersectCoerce(
+        /**
+         * Returns the most specific possible intersection of the given signatures, iff any exists. The returned
+         * signature, if any, is guaranteed to satisfy all the given signatures, including when some parts do not permit
+         * coercion. Parameters are taken from each signature as per [numParams].
+         */
+        private fun intersect(
             context: PsiElement,
             signatures: List<MethodSignature>,
             numParams: (MethodSignature) -> Int,
         ): SuggestedSignature? {
-            return intersect(
-                context,
-                softSignatures = signatures,
-                hardSignatures = emptyList(),
-                numParams = numParams,
-            )
-        }
-
-        private fun intersect(
-            context: PsiElement,
-            softSignatures: List<MethodSignature>,
-            hardSignatures: List<MethodSignature>,
-            numParams: (MethodSignature) -> Int,
-        ): SuggestedSignature? {
-            val allSignatures = softSignatures.asSequence() + hardSignatures
-            val paramsToUse = allSignatures.map { numParams(it) }.distinct().singleOrNull() ?: return null
+            val paramsToUse = signatures
+                .map { sig ->
+                    numParams(sig).also {
+                        if (it !in sig.requiredParams.size..sig.requiredParams.size + sig.trailingParams.size) {
+                            return null
+                        }
+                    }
+                }
+                .asSequence()
+                .distinct()
+                .singleOrNull()
+                ?: return null
 
             val intLikeAnchor = run {
-                allSignatures.mapNotNull { it.intLikeTypes.firstOrNull() }.toList()
+                signatures.mapNotNull { it.intLikeTypes.firstOrNull() }.toList()
                     .ifEmpty { return@run null }
                     .asSequence()
                     .distinct()
-                    .singleOrNull() ?: return null
+                    // With the currently available signature shapes, there can only ever be 1 anchor.
+                    // This logic will need revisiting if that changes.
+                    .single()
             }
             val intLikeAssignment = intLikeAnchor?.let {
                 val solver = IntLikeAnchorSolver()
-                val signatures =
-                    softSignatures.asSequence().map { it to false } + hardSignatures.asSequence().map { it to true }
-                for ((signature, isHard) in signatures) {
+                for (signature in signatures) {
                     for (pos in signature.allPositions(paramsToUse)) {
                         if (pos in signature.intLikeTypes) {
                             continue
                         }
+                        val isTrailingParam = pos is MethodSignature.TypePosition.Param &&
+                            pos.index > signature.requiredParams.lastIndex
                         val isValid = solver.constrain(
                             pos.getType(signature),
                             isAnchor = pos == intLikeAnchor,
-                            isHard = isHard,
+                            isHard = if (isTrailingParam) signature.allowCoerceTrailing else signature.allowCoerceRequired,
                         )
                         if (!isValid) {
                             return null
@@ -438,7 +491,7 @@ data class SuggestedSignature(
                 solver.solve()
             }
 
-            val suggestedSignatures = allSignatures.map {
+            val suggestedSignatures = signatures.map {
                 exact(it, takeTrailing = paramsToUse - it.requiredParams.size, intLikeAssignment = intLikeAssignment)
             }.toList()
 
@@ -450,8 +503,15 @@ data class SuggestedSignature(
             val intersected = suggestedSignatures.asSequence()
                 .reduceFallible { acc, it -> acc.intersectCoerce(it, manager) } ?: return null
 
+            // It is fine simply to intersect and then check hard constraints, because if an input signature contains a
+            // subtype Y of X at a position where X is a hard constraint, then the intersection will coerce Y upwards
+            // to X. If it contains instead a *supertype* Z of X, then reconciliation is not possible and the following
+            // check will fail:
             return intersected.takeIf {
-                hardSignatures.all { it.matches(intersected) }
+                signatures.all {
+                    it.allowCoerceRequired && (intersected.params.size <= it.requiredParams.size || it.allowCoerceTrailing)
+                        || it.matches(intersected)
+                }
             }
         }
     }
@@ -462,7 +522,14 @@ private fun kindsMatch(a: SuggestedSignature, b: SuggestedSignature) =
         && a.params.size == b.params.size
         && a.params.indices.all { TypeKind.of(a.params[it].type) == TypeKind.of(b.params[it].type) }
 
-private fun getSupertype(
+/**
+ * Merges the two types with regards to `@Coerce` behaviour. Returns the merged type, whether the merged type is a
+ * free int-like type, and whether the merge **newly** requires `@Coerce`.
+ *
+ * **Preconditions:** The types must be of the same kind, and if either type is a free int-like type, the other must be
+ * too. (Fully solving int-like types is left to the caller.)
+ */
+private fun mergeTypes(
     manager: PsiManager,
     a: PsiType,
     b: PsiType,
@@ -481,9 +548,10 @@ private fun getSupertype(
         when {
             aIsIntLike && bIsIntLike -> TypeMergeResult(a, isIntLike = true, coerce = false)
             aIsIntLike || bIsIntLike -> error("Int-like type should have been forced")
-            else -> mergeIntTypes(a, b)?.let { (type, coerce) ->
-                TypeMergeResult(type, isIntLike = false, coerce = coerce)
-            }
+            a == b -> TypeMergeResult(a, isIntLike = false, coerce = false)
+            a == PsiTypes.intType() -> TypeMergeResult(b, isIntLike = false, coerce = true)
+            b == PsiTypes.intType() -> TypeMergeResult(a, isIntLike = false, coerce = true)
+            else -> null
         }
     }
 
@@ -495,13 +563,9 @@ private fun getSupertype(
 
 private data class TypeMergeResult(val type: PsiType, val isIntLike: Boolean, val coerce: Boolean)
 
-private fun mergeIntTypes(a: PsiType, b: PsiType): Pair<PsiType, Boolean>? = when {
-    a == b -> a to false
-    a == PsiTypes.intType() -> b to true
-    b == PsiTypes.intType() -> a to true
-    else -> null
-}
-
+/**
+ * Returns the largest N such that the sequences' first N types can be merged element-wise.
+ */
 private fun coerciblePrefixLength(types: Sequence<Sequence<PsiType>>): Int {
     val iterators = types.map { it.iterator() }.toList()
     var i = 0

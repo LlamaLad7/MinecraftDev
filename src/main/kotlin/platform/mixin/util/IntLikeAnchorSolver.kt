@@ -24,11 +24,17 @@ import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypes
 import java.util.EnumSet
 
+/**
+ * Represents a constraint solver for the anchor type of a signature containing free int-like types.
+ */
 class IntLikeAnchorSolver {
     private val candidates = EnumSet.allOf(IntType::class.java)
     private var hasIntPreference = false
     private var hasLeafPreference = false
 
+    /**
+     * Adds the given constraint to the solver and returns whether a solution is still possible.
+     */
     fun constrain(desiredType: PsiType, isAnchor: Boolean, isHard: Boolean): Boolean {
         val type = IntType.of(desiredType) ?: return false
         when {
@@ -43,17 +49,26 @@ class IntLikeAnchorSolver {
         return candidates.isNotEmpty()
     }
 
+    /**
+     * Returns either a chosen anchor type or `null` if any anchor type will suffice.
+     *
+     * **Precondition:** A solution is possible.
+     */
     fun solve(): PsiType? {
         require(candidates.isNotEmpty())
 
         candidates.singleOrNull()?.let { return it.type }
 
         return when {
+            // int preference is the strongest, since choosing a leaf type instead would require a @Coerce *and* the
+            // use of an undesired leaf type
             hasIntPreference -> {
                 // Cannot have 2 leaves without int
                 check(IntType.INT in candidates)
                 PsiTypes.intType()
             }
+            // Leaf preference is the next strongest, since choosing int instead would require a @Coerce
+            // NB leaf preferences can only come from non-anchor positions
             hasLeafPreference -> {
                 // Cannot have 2 leaves and a leaf preference
                 candidates.single { it != IntType.INT }.type
